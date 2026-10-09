@@ -1,7 +1,6 @@
 //! O site público: do host ao que está publicado.
 
 use askama::Template;
-use axum::extract::State;
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{DateTime, Utc};
@@ -23,15 +22,15 @@ use crate::visao::{Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBl
 const CAMINHO_DO_BLOG: &str = "/blog";
 
 pub async fn atender(
-    State(estado): State<Estado>,
-    metodo: Method,
-    cabecalhos: HeaderMap,
-    uri: Uri,
+    estado: &Estado,
+    metodo: &Method,
+    cabecalhos: &HeaderMap,
+    uri: &Uri,
 ) -> Response {
     if metodo != Method::GET && metodo != Method::HEAD {
         return simples(StatusCode::METHOD_NOT_ALLOWED, "Método não permitido.");
     }
-    match responder(&estado, &cabecalhos, &uri).await {
+    match responder(estado, cabecalhos, uri).await {
         Ok(resposta) => resposta,
         Err(erro) => {
             tracing::error!(%erro, caminho = uri.path(), "falha ao atender o pedido");
@@ -41,7 +40,7 @@ pub async fn atender(
 }
 
 /// O servidor fica atrás do Caddy, que repassa o host original.
-fn host_do_pedido(cabecalhos: &HeaderMap) -> Option<Host> {
+pub(crate) fn host_do_pedido(cabecalhos: &HeaderMap) -> Option<Host> {
     ["x-forwarded-host", "host"]
         .into_iter()
         .find_map(|nome| cabecalhos.get(nome))

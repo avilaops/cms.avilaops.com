@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into convite (site_id, email, papel, token_hash, expira_em, criado_por)\n        values ($1, $2, $3, $4, now() + interval '48 hours', $5)\n        returning id, expira_em\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "expira_em",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "edf4a01f3e16644760fc4bb2a60685b675a8151883b3bc5db2dd41c86d38749f"
+}

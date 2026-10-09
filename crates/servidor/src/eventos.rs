@@ -131,6 +131,8 @@ mod testes {
             diretorio_de_midia: PathBuf::from("midia-que-nao-existe"),
             token_do_n8n: None,
             chave_do_indexnow: Some("0123456789abcdef".into()),
+            host_do_painel: None,
+            limites_de_criacao: Default::default(),
         }
     }
 

@@ -106,7 +106,17 @@ O login do painel é do Auth (`auth.avilaops.com`).
 - Sessão válida não é autorização: o cookie vale em todo `*.avilaops.com`. A
   aplicação confere `permitido` em `GET /api/session?app=<id>`, servidor a
   servidor, e guarda a própria participação por conta.
+- No CMS, como no Lojas, a consulta a `/api/session?app=<id>` responde as duas
+  perguntas de uma vez, quem é a pessoa e se pode entrar, e o JWT não é
+  conferido localmente. Assim a aplicação não guarda o `SSO_JWT_SECRET`, que
+  assina a sessão de todos os outros sistemas. O custo é uma ida ao Auth por
+  pedido do painel.
 - Sem sessão: 302 para `/login?app=<id>&returnTo=<url https do próprio host>`.
+  O retorno leva `volta=1`: se a pessoa voltar e a sessão não chegar, a
+  aplicação para em vez de mandar de novo.
+- Formulário do painel só vale com `Origin` do próprio painel. O cookie do Auth
+  chega de qualquer `*.avilaops.com`, inclusive dos sites que a aplicação
+  serve, se o domínio-base ficar debaixo de `avilaops.com`.
 - Em domínio próprio de cliente o cookie não chega. O caminho é OIDC
   (`/oauth/authorize`, `/oauth/token`, `/oauth/userinfo` do Auth), com
   `client_id` e `client_secret` da aplicação.

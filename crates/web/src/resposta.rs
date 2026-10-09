@@ -85,3 +85,13 @@ pub fn redirecionar(status: StatusCode, destino: &str) -> Response {
         Err(_) => simples(StatusCode::BAD_REQUEST, "Endereço inválido."),
     }
 }
+
+/// Tela do painel: é de uma pessoa só. Ninguém no caminho guarda, e buscador
+/// nenhum indexa.
+pub fn html_privado(status: StatusCode, corpo: String) -> Response {
+    let mut resposta = html(status, corpo, false);
+    resposta
+        .headers_mut()
+        .insert(CACHE_CONTROL, HeaderValue::from_static("private, no-store"));
+    resposta
+}

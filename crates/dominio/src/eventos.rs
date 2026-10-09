@@ -39,6 +39,26 @@ pub struct ConteudoEnviadoParaRevisao {
     pub pedido_por: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteCriado {
+    /// O e-mail da conta que criou. A criação é aberta: alguém da equipe
+    /// precisa olhar.
+    pub criado_por: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConviteCriado {
+    pub email: String,
+    /// "Autor", "Editor" ou "Dono", como a pessoa lê.
+    pub papel: String,
+    /// O link pronto, com token de uso único. As execuções do n8n guardam o
+    /// corpo recebido: por isso a validade é curta.
+    pub link: String,
+    pub expira_em: DateTime<Utc>,
+}
+
 /// Um fato. Serializa só os dados; o tipo vai em campo próprio do corpo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
@@ -46,6 +66,8 @@ pub enum Evento {
     ConteudoPublicado(ConteudoPublicado),
     ConteudoDespublicado(ConteudoDespublicado),
     ConteudoEnviadoParaRevisao(ConteudoEnviadoParaRevisao),
+    SiteCriado(SiteCriado),
+    ConviteCriado(ConviteCriado),
 }
 
 impl Evento {
@@ -55,6 +77,8 @@ impl Evento {
             Evento::ConteudoPublicado(_) => "conteudo.publicado",
             Evento::ConteudoDespublicado(_) => "conteudo.despublicado",
             Evento::ConteudoEnviadoParaRevisao(_) => "conteudo.enviado_para_revisao",
+            Evento::SiteCriado(_) => "site.criado",
+            Evento::ConviteCriado(_) => "convite.criado",
         }
     }
 }
@@ -176,6 +200,35 @@ mod testes {
                 "especie": "post",
                 "titulo": "Como escolher",
                 "pedidoPor": "conta-da-autora"
+            })
+        );
+    }
+
+    #[test]
+    fn site_criado_e_convite_criado_batem_com_a_referencia() {
+        let site = Evento::SiteCriado(SiteCriado {
+            criado_por: "ana@exemplo.example".into(),
+        });
+        assert_eq!(site.tipo(), "site.criado");
+        assert_eq!(dados(&site), json!({ "criadoPor": "ana@exemplo.example" }));
+
+        let convite = Evento::ConviteCriado(ConviteCriado {
+            email: "bia@exemplo.example".into(),
+            papel: "Editor".into(),
+            link: "https://cms.example/convite/abc".into(),
+            expira_em: Utc
+                .with_ymd_and_hms(2026, 10, 11, 12, 0, 0)
+                .single()
+                .expect("data válida"),
+        });
+        assert_eq!(convite.tipo(), "convite.criado");
+        assert_eq!(
+            dados(&convite),
+            json!({
+                "email": "bia@exemplo.example",
+                "papel": "Editor",
+                "link": "https://cms.example/convite/abc",
+                "expiraEm": "2026-10-11T12:00:00Z"
             })
         );
     }

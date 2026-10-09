@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as \"nome!\", s.situacao, p.papel\n        from participacao p\n        join site s on s.id = p.site_id\n        where p.conta = $1\n        order by 3, s.slug\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "nome!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "situacao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "papel",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "721babe3bd95d68f27d2236e17c02d4ce32736d85a43c965b6333f420a6b047f"
+}

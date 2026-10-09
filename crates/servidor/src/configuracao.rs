@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use cms_dominio::LimitesDeCriacao;
 use cms_web::{Configuracao, Segredo};
 
 use crate::Erro;
@@ -13,6 +14,26 @@ pub struct Ambiente {
     pub web: Configuracao,
     /// Para onde os eventos vão. Sem isso, ficam na fila.
     pub n8n: Option<SaidaParaN8n>,
+    /// O login do painel. Sem isso, a aplicação só serve sites.
+    pub auth: Option<LoginPeloAuth>,
+}
+
+#[derive(Debug, Clone)]
+pub struct LoginPeloAuth {
+    pub url: String,
+    /// O identificador do CMS no cadastro de aplicações do Auth.
+    pub app: String,
+}
+
+fn inteiro(nome: &str, padrao: i64) -> Result<i64, Erro> {
+    match variavel(nome) {
+        Some(texto) => texto
+            .parse()
+            .ok()
+            .filter(|valor| *valor >= 0)
+            .ok_or_else(|| Erro::Configuracao(format!("{nome} precisa ser um número inteiro"))),
+        None => Ok(padrao),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -74,8 +95,27 @@ impl Ambiente {
                 ));
             }
         }
+        let host_do_painel = variavel("HOST_DO_PAINEL").map(|host| host.to_ascii_lowercase());
+        let auth = match (&host_do_painel, variavel("SSO_APP_ID")) {
+            (Some(_), Some(app)) => Some(LoginPeloAuth {
+                url: variavel("SSO_URL").unwrap_or_else(|| "https://auth.avilaops.com".to_string()),
+                app,
+            }),
+            (None, None) => None,
+            _ => {
+                return Err(Erro::Configuracao(
+                    "HOST_DO_PAINEL e SSO_APP_ID andam juntas: defina as duas ou nenhuma".into(),
+                ));
+            }
+        };
+        let padrao = LimitesDeCriacao::default();
+        let limites_de_criacao = LimitesDeCriacao {
+            sites_por_conta: inteiro("LIMITE_DE_SITES_POR_CONTA", padrao.sites_por_conta)?,
+            criacoes_por_dia: inteiro("LIMITE_DE_CRIACOES_POR_DIA", padrao.criacoes_por_dia)?,
+        };
         Ok(Self {
             n8n,
+            auth,
             banco: obrigatoria("DATABASE_URL")?,
             porta,
             web: Configuracao {
@@ -86,6 +126,8 @@ impl Ambiente {
                 ),
                 token_do_n8n: variavel("N8N_TOKEN_DE_VOLTA").map(Segredo::novo),
                 chave_do_indexnow,
+                host_do_painel,
+                limites_de_criacao,
             },
         })
     }

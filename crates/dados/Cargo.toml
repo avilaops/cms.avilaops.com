@@ -10,6 +10,7 @@ chrono.workspace = true
 cms-dominio.workspace = true
 motor-web.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 sqlx.workspace = true
 thiserror.workspace = true
 uuid.workspace = true

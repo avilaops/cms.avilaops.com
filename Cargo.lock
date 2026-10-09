@@ -402,6 +402,7 @@ dependencies = [
  "cms-dominio",
  "motor-web",
  "serde_json",
+ "sha2 0.11.0",
  "sqlx",
  "thiserror",
  "uuid",
@@ -424,6 +425,8 @@ version = "0.1.0"
 dependencies = [
  "cms-dominio",
  "reqwest",
+ "serde",
+ "serde_json",
  "thiserror",
 ]
 
@@ -457,10 +460,12 @@ dependencies = [
  "chrono",
  "cms-dados",
  "cms-dominio",
+ "cms-integracoes",
  "http-body-util",
  "motor-web",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sqlx",
  "subtle",
  "thiserror",

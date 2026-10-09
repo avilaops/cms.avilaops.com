@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update convite set aceito_em = now() where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e3f851041421049fa9ca0da9978333aba8045489453d08c4d9c52e1050fc95bf"
+}

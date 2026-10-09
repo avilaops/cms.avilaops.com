@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select papel from participacao where site_id = $1 and conta = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "papel",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b9c82e1e717aaf7a90a13f02561d57e373f69710b891deff0325061fb30bb3ec"
+}

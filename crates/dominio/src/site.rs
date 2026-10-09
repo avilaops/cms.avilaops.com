@@ -5,6 +5,9 @@ use std::fmt;
 use motor_web::tipos::{Midia, Organizacao, Site};
 use serde::{Deserialize, Serialize};
 
+/// Peso máximo recomendado de uma página, até o Dono mudar.
+const ORCAMENTO_DE_PESO_PADRAO_KB: u32 = 500;
+
 /// O que o dono define sobre o site. É o `Site` do motor sem a origem, que
 /// depende do host em que o pedido chegou.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -21,6 +24,28 @@ pub struct PerfilDoSite {
 }
 
 impl PerfilDoSite {
+    /// O perfil de um site recém-criado: só o nome. O resto o Dono preenche,
+    /// e o painel aponta o que falta.
+    pub fn inicial(nome: &str) -> Self {
+        Self {
+            nome: nome.to_string(),
+            descricao: String::new(),
+            idioma: "pt-BR".to_string(),
+            logo: Midia {
+                id: String::new(),
+                alt: String::new(),
+                largura: 0,
+                altura: 0,
+                variantes: Vec::new(),
+                legenda: None,
+                credito: None,
+            },
+            organizacao: Organizacao::default(),
+            diretrizes_ia: Vec::new(),
+            orcamento_peso_kb: ORCAMENTO_DE_PESO_PADRAO_KB,
+        }
+    }
+
     pub fn para_site(&self, origem: &str) -> Site {
         Site {
             origem: origem.to_string(),

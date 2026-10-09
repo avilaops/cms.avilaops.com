@@ -14,6 +14,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use cms_integracoes::ClienteN8n;
+use cms_integracoes::auth::ClienteAuth;
 use cms_web::Estado;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
@@ -111,7 +112,18 @@ async fn servir(ambiente: &Ambiente) -> Result<(), Erro> {
         }
         None => tracing::warn!("n8n não configurado: os eventos ficam na fila"),
     }
+    let auth = match &ambiente.auth {
+        Some(login) => Some(
+            ClienteAuth::novo(&login.url, &login.app)
+                .map_err(|erro| Erro::Configuracao(erro.to_string()))?,
+        ),
+        None => {
+            tracing::warn!("painel não configurado: a aplicação só serve sites");
+            None
+        }
+    };
     let estado = Estado {
+        auth,
         pool,
         configuracao: Arc::new(ambiente.web.clone()),
     };

@@ -1,6 +1,7 @@
 //! Acesso ao banco. SQLx é o dono do esquema: as migrações moram aqui, e as
 //! consultas são conferidas na compilação.
 
+mod contas;
 mod documentos;
 mod eventos;
 pub mod fluxo;
@@ -9,6 +10,10 @@ mod sites;
 use sqlx::PgPool;
 use sqlx::migrate::Migrator;
 
+pub use contas::{
+    ConviteCriado, ErroDeConta, SiteDaConta, aceitar_convite, criar_convite, criar_site_para,
+    papel_no_site, sites_da_conta,
+};
 pub use documentos::{
     Ausencia, ItemDeNavegacao, ausencia, documento_publicado, documentos_publicados, navegacao,
     publicar,

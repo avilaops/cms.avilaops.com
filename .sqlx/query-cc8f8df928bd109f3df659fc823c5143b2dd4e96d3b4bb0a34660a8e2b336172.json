@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into participacao (site_id, conta, email, papel)\n        values ($1, $2, $3, $4)\n        on conflict (site_id, conta) do nothing\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cc8f8df928bd109f3df659fc823c5143b2dd4e96d3b4bb0a34660a8e2b336172"
+}

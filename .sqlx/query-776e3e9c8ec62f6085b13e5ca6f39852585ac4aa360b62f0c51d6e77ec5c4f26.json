@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into participacao (site_id, conta, email, papel) values ($1, $2, $3, 'dono')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "776e3e9c8ec62f6085b13e5ca6f39852585ac4aa360b62f0c51d6e77ec5c4f26"
+}

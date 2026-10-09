@@ -16,6 +16,7 @@ use tower::ServiceExt;
 
 pub const DOMINIO_BASE: &str = "sites.teste";
 pub const CHAVE_DO_INDEXNOW: &str = "0123456789abcdef0123456789abcdef";
+pub const HOST_DO_PAINEL: &str = "cms.teste";
 pub const TOKEN_DO_N8N: &str = "token-de-volta-do-teste";
 
 pub struct Resposta {
@@ -42,7 +43,10 @@ pub fn estado(pool: &PgPool, diretorio_de_midia: PathBuf) -> Estado {
             diretorio_de_midia,
             token_do_n8n: Some(Segredo::novo(TOKEN_DO_N8N)),
             chave_do_indexnow: Some(CHAVE_DO_INDEXNOW.into()),
+            host_do_painel: Some(HOST_DO_PAINEL.into()),
+            limites_de_criacao: Default::default(),
         }),
+        auth: None,
     }
 }
 
@@ -65,7 +69,7 @@ pub async fn postar(
     let mut pedido = Request::builder()
         .method("POST")
         .uri(caminho)
-        .header("host", "cms.teste")
+        .header("host", HOST_DO_PAINEL)
         .header("content-type", "application/json");
     if let Some(autorizacao) = autorizacao {
         pedido = pedido.header("authorization", autorizacao);
@@ -76,7 +80,7 @@ pub async fn postar(
     responder(estado(pool, PathBuf::from("midia-que-nao-existe")), pedido).await
 }
 
-async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
+pub async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
     let resposta = roteador(estado)
         .oneshot(pedido)
         .await
