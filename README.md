@@ -7,12 +7,13 @@ painel impede quem edita de estragar isso.
 
 ## Estado
 
-Em desenho. Não há código nem nada publicado.
+O motor está implementado e publicado como biblioteca. CMS e Lojas em Rust
+ainda são desenho: nenhum site está no ar.
 
 | Frente | Entrega | Situação |
 |---|---|---|
 | Base | Convenções comuns em Rust: servidor, banco, login, publicação | Spec escrita, aguardando revisão |
-| Motor | Crate `motor-web`: validação, cabeçalho, JSON-LD, imagens, sitemaps, `robots.txt`, `llms.txt` | Spec escrita, aguardando revisão |
+| Motor | Crate `motor-web`: validação, cabeçalho, JSON-LD, imagens, sitemaps, `robots.txt`, `llms.txt` | Implementado em [avilaops/motor-web](https://github.com/avilaops/motor-web), commit `0f959b6` |
 | CMS | Painel, conector MCP e renderização por host | Spec escrita, aguardando revisão |
 | Lojas | Reescrita do Lojas em Rust, por fatias de rota | Spec escrita, aguardando revisão |
 
