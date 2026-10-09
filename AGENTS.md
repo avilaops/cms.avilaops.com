@@ -50,7 +50,7 @@ Rust não está instalado na máquina do Nicolas.
 | Base Rust | `2026-10-09-base-rust-design.md` | Escrita, aguarda revisão |
 | Motor | `2026-10-09-motor-web-design.md` | Escrita, aguarda revisão |
 | Lojas em Rust | `2026-10-09-lojas-rust-design.md` | Escrita, aguarda revisão |
-| CMS | `2026-10-09-cms-design.md` | Não escrita: depende de respostas do Nicolas |
+| CMS | `2026-10-09-cms-design.md` | Escrita, aguarda revisão |
 
 Não implementar antes de a spec correspondente e o plano dela serem aprovados.
 
@@ -82,6 +82,9 @@ Não implementar antes de a spec correspondente e o plano dela serem aprovados.
   impede publicar; o que avisa não.
 - **`aggregateRating` só com avaliação do próprio site.**
 - **"Atualizado em" só muda quando o conteúdo muda.**
+- **Site é criado pelo cliente, pela equipe ou por agente de IA pelo conector**,
+  sempre pela mesma função. Papéis: Dono, Editor e Autor. Todo site nasce em
+  subdomínio da Ávila Ops e pode ganhar domínio próprio.
 - **A primeira versão do CMS é provada com um site novo de demonstração**, de
   empresa fictícia. Nome de cliente real não entra em fixture, exemplo ou
   teste.
@@ -103,7 +106,8 @@ Não implementar antes de a spec correspondente e o plano dela serem aprovados.
 
 ## Pendências que dependem do Nicolas
 
-- Respostas para a spec do CMS: endereço dos sites, quem cria um site e papéis.
+- CMS: cobrança e planos, nome do domínio-base dos sites, e cadastro aberto no
+  Auth.
 - Quantas lojas estão em produção no Lojas (o repositório registra três; outros
   documentos citam mais).
 - Onde fica o DNS da zona `avilaops.com` ao sair da Cloudflare.

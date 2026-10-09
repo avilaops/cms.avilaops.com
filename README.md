@@ -13,7 +13,7 @@ Em desenho. Não há código nem nada publicado.
 |---|---|---|
 | Base | Convenções comuns em Rust: servidor, banco, login, publicação | Spec escrita, aguardando revisão |
 | Motor | Crate `motor-web`: validação, cabeçalho, JSON-LD, imagens, sitemaps, `robots.txt`, `llms.txt` | Spec escrita, aguardando revisão |
-| CMS | Painel, conector MCP e renderização por host | Spec não escrita |
+| CMS | Painel, conector MCP e renderização por host | Spec escrita, aguardando revisão |
 | Lojas | Reescrita do Lojas em Rust, por fatias de rota | Spec escrita, aguardando revisão |
 
 ## Pilha
@@ -36,5 +36,6 @@ aplicações da Ávila Ops. Sem Node em produção.
 
 - [Base Rust](docs/superpowers/specs/2026-10-09-base-rust-design.md)
 - [Motor](docs/superpowers/specs/2026-10-09-motor-web-design.md)
+- [CMS](docs/superpowers/specs/2026-10-09-cms-design.md)
 - [Lojas em Rust](docs/superpowers/specs/2026-10-09-lojas-rust-design.md)
 - [Regras para agentes](AGENTS.md)
