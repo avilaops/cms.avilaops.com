@@ -101,6 +101,8 @@ const normalizarEvento = node({
       id: '0b9f6a3e-3f1c-4d0a-9d55-6f0c2a8f1e11',
       tipo: 'conteudo.publicado',
       origem: 'https://oficina.sites.example',
+      siteNome: 'Oficina Exemplo',
+      dados: { caminho: '/blog/como-escolher' },
       indexnowChave: '0123456789abcdef0123456789abcdef',
       avisarBuscadores: true,
       urls: [
@@ -128,6 +130,8 @@ const descartarRepetido = node({
       id: '0b9f6a3e-3f1c-4d0a-9d55-6f0c2a8f1e11',
       tipo: 'conteudo.publicado',
       origem: 'https://oficina.sites.example',
+      siteNome: 'Oficina Exemplo',
+      dados: { caminho: '/blog/como-escolher' },
       indexnowChave: '0123456789abcdef0123456789abcdef',
       avisarBuscadores: true,
       urls: ['https://oficina.sites.example/blog/como-escolher'],
