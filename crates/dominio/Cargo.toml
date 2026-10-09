@@ -1,0 +1,11 @@
+[package]
+name = "cms-dominio"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+chrono.workspace = true
+motor-web.workspace = true
+serde.workspace = true

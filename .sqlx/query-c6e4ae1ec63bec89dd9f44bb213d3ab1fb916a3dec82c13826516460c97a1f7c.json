@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into dominio (host, site_id, situacao, conferido_em)\n        values ($1, $2, 'ativo', now())\n        on conflict (host) do update\n            set situacao = 'ativo', conferido_em = now()\n            where dominio.site_id = excluded.site_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c6e4ae1ec63bec89dd9f44bb213d3ab1fb916a3dec82c13826516460c97a1f7c"
+}

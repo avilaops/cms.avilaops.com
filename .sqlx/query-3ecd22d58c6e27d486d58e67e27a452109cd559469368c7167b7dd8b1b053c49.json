@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into documento (site_id, especie, slug, caminho)\n        values ($1, $2, $3, $4)\n        on conflict (site_id, especie, slug) do update set caminho = excluded.caminho\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3ecd22d58c6e27d486d58e67e27a452109cd559469368c7167b7dd8b1b053c49"
+}

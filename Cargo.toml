@@ -1,0 +1,33 @@
+[workspace]
+resolver = "3"
+members = ["crates/dominio", "crates/dados", "crates/web", "crates/servidor"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[workspace.dependencies]
+cms-dominio = { path = "crates/dominio" }
+cms-dados = { path = "crates/dados" }
+cms-web = { path = "crates/web" }
+
+# Fixado por commit: mudou o motor, este `rev` é atualizado de propósito.
+motor-web = { git = "https://github.com/avilaops/motor-web", rev = "c21c3e90b2bbb5ec9a1cd4615f672fbfc87411be" }
+
+askama = "0.16"
+axum = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["serde", "std", "clock"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+
+# O codificador AVIF sem otimização leva minutos por imagem.
+[profile.dev.package."*"]
+opt-level = 2

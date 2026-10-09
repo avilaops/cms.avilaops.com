@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="{{ moldura.idioma }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{{ moldura.head|safe }}
+<style>
+:root{--texto:#1c1917;--suave:#57534e;--linha:#e7e5e4;--fundo:#fff;--destaque:#9a3412;--largura:46rem}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:1.0625rem/1.65 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--texto);background:var(--fundo)}
+a{color:var(--destaque);text-underline-offset:.15em}
+a:focus-visible{outline:3px solid var(--destaque);outline-offset:2px}
+.faixa{max-width:var(--largura);margin:0 auto;padding:0 1.25rem}
+header.topo{border-bottom:1px solid var(--linha)}
+header.topo .faixa{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem 1.5rem;padding-top:1rem;padding-bottom:1rem}
+.marca{font-weight:700;font-size:1.125rem;color:var(--texto);text-decoration:none}
+nav.principal ul{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;list-style:none;margin:0;padding:0}
+nav.principal a{color:var(--suave);text-decoration:none;display:inline-block;padding:.35rem 0}
+nav.principal a[aria-current]{color:var(--texto);font-weight:600}
+main{padding:2rem 0 3rem}
+h1{font-size:clamp(1.75rem,5vw,2.5rem);line-height:1.15;margin:.25rem 0 1rem;letter-spacing:-.01em}
+h2{font-size:1.5rem;line-height:1.25;margin:2.25rem 0 .5rem}
+h3{font-size:1.25rem;margin:1.75rem 0 .5rem}
+h4{font-size:1.0625rem;margin:1.5rem 0 .5rem}
+img{max-width:100%;height:auto;display:block;border-radius:.5rem}
+figure{margin:1.75rem 0}
+figcaption,.datas,.trilha,.cartao .meta{font-size:.9375rem;color:var(--suave)}
+.trilha ol{display:flex;flex-wrap:wrap;gap:.25rem .5rem;list-style:none;margin:0;padding:0}
+.trilha li+li::before{content:"/";margin-right:.5rem;color:var(--linha)}
+.capa{margin:1.25rem 0 1.75rem}
+blockquote{margin:1.5rem 0;padding-left:1rem;border-left:3px solid var(--destaque)}
+blockquote footer{color:var(--suave);font-size:.9375rem}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;display:block;overflow-x:auto}
+th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--linha)}
+dl.perguntas dt{font-weight:600;margin-top:1.25rem}
+dl.perguntas dd{margin:.25rem 0 0}
+iframe{width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:.5rem;margin:1.5rem 0}
+.chamada{margin:2rem 0;padding:1.25rem;border:1px solid var(--linha);border-radius:.5rem}
+.chamada p{margin:0 0 .75rem}
+.chamada a{display:inline-block;padding:.6rem 1rem;border-radius:.375rem;background:var(--destaque);color:#fff;text-decoration:none;font-weight:600}
+.autor{display:flex;gap:1rem;margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--linha)}
+.autor img{width:96px;height:96px;object-fit:cover;border-radius:50%}
+.autor h2{font-size:1.125rem;margin:0}
+.autor p{margin:.25rem 0}
+.autor ul{list-style:none;margin:.5rem 0 0;padding:0;font-size:.9375rem;color:var(--suave)}
+.cartao{padding:1.5rem 0;border-bottom:1px solid var(--linha)}
+.cartao h2{margin:0 0 .25rem}
+.cartao p{margin:.25rem 0}
+footer.rodape{border-top:1px solid var(--linha);padding:1.5rem 0;font-size:.9375rem;color:var(--suave)}
+footer.rodape p{margin:.15rem 0}
+</style>
+</head>
+<body>
+<header class="topo">
+<div class="faixa">
+<a class="marca" href="/">{{ moldura.nome_do_site }}</a>
+<nav class="principal" aria-label="Principal">
+<ul>
+{%- for link in moldura.navegacao %}
+<li><a href="{{ link.url }}"{% if link.atual %} aria-current="page"{% endif %}>{{ link.rotulo }}</a></li>
+{%- endfor %}
+</ul>
+</nav>
+</div>
+</header>
+<main>
+<div class="faixa">
+{% block conteudo %}{% endblock %}
+</div>
+</main>
+<footer class="rodape">
+<div class="faixa">
+{%- for linha in moldura.rodape %}
+<p>{{ linha }}</p>
+{%- endfor %}
+</div>
+</footer>
+</body>
+</html>

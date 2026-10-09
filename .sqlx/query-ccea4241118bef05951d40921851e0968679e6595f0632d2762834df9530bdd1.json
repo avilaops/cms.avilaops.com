@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update documento\n        set situacao = 'publicado',\n            versao_publicada = $2,\n            publicado_em = coalesce(publicado_em, $3),\n            atualizado_em = $4\n        where id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ccea4241118bef05951d40921851e0968679e6595f0632d2762834df9530bdd1"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into site (slug, situacao, provisorio_definitivo, perfil)\n        values ($1, $2, $3, $4)\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Bool",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b4e28c756020926805e685e1bf5e65e35a2c9491d0b7cfa3cb263cee05dc10a3"
+}

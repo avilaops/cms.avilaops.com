@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<h1>{{ titulo }}</h1>
+{%- for cartao in cartoes %}
+<article class="cartao">
+<h2><a href="{{ cartao.url }}">{{ cartao.titulo }}</a></h2>
+<p class="meta"><time datetime="{{ cartao.data_iso }}">{{ cartao.data }}</time> · {{ cartao.autor }}</p>
+<p>{{ cartao.resumo }}</p>
+</article>
+{%- endfor %}
+{% endblock %}

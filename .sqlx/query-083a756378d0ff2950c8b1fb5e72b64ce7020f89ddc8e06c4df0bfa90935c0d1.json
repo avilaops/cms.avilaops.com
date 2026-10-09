@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update site set situacao = $2, atualizado_em = now() where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "083a756378d0ff2950c8b1fb5e72b64ce7020f89ddc8e06c4df0bfa90935c0d1"
+}

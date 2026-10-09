@@ -1,0 +1,26 @@
+[package]
+name = "cms-servidor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "servidor"
+path = "src/main.rs"
+
+[dependencies]
+axum.workspace = true
+chrono.workspace = true
+cms-dados.workspace = true
+cms-dominio.workspace = true
+cms-web.workspace = true
+# Só o necessário para desenhar as imagens do site de demonstração.
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+motor-web = { workspace = true, features = ["imagem"] }
+sqlx.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true

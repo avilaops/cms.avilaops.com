@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<article>
+{%- if !trilha.is_empty() %}
+<nav class="trilha" aria-label="Você está em">
+<ol>
+{%- for item in trilha %}
+<li>{% if loop.last %}<span aria-current="page">{{ item.nome }}</span>{% else %}<a href="{{ item.url }}">{{ item.nome }}</a>{% endif %}</li>
+{%- endfor %}
+</ol>
+</nav>
+{%- endif %}
+<h1>{{ titulo }}</h1>
+{%- if let Some(datas) = datas %}
+<p class="datas">Publicado em <time datetime="{{ datas.publicado_iso }}">{{ datas.publicado }}</time>
+{%- if datas.mostrar_atualizado %} · Atualizado em <time datetime="{{ datas.atualizado_iso }}">{{ datas.atualizado }}</time>{% endif %}</p>
+{%- endif %}
+{%- if !capa.is_empty() %}
+<div class="capa">{{ capa|safe }}</div>
+{%- endif %}
+{{ corpo|safe }}
+{%- if let Some(autor) = autor %}
+<aside class="autor" aria-label="Sobre quem escreveu">
+{{ autor.foto|safe }}
+<div>
+<h2>{{ autor.nome }}</h2>
+<p>{{ autor.cargo }}</p>
+<p>{{ autor.bio }}</p>
+{%- if !autor.credenciais.is_empty() || !autor.perfis.is_empty() %}
+<ul>
+{%- for credencial in autor.credenciais %}
+<li>{{ credencial }}</li>
+{%- endfor %}
+{%- for perfil in autor.perfis %}
+<li><a href="{{ perfil }}" rel="me noopener">{{ perfil }}</a></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</div>
+</aside>
+{%- endif %}
+</article>
+{% endblock %}

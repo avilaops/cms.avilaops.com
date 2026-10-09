@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update documento set situacao = 'despublicado', versao_publicada = null\n        where site_id = (select id from site where slug = $1)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cea635a9c304b1b6660afb4ba557d0b7938ba4799df946668b9bb716a0853f5d"
+}

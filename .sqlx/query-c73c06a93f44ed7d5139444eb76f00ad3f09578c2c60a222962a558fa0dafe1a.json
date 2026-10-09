@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select s.id, s.slug, s.situacao, s.provisorio_definitivo,\n               s.perfil as \"perfil: Json<PerfilDoSite>\",\n               d.host as dominio_ativo\n        from dominio d\n        join site s on s.id = d.site_id\n        where d.host = $1 and d.situacao = 'ativo'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "situacao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "provisorio_definitivo",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "perfil: Json<PerfilDoSite>",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "dominio_ativo",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c73c06a93f44ed7d5139444eb76f00ad3f09578c2c60a222962a558fa0dafe1a"
+}

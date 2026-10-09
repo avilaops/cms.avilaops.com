@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select 1 as \"um!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "um!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4621cba3be1ba0a396244542410f70043d29b7835f3a86849d02fce15dbfbcd5"
+}

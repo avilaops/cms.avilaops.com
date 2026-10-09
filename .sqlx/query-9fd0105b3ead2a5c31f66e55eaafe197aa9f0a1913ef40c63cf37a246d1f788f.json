@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update dominio set situacao = 'pendente' where site_id = $1 and situacao = 'ativo'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9fd0105b3ead2a5c31f66e55eaafe197aa9f0a1913ef40c63cf37a246d1f788f"
+}
