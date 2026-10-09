@@ -15,7 +15,9 @@ Convenções comuns: `2026-10-09-base-rust-design.md`. Regras de conteúdo:
   próprio.
 - Papéis: Dono, Editor e Autor.
 - Prova da primeira versão: um site novo de demonstração.
-- Sem Cloudflare e sem Twilio. n8n nas automações de negócio.
+- Sem Cloudflare e sem Twilio.
+- O n8n assume o que não precisa ser código Rust. Ver "O que fica com o n8n".
+- Todo e-mail sai de `noreply@avilaops.com`.
 
 ## Objetivo
 
@@ -414,6 +416,9 @@ O alvo de desempenho é do tema padrão sem script de terceiros. Com GTM, a nota
   de outro site, esperando recusa.
 - Conector: fluxo de autorização e cada ferramenta com escopo certo e errado.
 - HTML público comparado com referência.
+- Corpo de cada tipo de evento enviado ao n8n comparado com referência, e a
+  rota de volta testada com token certo, errado e evento já encerrado.
+- Publicação com o n8n fora do ar: o site publica e o evento fica na fila.
 - Lighthouse do site de demonstração no build.
 
 ## Critério de pronto

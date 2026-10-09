@@ -17,7 +17,9 @@ para `docs/` do repositório do Lojas, que é onde o código mora.
 - SQLx é dono do esquema desde o dia 0. O Next não migra mais.
 - Painel também em Rust, por template.
 - Sem Cloudflare e sem Twilio.
-- n8n continua nas automações de negócio.
+- n8n continua nas automações de negócio, com o contrato atual
+  (`lojas-eventos`). O envio de e-mail e WhatsApp continua no servidor.
+- Todo e-mail sai de `noreply@avilaops.com`.
 
 ## O que existe hoje
 
@@ -213,12 +215,12 @@ Sem caminho público novo; assume `/api/admin/rotinas*` e
   Mercado Livre, com a fatia 8.
 - E-mail com `lettre`, WhatsApp pela Cloud API da Meta. O texto de cada
   mensagem é função pura, como hoje.
-- **A decidir por Nicolas:** com o n8n assumindo o que não precisa ser código
-  (09/10/2026), esta fatia poderia deixar e-mail e WhatsApp no n8n em vez de
-  portá-los. Isso desfaz uma decisão anterior do Lojas, registrada no
-  `AGENTS.md` dele ("o relógio é nosso, e o e-mail também"), tomada porque
-  executar metade dos canais fazia aviso ao lojista sumir sem ninguém notar. A
-  spec mantém o envio no servidor até essa decisão ser revista de propósito.
+- O envio fica no servidor, e não no n8n, mesmo com o n8n assumindo o que não
+  precisa ser código (09/10/2026). O Lojas já teve o envio no n8n e voltou
+  atrás: executar metade dos canais fazia aviso ao lojista sumir sem ninguém
+  notar, e a regra está no `AGENTS.md` dele ("o relógio é nosso, e o e-mail
+  também"). A opção foi apresentada a Nicolas em 09/10/2026 e ele não pediu a
+  mudança; se pedir, é esta fatia que muda.
 - Webhook de saída: só `https`, nome resolvido e recusado se for rede interna,
   redirecionamento não seguido.
 - O contrato com o n8n não muda: mesmo corpo, mesmas rotas de reivindicar e
@@ -373,7 +375,7 @@ loja de teste e o corte loja a loja.
 |---|---|---|
 | SDK `@google/genai` | HTTP direto para a API do Gemini | Baixo |
 | `onnxruntime-node` | crate `ort` | Médio: biblioteca nativa, tamanho da imagem |
-| `sharp` | `motor-web` com `image`, `webp`, `ravif` | Médio: AVIF é lento, exige fila |
+| `sharp` | `motor-web` com a *feature* `imagem`, já implementada | Médio: AVIF é lento, exige fila; AVIF não é aceito como arquivo de entrada |
 | SMTP próprio sobre `node:net` | crate `lettre` | Baixo |
 | Leitor e escritor de `.xlsx` próprios | `calamine` e `rust_xlsxwriter` | Baixo |
 | Componentes React do checkout | Template e script estático com o SDK do Mercado Pago | Médio: tela que cobra |

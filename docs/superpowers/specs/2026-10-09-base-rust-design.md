@@ -15,8 +15,9 @@ Specs que dependem desta: `2026-10-09-motor-web-design.md`,
 - Sem Cloudflare e sem Twilio: a plataforma usa a estrutura própria da Ávila
   Ops. Esta decisão prevalece, nestes projetos, sobre a linha do contexto
   corporativo que cita os dois.
-- n8n continua nas automações de negócio, no desenho atual do Lojas: o servidor
-  emite o evento e o n8n reivindica o que espera ou depende de terceiros.
+- O n8n assume o que não precisa ser código Rust: o que acontece depois do
+  fato e fala com terceiros. Ver "O que vai para o n8n".
+- Todo e-mail sai de `noreply@avilaops.com`.
 
 ## O que se espera do Rust, e o que não se promete
 
@@ -146,7 +147,11 @@ serviço de fora.
 - Decodificar e redimensionar: crate `image`.
 - WebP: crate `webp` (libwebp), porque o codificador WebP do `image` é só sem
   perdas e gera arquivo maior que o JPG de origem.
-- AVIF: crate `ravif`. Leva segundos por imagem.
+- AVIF: o codificador do próprio `image` (`ravif` por baixo). Leva segundos
+  por imagem.
+- Arquivo aceito no envio: JPG, PNG ou WebP. AVIF é só formato de saída.
+- Tudo isso já está no `motor-web`, atrás da *feature* `imagem`: a aplicação
+  chama `processar_imagem` e cuida só da fila e do disco.
 - O upload grava o original, responde, e as variantes saem pela fila de
   tarefas. Enquanto não existem, a página usa o original com as dimensões já
   conhecidas.
@@ -171,8 +176,13 @@ serviço de fora.
 
 O caminho em uso é o build manual do `avilaops/infra`
 (`scripts/publicar-manual.ps1`): build no `apps-noclient`, troca no servidor de
-aplicações. O GitHub Actions da conta está parado por cobrança; os workflows
-ficam prontos para quando voltar.
+aplicações.
+
+O GitHub Actions roda em repositório público da conta: o `motor-web` valida lá
+desde 09/10/2026. O bloqueio por cobrança vale para repositório privado. Como
+o repositório do CMS é público, a validação dele (`fmt`, `clippy`, testes)
+roda no Actions; a publicação segue pelo caminho manual até o infra decidir o
+contrário.
 
 O que cada aplicação cumpre:
 

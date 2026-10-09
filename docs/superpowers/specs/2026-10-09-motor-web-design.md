@@ -6,6 +6,11 @@ aprovados; muda a linguagem e saem os componentes React.
 
 Convenções comuns: `2026-10-09-base-rust-design.md`.
 
+**Estado: implementado.** O crate está em
+[avilaops/motor-web](https://github.com/avilaops/motor-web), e os três
+critérios de pronto foram cumpridos em 09/10/2026. Este documento descreve o
+que foi construído; mudança no crate atualiza este texto no mesmo trabalho.
+
 ## Contexto
 
 A Ávila Ops vai ter um CMS próprio ao lado do Lojas. O diferencial é o site já
@@ -396,7 +401,7 @@ pub struct ImagemProcessada {
     pub nome: String,               // slug do nome original + 8 caracteres do hash
     pub largura: u32,
     pub altura: u32,
-    pub variantes: Vec<VarianteGerada>,   // formato, largura, bytes
+    pub variantes: Vec<VarianteGerada>,   // formato, largura, arquivo, bytes
 }
 
 pub fn processar_imagem(nome_original: &str, bytes: &[u8])
@@ -525,7 +530,8 @@ peso. A medição, com build falhando abaixo do alvo, é do ciclo 2.
 | `<HeadSEO/>` e `paraMetadataNext` | `montar_cabecalho` e `Cabecalho::para_html` |
 | `<MediaRenderer/>` | `renderizar_midia` |
 | Corpo como componente React | `renderizar_corpo`, HTML em texto |
-| `sharp` | `image`, `webp` e `ravif` |
+| `sharp` | `image` (com o codificador AVIF dele) e `webp` |
+| Aceitava AVIF no envio | Só JPG, PNG e WebP no envio |
 | Canônica como campo de `Seo` | Calculada de origem e caminho |
 | `Problema[]` | `Vec<Problema>`, mesma semântica |
 | Gerador lança erro de programação | `Result` com `DocumentoInvalido` |
