@@ -1,7 +1,7 @@
 {% extends "painel_base.html" %}
 {% block titulo %}Equipe de {{ site }}{% endblock %}
 {% block conteudo %}
-<a class="voltar" href="/painel">‹ Meus sites</a>
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
 <h1>Equipe</h1>
 <p class="quem">{{ site }}</p>
 {%- if let Some(erro) = erro %}

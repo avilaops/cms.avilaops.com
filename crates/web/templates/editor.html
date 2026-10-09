@@ -1,0 +1,140 @@
+{% extends "painel_base.html" %}
+{% block titulo %}{{ cabecalho }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>{{ cabecalho }}</h1>
+<p class="quem">{{ estado }}</p>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+{%- if !problemas.is_empty() %}
+<ul class="problemas" aria-label="O que falta para publicar">
+{%- for problema in problemas %}
+<li{% if problema.bloqueia %} class="bloqueia"{% endif %}>{{ problema.mensagem }}</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+<form method="post" action="{{ destino }}">
+<button class="oculto" name="acao" value="salvar" tabindex="-1" aria-hidden="true">Salvar</button>
+<input type="hidden" name="especie" value="{% if f.eh_post %}post{% else %}pagina{% endif %}">
+<input type="hidden" name="n" value="{{ blocos.len() }}">
+<label for="titulo">Título</label>
+<input id="titulo" name="titulo" maxlength="160" value="{{ f.titulo }}">
+<label for="slug">Endereço{% if !f.eh_post %} (em branco é a página inicial){% endif %}</label>
+<input id="slug" name="slug" maxlength="80" autocapitalize="none" spellcheck="false" value="{{ f.slug }}">
+{%- if f.eh_post %}
+<label for="tipo_do_post">Tipo</label>
+<select id="tipo_do_post" name="tipo_do_post">
+{%- for opcao in tipos_de_post %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<label for="resumo">Resumo</label>
+<textarea id="resumo" name="resumo" maxlength="300">{{ f.resumo }}</textarea>
+<label for="autor">Autor</label>
+<select id="autor" name="autor">
+<option value="">Escolha</option>
+{%- for opcao in autores %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<label for="categoria">Categoria</label>
+<select id="categoria" name="categoria">
+<option value="">Escolha</option>
+{%- for opcao in categorias %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<label for="tags">Marcadores, separados por vírgula</label>
+<input id="tags" name="tags" value="{{ f.tags }}">
+{%- endif %}
+<label for="capa">Imagem de capa</label>
+<select id="capa" name="capa">
+<option value="">Sem capa</option>
+{%- for opcao in capas %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+{%- for bloco in blocos %}
+<fieldset>
+<legend>{{ bloco.nome }}</legend>
+<input type="hidden" name="b{{ bloco.i }}_tipo" value="{{ bloco.tipo }}">
+{%- if !bloco.niveis.is_empty() %}
+<label for="b{{ bloco.i }}_nivel">Nível</label>
+<select id="b{{ bloco.i }}_nivel" name="b{{ bloco.i }}_nivel">
+{%- for opcao in bloco.niveis %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+{%- endif %}
+{%- if bloco.usa_midia %}
+<label for="b{{ bloco.i }}_midia">Imagem da biblioteca</label>
+<select id="b{{ bloco.i }}_midia" name="b{{ bloco.i }}_midia">
+<option value="">Escolha</option>
+{%- for opcao in bloco.midias %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+{%- else %}
+<label for="b{{ bloco.i }}_texto">{{ bloco.dica }}</label>
+<textarea id="b{{ bloco.i }}_texto" name="b{{ bloco.i }}_texto">{{ bloco.texto }}</textarea>
+{%- endif %}
+{%- if bloco.usa_ordenada %}
+<label class="marcar"><input type="checkbox" name="b{{ bloco.i }}_ordenada" value="1"{% if bloco.ordenada %} checked{% endif %}> Numerada</label>
+{%- endif %}
+{%- if bloco.usa_fonte %}
+<label for="b{{ bloco.i }}_fonte">De quem é a citação</label>
+<input id="b{{ bloco.i }}_fonte" name="b{{ bloco.i }}_fonte" value="{{ bloco.fonte }}">
+{%- endif %}
+{%- if bloco.usa_rotulo %}
+<label for="b{{ bloco.i }}_rotulo">Texto do botão</label>
+<input id="b{{ bloco.i }}_rotulo" name="b{{ bloco.i }}_rotulo" value="{{ bloco.rotulo }}">
+{%- endif %}
+{%- if bloco.usa_url %}
+<label for="b{{ bloco.i }}_url">Endereço</label>
+<input id="b{{ bloco.i }}_url" name="b{{ bloco.i }}_url" autocapitalize="none" spellcheck="false" value="{{ bloco.url }}">
+{%- endif %}
+<div class="mover">
+<button name="acao" value="subir:{{ bloco.i }}" aria-label="Subir este bloco">↑</button>
+<button name="acao" value="descer:{{ bloco.i }}" aria-label="Descer este bloco">↓</button>
+<button name="acao" value="remover:{{ bloco.i }}">Remover</button>
+</div>
+</fieldset>
+{%- endfor %}
+<div class="linha">
+<select name="novo_tipo" aria-label="Tipo do bloco novo">
+{%- for opcao in tipos_de_bloco %}
+<option value="{{ opcao.valor }}">{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<button name="acao" value="adicionar">Acrescentar</button>
+</div>
+<fieldset>
+<legend>Como aparece no Google</legend>
+<label for="seo_titulo">Título de busca (até 60 caracteres)</label>
+<input id="seo_titulo" name="seo_titulo" maxlength="120" value="{{ f.seo_titulo }}">
+<label for="seo_descricao">Descrição de busca (até 155 caracteres)</label>
+<textarea id="seo_descricao" name="seo_descricao" maxlength="300">{{ f.seo_descricao }}</textarea>
+<label class="marcar"><input type="checkbox" name="indexar" value="1"{% if f.indexar %} checked{% endif %}> Aparecer nos buscadores</label>
+</fieldset>
+<button name="acao" value="salvar">Salvar rascunho</button>
+{%- if pode_revisar %}
+<button class="secundario" name="acao" value="revisar">Enviar para revisão</button>
+{%- endif %}
+{%- if pode_devolver %}
+<button class="secundario" name="acao" value="devolver">Devolver a quem escreveu</button>
+{%- endif %}
+{%- if pode_publicar %}
+<button name="acao" value="publicar">Publicar</button>
+{%- endif %}
+{%- if pode_despublicar %}
+<button class="secundario" name="acao" value="despublicar">Tirar do ar</button>
+{%- endif %}
+</form>
+{%- if let Some(previa) = previa %}
+<p class="atalhos"><a href="{{ previa }}">Ver a prévia</a></p>
+{%- endif %}
+{% endblock %}

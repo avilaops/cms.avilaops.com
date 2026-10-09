@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select slug, nome, cargo, bio, foto_id, perfis, credenciais\n        from autor where site_id = $1 order by nome, slug\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "cargo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "bio",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "foto_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "perfis",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "credenciais",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "dce1c862eaa36fc44e40a0508541a5d351e87a5eb7f98b934017a8363a671d7c"
+}

@@ -5,6 +5,7 @@ use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
+use cms_dominio::eventos::origem_do_site;
 use cms_dominio::site::aparece_na_busca;
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
@@ -360,6 +361,30 @@ async fn blog(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
     }
     .render()?;
     Ok(html(StatusCode::OK, pagina, pedido.indexavel))
+}
+
+/// A página como o visitante a veria, montada a partir de um rascunho. Só lê:
+/// não grava e sai sempre fora da busca.
+pub(crate) async fn previa(
+    estado: &Estado,
+    gravado: SiteGravado,
+    mut documento: Documento,
+) -> Result<String, ErroWeb> {
+    let configuracao = &estado.configuracao;
+    let origem = origem_do_site(
+        &configuracao.esquema,
+        &configuracao.dominio_base,
+        &gravado.slug,
+        gravado.dominio_ativo.as_deref(),
+    );
+    let pedido = Pedido {
+        site: gravado.perfil.para_site(&origem),
+        gravado,
+        indexavel: false,
+    };
+    ajustar_indexacao(&mut documento, false);
+    let moldura = moldura(estado, &pedido, &documento).await?;
+    Ok(PaginaDeDocumento::nova(moldura, &documento).render()?)
 }
 
 /// O que o visitante lê quando o endereço não tem página.

@@ -861,3 +861,375 @@ async fn imagem_em_uso_nao_e_apagada_e_sem_variante_nao_vai_ao_ar(pool: PgPool) 
     );
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
+
+/// Um formulário do editor, codificado como o navegador manda.
+fn formulario(campos: &[(&str, &str)]) -> String {
+    serde_urlencoded::to_string(campos).expect("formulário codificado")
+}
+
+/// O endereço do documento para onde o editor redirecionou, sem o recado.
+fn documento_de(resposta: &Resposta) -> String {
+    assert_eq!(resposta.status, StatusCode::SEE_OTHER);
+    let destino = resposta.cabecalho("location");
+    destino.split('?').next().unwrap_or(destino).to_string()
+}
+
+const PAGINA: [(&str, &str); 8] = [
+    ("especie", "pagina"),
+    ("titulo", "Sobre a padaria"),
+    ("slug", "sobre"),
+    ("seo_titulo", "Sobre a Padaria da Ana"),
+    (
+        "seo_descricao",
+        "Conheça a história e o jeito de trabalhar da Padaria da Ana, no bairro desde 1998.",
+    ),
+    ("indexar", "1"),
+    ("n", "1"),
+    ("b0_tipo", "paragrafo"),
+];
+
+fn pagina_com(extras: &[(&str, &str)]) -> String {
+    let mut campos = PAGINA.to_vec();
+    campos.extend_from_slice(extras);
+    formulario(&campos)
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn escrever_rever_e_publicar_uma_pagina_pelo_painel(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const SITE: &str = "/painel/sites/padaria";
+
+    let vazio = painel.abrir(Some("ana"), SITE).await;
+    assert_eq!(vazio.status, StatusCode::OK);
+    assert!(vazio.corpo.contains("ainda não tem conteúdo"));
+    let novo = painel
+        .abrir(Some("ana"), &format!("{SITE}/novo/pagina"))
+        .await;
+    assert!(novo.corpo.contains("Nova página"));
+    assert_eq!(
+        painel
+            .abrir(Some("ana"), &format!("{SITE}/novo/produto"))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+
+    let texto = "A **Padaria** abre cedo. Veja [o cardápio](/cardapio).";
+    let salvo = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/doc"),
+            &pagina_com(&[("b0_texto", texto), ("acao", "salvar")]),
+        )
+        .await;
+    assert!(salvo.cabecalho("location").ends_with("?r=salvo"));
+    let documento = documento_de(&salvo);
+
+    let editor = painel
+        .abrir(Some("ana"), &format!("{documento}?r=salvo"))
+        .await;
+    assert_eq!(editor.status, StatusCode::OK);
+    assert!(editor.corpo.contains("Rascunho salvo."));
+    assert!(editor.corpo.contains(r#"value="Sobre a padaria""#));
+    // O parágrafo volta na marcação em que foi digitado.
+    assert!(
+        editor
+            .corpo
+            .contains("A **Padaria** abre cedo. Veja [o cardápio](/cardapio).")
+    );
+    assert!(
+        painel
+            .abrir(Some("ana"), SITE)
+            .await
+            .corpo
+            .contains("Página · Rascunho")
+    );
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/sobre").await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // A prévia mostra a página pelo template do site, sem pôr nada no ar.
+    let previa = painel
+        .abrir(Some("ana"), &format!("{documento}/previa"))
+        .await;
+    assert_eq!(previa.status, StatusCode::OK);
+    assert!(previa.corpo.contains("<h1>Sobre a padaria</h1>"));
+    assert!(previa.corpo.contains("<strong>Padaria</strong>"));
+    assert!(
+        previa
+            .corpo
+            .contains(r#"<a href="/cardapio">o cardápio</a>"#)
+    );
+    assert_eq!(previa.cabecalho("x-robots-tag"), "noindex");
+    assert_eq!(previa.cabecalho("cache-control"), "private, no-store");
+
+    // Acrescentar um bloco salva e devolve o editor com ele.
+    let com_bloco = painel
+        .postar(
+            "ana",
+            &documento,
+            &pagina_com(&[
+                ("b0_texto", texto),
+                ("novo_tipo", "titulo"),
+                ("acao", "adicionar"),
+            ]),
+        )
+        .await;
+    let editor = painel.abrir(Some("ana"), &documento_de(&com_bloco)).await;
+    assert!(editor.corpo.contains(r#"name="b1_tipo" value="titulo""#));
+    assert!(editor.corpo.contains(r#"name="n" value="2""#));
+
+    let publicado = painel
+        .postar(
+            "ana",
+            &documento,
+            &pagina_com(&[
+                ("b0_texto", texto),
+                ("n", "2"),
+                ("b1_tipo", "titulo"),
+                ("b1_nivel", "2"),
+                ("b1_texto", "Nossa história"),
+                ("acao", "publicar"),
+            ]),
+        )
+        .await;
+    assert!(publicado.cabecalho("location").ends_with("?r=publicado"));
+    let no_ar = pedir(&pool, &host("padaria"), "/sobre").await;
+    assert_eq!(no_ar.status, StatusCode::OK);
+    assert!(no_ar.corpo.contains("Nossa história</h2>"));
+    assert!(
+        no_ar
+            .corpo
+            .contains("<title>Sobre a Padaria da Ana</title>")
+    );
+    assert!(
+        painel
+            .abrir(Some("ana"), SITE)
+            .await
+            .corpo
+            .contains("Página · No ar")
+    );
+
+    let fora = painel
+        .postar("ana", &documento, &formulario(&[("acao", "despublicar")]))
+        .await;
+    assert!(fora.cabecalho("location").ends_with("?r=despublicado"));
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/sobre").await.status,
+        StatusCode::GONE
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn publicar_incompleto_salva_e_mostra_o_que_falta(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let incompleto = formulario(&[
+        ("especie", "pagina"),
+        ("titulo", "Contato"),
+        ("slug", "blog"),
+        ("n", "0"),
+        ("acao", "publicar"),
+    ]);
+    let recusado = painel
+        .postar("ana", "/painel/sites/padaria/doc", &incompleto)
+        .await;
+    assert!(recusado.cabecalho("location").ends_with("?r=recusado"));
+
+    let editor = painel
+        .abrir(
+            Some("ana"),
+            &format!("{}?r=recusado", documento_de(&recusado)),
+        )
+        .await;
+    assert!(editor.corpo.contains("corrija o que está em vermelho"));
+    assert!(editor.corpo.contains(r#"class="bloqueia""#));
+    assert!(
+        editor
+            .corpo
+            .contains("Escreva o título que vai aparecer no Google.")
+    );
+    assert!(editor.corpo.contains("é usado pelo próprio site"));
+    // O que foi digitado ficou salvo.
+    assert!(editor.corpo.contains(r#"value="Contato""#));
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/blog").await.status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn autor_escreve_e_pede_revisao_e_o_dono_devolve(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let convite = painel
+        .postar(
+            "ana",
+            "/painel/sites/padaria/convites",
+            "email=bia%40exemplo.example&papel=autor",
+        )
+        .await;
+    painel
+        .abrir(Some("bia"), &caminho_do_convite(&convite.corpo))
+        .await;
+
+    let corpo = |acao: &str| pagina_com(&[("b0_texto", "Texto da Bia."), ("acao", acao)]);
+    let salvo = painel
+        .postar("bia", "/painel/sites/padaria/doc", &corpo("salvar"))
+        .await;
+    let documento = documento_de(&salvo);
+
+    // Autor não vê o botão de publicar, e o pedido direto é recusado.
+    let editor = painel.abrir(Some("bia"), &documento).await;
+    assert!(editor.corpo.contains(r#"value="revisar""#));
+    assert!(!editor.corpo.contains(r#"value="publicar""#));
+    let negado = painel.postar("bia", &documento, &corpo("publicar")).await;
+    assert!(negado.cabecalho("location").ends_with("?r=sem-permissao"));
+
+    let pedido = painel.postar("bia", &documento, &corpo("revisar")).await;
+    assert!(pedido.cabecalho("location").ends_with("?r=revisao"));
+    let da_dona = painel.abrir(Some("ana"), &documento).await;
+    assert!(da_dona.corpo.contains("Em revisão"));
+    assert!(da_dona.corpo.contains(r#"value="devolver""#));
+    let devolvido = painel
+        .postar("ana", &documento, &formulario(&[("acao", "devolver")]))
+        .await;
+    assert!(devolvido.cabecalho("location").ends_with("?r=devolvido"));
+
+    // Quem não é do site não abre o documento nem a prévia.
+    for caminho in [documento.clone(), format!("{documento}/previa")] {
+        assert_eq!(
+            painel.abrir(Some("caio"), &caminho).await.status,
+            StatusCode::NOT_FOUND,
+            "{caminho}"
+        );
+    }
+    assert_eq!(
+        painel
+            .postar("caio", &documento, &corpo("publicar"))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn post_sai_com_autor_categoria_e_capa_do_cadastro(pool: PgPool) {
+    use motor_web::tipos::Formato;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const SITE: &str = "/painel/sites/padaria";
+
+    // Uma imagem pronta na biblioteca, larga o bastante para capa.
+    painel
+        .enviar_imagem(
+            "ana",
+            "padaria",
+            &png(1400, 800, 77),
+            "Fornada de pães saindo do forno",
+        )
+        .await;
+    let (imagem, _) = imagem_do_site(&pool).await;
+    let variante = cms_dados::VarianteGravada {
+        formato: Formato::Webp,
+        largura: 1400,
+        arquivo: "fornada-0a1b2c3d-1400.webp".into(),
+        bytes: 999,
+    };
+    cms_dados::concluir_midia(&pool, imagem, 1400, 800, &[variante])
+        .await
+        .expect("imagem pronta");
+    let imagem = imagem.to_string();
+
+    let autor = formulario(&[
+        ("nome", "Ana Souza"),
+        ("cargo", "Padeira"),
+        ("bio", "Faz pão de fermentação natural desde 1998."),
+        ("foto", &imagem),
+        ("credenciais", "Curso de panificação artesanal"),
+    ]);
+    let salvo = painel
+        .postar("ana", &format!("{SITE}/autores"), &autor)
+        .await;
+    assert!(salvo.cabecalho("location").ends_with("/catalogo?r=autor"));
+    let salva = painel
+        .postar("ana", &format!("{SITE}/categorias"), "nome=Receitas")
+        .await;
+    assert!(
+        salva
+            .cabecalho("location")
+            .ends_with("/catalogo?r=categoria")
+    );
+    let catalogo = painel.abrir(Some("ana"), &format!("{SITE}/catalogo")).await;
+    assert!(catalogo.corpo.contains("Ana Souza"));
+    assert!(catalogo.corpo.contains("/blog/categoria/receitas"));
+
+    let post = formulario(&[
+        ("especie", "post"),
+        ("titulo", "Como fazer pão de fermentação natural"),
+        ("slug", "pao-de-fermentacao-natural"),
+        ("tipo_do_post", "guia-tecnico"),
+        ("resumo", "O passo a passo do fermento ao forno."),
+        ("autor", "ana-souza"),
+        ("categoria", "receitas"),
+        ("tags", "pão, fermento"),
+        ("capa", &imagem),
+        ("seo_titulo", "Pão de fermentação natural: passo a passo"),
+        (
+            "seo_descricao",
+            "Aprenda a fazer pão de fermentação natural em casa, do fermento ao forno, com a Padaria da Ana.",
+        ),
+        ("indexar", "1"),
+        ("n", "2"),
+        ("b0_tipo", "paragrafo"),
+        ("b0_texto", "Comece pelo fermento."),
+        ("b1_tipo", "imagem"),
+        ("b1_midia", &imagem),
+        ("acao", "publicar"),
+    ]);
+    let publicado = painel.postar("ana", &format!("{SITE}/doc"), &post).await;
+    assert!(
+        publicado.cabecalho("location").ends_with("?r=publicado"),
+        "{}",
+        publicado.cabecalho("location")
+    );
+
+    let no_ar = pedir(&pool, &host("padaria"), "/blog/pao-de-fermentacao-natural").await;
+    assert_eq!(no_ar.status, StatusCode::OK);
+    assert!(no_ar.corpo.contains("Ana Souza"));
+    assert!(no_ar.corpo.contains("Curso de panificação artesanal"));
+    assert!(no_ar.corpo.contains("/midia/fornada-0a1b2c3d-1400.webp"));
+    assert!(
+        pedir(&pool, &host("padaria"), "/blog")
+            .await
+            .corpo
+            .contains("Como fazer pão")
+    );
+
+    // O editor reabre o post com o que foi escolhido.
+    let editor = painel.abrir(Some("ana"), &documento_de(&publicado)).await;
+    assert!(
+        editor
+            .corpo
+            .contains(r#"<option value="ana-souza" selected>"#)
+    );
+    assert!(
+        editor
+            .corpo
+            .contains(r#"<option value="receitas" selected>"#)
+    );
+    assert!(
+        editor
+            .corpo
+            .contains(r#"<option value="guia-tecnico" selected>"#)
+    );
+    // Em uso na capa, no corpo e na foto do autor: a imagem não é apagada.
+    let recusada = painel
+        .postar("ana", &format!("{SITE}/midia/{imagem}/apagar"), "")
+        .await;
+    assert_eq!(recusada.status, StatusCode::CONFLICT);
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}

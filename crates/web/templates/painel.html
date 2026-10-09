@@ -15,7 +15,7 @@
 <ul>
 {%- for site in sites %}
 <li>
-<strong>{{ site.nome }}</strong>
+<a href="{{ site.abrir }}"><strong>{{ site.nome }}</strong></a>
 <a href="{{ site.url }}">{{ site.endereco }}</a>
 <span class="etiquetas">{{ site.situacao }} · {{ site.papel }}</span>
 <a class="acao" href="{{ site.midia }}">Imagens</a>

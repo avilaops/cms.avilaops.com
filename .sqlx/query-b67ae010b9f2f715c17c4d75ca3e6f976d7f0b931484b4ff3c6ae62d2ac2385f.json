@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select d.id, d.situacao, d.caminho, d.criado_por,\n               (d.versao_rascunho is not null) as \"tem_rascunho!\",\n               (d.revisao_pedida_em is not null) as \"em_revisao!\",\n               v.conteudo as \"conteudo: Json<Conteudo>\"\n        from documento d\n        join versao v on v.id = coalesce(d.versao_rascunho, d.versao_publicada)\n        where d.id = $1 and d.site_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "situacao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "caminho",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "criado_por",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "tem_rascunho!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "em_revisao!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "conteudo: Json<Conteudo>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "b67ae010b9f2f715c17c4d75ca3e6f976d7f0b931484b4ff3c6ae62d2ac2385f"
+}

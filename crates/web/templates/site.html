@@ -1,0 +1,25 @@
+{% extends "painel_base.html" %}
+{% block titulo %}{{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel">‹ Meus sites</a>
+<h1>{{ site }}</h1>
+<p class="quem"><a href="{{ url }}">{{ endereco }}</a> · {{ situacao }}</p>
+<nav class="atalhos" aria-label="Seções do site">
+<a href="/painel/sites/{{ slug }}/novo/pagina">Nova página</a>
+<a href="/painel/sites/{{ slug }}/novo/post">Novo post</a>
+<a href="/painel/sites/{{ slug }}/midia">Imagens</a>
+<a href="/painel/sites/{{ slug }}/catalogo">Autores e categorias</a>
+{%- if dono %}
+<a href="/painel/sites/{{ slug }}/equipe">Equipe</a>
+{%- endif %}
+</nav>
+{%- if documentos.is_empty() %}
+<p>O site ainda não tem conteúdo. Comece pela página inicial: uma página nova com o endereço em branco.</p>
+{%- else %}
+<ul>
+{%- for documento in documentos %}
+<li><a href="/painel/sites/{{ slug }}/doc/{{ documento.id }}"><strong>{{ documento.titulo }}</strong></a><span class="etiquetas">{{ documento.especie }} · {{ documento.estado }}</span></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{% endblock %}

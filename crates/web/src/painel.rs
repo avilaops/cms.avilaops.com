@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, equipe};
+use crate::{biblioteca, conteudo, equipe};
 
 const CAMINHO: &str = "/painel";
 
@@ -29,6 +29,8 @@ struct LinhaDeSite {
     /// A tela de equipe, para quem é Dono.
     equipe: Option<String>,
     midia: String,
+    /// A página do site no painel.
+    abrir: String,
 }
 
 impl LinhaDeSite {
@@ -50,6 +52,7 @@ impl LinhaDeSite {
             },
             papel: site.papel.rotulo(),
             midia: format!("/painel/sites/{}/midia", site.slug),
+            abrir: format!("/painel/sites/{}", site.slug),
             equipe: (site.papel == Papel::Dono)
                 .then(|| format!("/painel/sites/{}/equipe", site.slug)),
         }
@@ -287,6 +290,15 @@ enum Rota<'a> {
     EnviarMidia(&'a str),
     ArquivoDeMidia(&'a str, &'a str),
     ApagarMidia(&'a str, &'a str),
+    Site(&'a str),
+    NovoDocumento(&'a str, &'a str),
+    GravarNovo(&'a str),
+    Documento(&'a str, &'a str),
+    Gravar(&'a str, &'a str),
+    Previa(&'a str, &'a str),
+    Catalogo(&'a str),
+    SalvarAutor(&'a str),
+    SalvarCategoria(&'a str),
 }
 
 impl<'a> Rota<'a> {
@@ -311,6 +323,17 @@ impl<'a> Rota<'a> {
             (false, ["painel", "sites", slug, "midia", id, "apagar"]) => {
                 Some(Rota::ApagarMidia(slug, id))
             }
+            (true, ["painel", "sites", slug]) => Some(Rota::Site(slug)),
+            (true, ["painel", "sites", slug, "novo", especie]) => {
+                Some(Rota::NovoDocumento(slug, especie))
+            }
+            (false, ["painel", "sites", slug, "doc"]) => Some(Rota::GravarNovo(slug)),
+            (true, ["painel", "sites", slug, "doc", id]) => Some(Rota::Documento(slug, id)),
+            (false, ["painel", "sites", slug, "doc", id]) => Some(Rota::Gravar(slug, id)),
+            (true, ["painel", "sites", slug, "doc", id, "previa"]) => Some(Rota::Previa(slug, id)),
+            (true, ["painel", "sites", slug, "catalogo"]) => Some(Rota::Catalogo(slug)),
+            (false, ["painel", "sites", slug, "autores"]) => Some(Rota::SalvarAutor(slug)),
+            (false, ["painel", "sites", slug, "categorias"]) => Some(Rota::SalvarCategoria(slug)),
             _ => None,
         }
     }
@@ -319,7 +342,14 @@ impl<'a> Rota<'a> {
     fn escreve(self) -> bool {
         matches!(
             self,
-            Rota::CriarSite | Rota::Convidar(_) | Rota::EnviarMidia(_) | Rota::ApagarMidia(..)
+            Rota::CriarSite
+                | Rota::Convidar(_)
+                | Rota::EnviarMidia(_)
+                | Rota::ApagarMidia(..)
+                | Rota::GravarNovo(_)
+                | Rota::Gravar(..)
+                | Rota::SalvarAutor(_)
+                | Rota::SalvarCategoria(_)
         )
     }
 }
@@ -373,6 +403,21 @@ async fn responder(
             biblioteca::arquivo(estado, &conta, slug, arquivo).await
         }
         Rota::ApagarMidia(slug, id) => biblioteca::apagar(estado, &conta, slug, id).await,
+        Rota::Site(slug) => conteudo::inicio(estado, &conta, slug).await,
+        Rota::NovoDocumento(slug, especie) => {
+            conteudo::novo(estado, &conta, slug, especie, uri).await
+        }
+        Rota::GravarNovo(slug) => conteudo::gravar(estado, &conta, slug, None, corpo).await,
+        Rota::Documento(slug, id) => conteudo::abrir(estado, &conta, slug, id, uri).await,
+        Rota::Gravar(slug, id) => conteudo::gravar(estado, &conta, slug, Some(id), corpo).await,
+        Rota::Previa(slug, id) => conteudo::previa(estado, &conta, slug, id).await,
+        Rota::Catalogo(slug) => conteudo::catalogo(estado, &conta, slug, uri).await,
+        Rota::SalvarAutor(slug) => {
+            conteudo::salvar_no_catalogo(estado, &conta, slug, true, corpo).await
+        }
+        Rota::SalvarCategoria(slug) => {
+            conteudo::salvar_no_catalogo(estado, &conta, slug, false, corpo).await
+        }
     }
 }
 

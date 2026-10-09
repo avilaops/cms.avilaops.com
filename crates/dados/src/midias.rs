@@ -194,7 +194,7 @@ pub async fn midia_para_conteudo(
     site_id: Uuid,
     midia_id: Uuid,
 ) -> Result<Option<Midia>, ErroDeDados> {
-    let mut conexao = pool.acquire().await?;
+    let mut conexao = pool.acquire().await.map_err(ErroDeDados::Banco)?;
     let Some(linha) = sqlx::query!(
         "select largura, altura, alt, legenda, credito from midia where id = $1 and site_id = $2",
         midia_id,

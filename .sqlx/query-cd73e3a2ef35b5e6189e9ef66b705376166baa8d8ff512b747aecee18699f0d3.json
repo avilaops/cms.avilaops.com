@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into autor (site_id, slug, nome, cargo, bio, foto_id, perfis, credenciais)\n        values ($1, $2, $3, $4, $5, $6, $7, $8)\n        on conflict (site_id, slug) do update\n            set nome = excluded.nome, cargo = excluded.cargo, bio = excluded.bio,\n                foto_id = excluded.foto_id, perfis = excluded.perfis,\n                credenciais = excluded.credenciais\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd73e3a2ef35b5e6189e9ef66b705376166baa8d8ff512b747aecee18699f0d3"
+}

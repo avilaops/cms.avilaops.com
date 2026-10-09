@@ -362,6 +362,29 @@ pub async fn salvar_rascunho(
     })
 }
 
+/// Os problemas do rascunho como está gravado, para o painel mostrar ao abrir
+/// o editor. Documento sem rascunho não tem o que conferir.
+pub async fn problemas_do_rascunho(
+    pool: &PgPool,
+    site_id: Uuid,
+    documento_id: Uuid,
+) -> Result<Vec<Problema>, ErroDeFluxo> {
+    let mut transacao = pool.begin().await?;
+    let linha = travar(&mut transacao, site_id, documento_id).await?;
+    let Some(versao_id) = linha.versao_rascunho else {
+        return Ok(Vec::new());
+    };
+    let conteudo = conteudo_da_versao(&mut transacao, versao_id).await?;
+    problemas_de(
+        &mut transacao,
+        site_id,
+        linha.id,
+        linha.slug_no_ar(),
+        &conteudo,
+    )
+    .await
+}
+
 /// Pede a revisão do rascunho. Com problema que bloqueia, é recusado e a
 /// lista volta. Pedir de novo o que já está em revisão não muda nada.
 pub async fn enviar_para_revisao(

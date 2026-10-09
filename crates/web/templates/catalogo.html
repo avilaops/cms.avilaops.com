@@ -1,0 +1,49 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Autores e categorias de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Autores e categorias</h1>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<h2>Autores</h2>
+<ul>
+{%- for autor in autores %}
+<li><strong>{{ autor.nome }}</strong><span class="etiquetas">{{ autor.cargo }}{% if autor.sem_foto %} · sem foto{% endif %}{% if autor.sem_bio %} · sem apresentação{% endif %}</span></li>
+{%- endfor %}
+</ul>
+<form method="post" action="/painel/sites/{{ slug }}/autores">
+<label for="nome">Nome (repita o nome de um autor para regravar)</label>
+<input id="nome" name="nome" required maxlength="80">
+<label for="cargo">Cargo</label>
+<input id="cargo" name="cargo" maxlength="80">
+<label for="bio">Apresentação</label>
+<textarea id="bio" name="bio" maxlength="600"></textarea>
+<label for="foto">Foto</label>
+<select id="foto" name="foto">
+<option value="">Sem foto</option>
+{%- for opcao in fotos %}
+<option value="{{ opcao.valor }}">{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<label for="credenciais">Credenciais, uma por linha</label>
+<textarea id="credenciais" name="credenciais"></textarea>
+<label for="perfis">Perfis (endereços https), um por linha</label>
+<textarea id="perfis" name="perfis"></textarea>
+<button type="submit">Salvar autor</button>
+</form>
+<h2>Categorias</h2>
+<ul>
+{%- for categoria in categorias %}
+<li><strong>{{ categoria.nome }}</strong><span class="etiquetas">/blog/categoria/{{ categoria.slug }}</span></li>
+{%- endfor %}
+</ul>
+<form method="post" action="/painel/sites/{{ slug }}/categorias">
+<label for="categoria">Nome da categoria</label>
+<input id="categoria" name="nome" required maxlength="60">
+<button type="submit">Salvar categoria</button>
+</form>
+{% endblock %}
