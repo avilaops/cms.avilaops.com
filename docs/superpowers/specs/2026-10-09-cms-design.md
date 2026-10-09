@@ -158,8 +158,8 @@ rascunho ──enviar──▶ em revisão ──publicar──▶ publicado
 - Publicar, na mesma transação: grava a versão, atualiza datas, cria
   redirecionamento se o slug mudou, registra no histórico, emite o evento
   `conteudo.publicado` e invalida o cache do site.
-- Depois da transação: avisa o IndexNow. "Buscadores avisados" só aparece no
-  painel com pelo menos uma resposta 2xx.
+- Depois da transação: o n8n avisa o IndexNow e devolve o resultado.
+  "Buscadores avisados" só aparece no painel com pelo menos uma resposta 2xx.
 
 O `contexto` da validação (títulos e descrições em uso, slug publicado,
 redirecionamentos, peso da página) é montado pelo CMS a partir do banco.
@@ -289,12 +289,79 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 - `enviar_midia` exige `alt`. Imagem por endereço segue a regra de requisição
   para endereço informado por cliente, da base Rust.
 
-## Automações
+## O que fica com o n8n
 
-O CMS emite eventos com a chave do fato, e o n8n reivindica:
-`site.criado`, `conteudo.enviado_para_revisao`, `conteudo.publicado`,
-`dominio.ativado`, `convite.criado`. O e-mail de convite é enviado pelo
-próprio CMS; o que espera ou depende de terceiros fica com o n8n.
+Decisão de Nicolas (09/10/2026): o n8n assume o que não precisa ser código
+Rust. A régua é uma só: **o que acontece depois do fato e fala com terceiros
+vai para o n8n; o que decide se algo pode acontecer fica no Rust.**
+
+| Trabalho | Onde | Motivo |
+|---|---|---|
+| Validar, publicar, agendar, despublicar | Rust | É a trava do produto |
+| Login, papéis, permissões, limites | Rust | Segurança |
+| Renderizar página, cache, sitemaps, `llms.txt` | Rust | Caminho do visitante |
+| Variantes de imagem | Rust | Usa o `motor-web` |
+| Conferir domínio próprio e liberar o certificado | Rust | Decide emissão de TLS |
+| Conector MCP | Rust | Escopo e histórico por chamada |
+| E-mail de convite, de revisão pendente e de publicação | n8n | Mensagem a pessoa, depois do fato |
+| Aviso aos buscadores (IndexNow) | n8n | Chamada a terceiros, com nova tentativa |
+| Medição periódica de desempenho dos sites | n8n | Agendado, usa API de terceiros |
+| Aviso à equipe quando um site é criado | n8n | Criação é aberta; alguém precisa olhar |
+| Tarefa no Todoist quando algo precisa de gente | n8n | Já é o destino dos erros da casa |
+| Relatório periódico ao dono do site | n8n | Agendado, junta dados de fora |
+
+Com isso o CMS não tem cliente de SMTP, não tem modelo de e-mail e não tem
+cliente do IndexNow.
+
+### Contrato
+
+- **Saída.** O CMS grava o evento na tabela `evento`, na mesma transação do
+  fato, com a chave do fato. A rotina `eventos.entregar` faz
+  `POST https://n8n.avilaops.com/webhook/cms-eventos` com `authorization`, e o
+  n8n responde na hora. É o desenho do `lojas-eventos`.
+- **Corpo.** `{ id, tipo, chave, ocorridoEm, site, dados }`. `dados` é projeção
+  explícita por tipo, nunca a linha do banco.
+- **Entrega.** Pelo menos uma vez. O mesmo fato tem o mesmo `id`, e o workflow
+  descarta repetido.
+- **Volta.** O n8n encerra o evento em
+  `POST /api/admin/eventos/<id>/encerrar`, com o resultado. É assim que
+  "buscadores avisados" só aparece no painel com resposta 2xx de verdade.
+- **Autenticação da volta.** Token próprio do n8n, comparado em tempo
+  constante. Não é o token de administração.
+
+Eventos: `site.criado`, `convite.criado`, `conteudo.enviado_para_revisao`,
+`conteudo.publicado`, `conteudo.despublicado`, `dominio.ativado`,
+`site.suspenso`.
+
+### O que o CMS não pode depender do n8n para fazer
+
+- Nada no caminho de editar, validar e publicar espera o n8n. Com o n8n fora
+  do ar, o site publica igual e os eventos ficam na fila.
+- O convite funciona sem e-mail: o painel mostra o link para o Dono copiar. O
+  e-mail é conveniência.
+- O `dados` de `convite.criado` leva o link pronto, com token de uso único e
+  validade curta. As execuções do n8n guardam o corpo recebido, então esse
+  token fica legível lá até expirar: por isso a validade é de 48 horas, e não
+  de semanas.
+
+### Workflows como código
+
+Os workflows do CMS ficam versionados em `n8n/` neste repositório e são
+criados e atualizados pelo conector do n8n, a partir do código. Editar direto
+na tela do n8n deixa o repositório para trás; quem editar lá exporta de volta.
+
+- Um workflow por produto, `CMS - Operação`, no padrão do
+  `Lojas - Operação Completa`: um webhook de entrada, os agendamentos dentro.
+- Todo workflow aponta o erro para o `Handler de Erro Central → Todoist`.
+- Cada tipo de evento tem um teste com dados fixados, rodado pelo conector
+  antes de publicar o workflow.
+
+### Custo assumido
+
+O que vai para o n8n sai do compilador e da suíte de testes do Rust. Um campo
+renomeado no evento não quebra o build: quebra o workflow, em produção. O que
+segura isso é o corpo ser projeção explícita, com teste de referência no CMS, e
+o teste com dados fixados de cada tipo no n8n.
 
 ## Rotinas
 

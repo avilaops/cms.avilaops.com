@@ -213,6 +213,12 @@ Sem caminho público novo; assume `/api/admin/rotinas*` e
   Mercado Livre, com a fatia 8.
 - E-mail com `lettre`, WhatsApp pela Cloud API da Meta. O texto de cada
   mensagem é função pura, como hoje.
+- **A decidir por Nicolas:** com o n8n assumindo o que não precisa ser código
+  (09/10/2026), esta fatia poderia deixar e-mail e WhatsApp no n8n em vez de
+  portá-los. Isso desfaz uma decisão anterior do Lojas, registrada no
+  `AGENTS.md` dele ("o relógio é nosso, e o e-mail também"), tomada porque
+  executar metade dos canais fazia aviso ao lojista sumir sem ninguém notar. A
+  spec mantém o envio no servidor até essa decisão ser revista de propósito.
 - Webhook de saída: só `https`, nome resolvido e recusado se for rede interna,
   redirecionamento não seguido.
 - O contrato com o n8n não muda: mesmo corpo, mesmas rotas de reivindicar e

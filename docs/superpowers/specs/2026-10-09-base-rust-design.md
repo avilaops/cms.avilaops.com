@@ -232,8 +232,26 @@ Lojas trata a troca.
 ## Sem Twilio
 
 WhatsApp pela Cloud API da Meta, como o Lojas já faz. A conexão com a Meta é do
-Auth: cada sistema lê por `GET /api/meta/ativos`. E-mail por SMTP próprio, com
-o crate `lettre`. SMS e voz não fazem parte da plataforma.
+Auth: cada sistema lê por `GET /api/meta/ativos`. SMS e voz não fazem parte da
+plataforma.
+
+## O que vai para o n8n
+
+Decisão de Nicolas (09/10/2026): o n8n assume o que não precisa ser código
+Rust. O que acontece depois do fato e fala com terceiros vai para o n8n:
+mensagem a pessoa, aviso a buscador, medição agendada, tarefa para a equipe. O
+que decide se algo pode acontecer fica no Rust: validação, permissão, cobrança,
+estoque, publicação.
+
+- O servidor grava o evento no banco, na transação do fato, e entrega por
+  webhook com `authorization`. O n8n responde na hora e encerra o evento por
+  uma rota de volta.
+- Entrega pelo menos uma vez; o mesmo fato tem o mesmo identificador.
+- Nada no caminho do visitante ou de quem edita espera o n8n.
+- Workflow é código: fica versionado no repositório do produto e é criado pelo
+  conector do n8n. Aponta o erro para o `Handler de Erro Central → Todoist`.
+- No CMS, o envio de e-mail é todo do n8n: não há cliente de SMTP no servidor.
+  No Lojas a decisão é outra e está na spec dele.
 
 ## Testes
 
