@@ -81,6 +81,13 @@ type Site = {
   orcamentoPesoKb: number;        // por página
 };
 
+type Endereco = {
+  logradouro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+};
+
 type Midia = {
   id: string;
   alt: string;
