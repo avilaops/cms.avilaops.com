@@ -28,7 +28,7 @@ login. Nenhum site está no ar.
 | Login e participação | Entrada pelo Auth no host do painel, participação por site, criação de site com limites por conta e por dia, convites de 48 horas, primeira tela do painel ("Meus sites") | Feita; falta a tela de equipe e convites, e o cadastro do CMS no Auth |
 | Painel | Telas de conteúdo, editor de blocos, prévia | A fazer |
 | Mídia | Envio, fila de variantes, uso por documento | A fazer |
-| Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para os eventos de conteúdo; o workflow está criado no n8n e ainda não publicado |
+| Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
 | Conector | Autorização e ferramentas para assistentes de IA | A fazer |
 | Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |
 | Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |
