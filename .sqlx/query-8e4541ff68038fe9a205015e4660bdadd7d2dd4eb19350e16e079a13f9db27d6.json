@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select email, papel from participacao where site_id = $1 order by email",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "papel",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8e4541ff68038fe9a205015e4660bdadd7d2dd4eb19350e16e079a13f9db27d6"
+}

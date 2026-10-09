@@ -1,6 +1,7 @@
 //! O servidor HTTP: resolve o site pelo host e serve o que está publicado.
 
 mod admin;
+mod equipe;
 mod midia;
 mod painel;
 mod publico;

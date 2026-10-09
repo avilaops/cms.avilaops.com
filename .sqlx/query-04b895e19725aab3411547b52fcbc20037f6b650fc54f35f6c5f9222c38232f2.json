@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select email, papel, expira_em from convite\n        where site_id = $1 and aceito_em is null and expira_em > now()\n        order by expira_em\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "papel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "expira_em",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "04b895e19725aab3411547b52fcbc20037f6b650fc54f35f6c5f9222c38232f2"
+}

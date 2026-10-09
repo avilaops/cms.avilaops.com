@@ -101,16 +101,21 @@ impl Painel {
         self.enviar(pedido, Body::empty()).await
     }
 
-    async fn criar_site(&self, quem: &str, slug: &str, nome: &str) -> Resposta {
+    /// Um formulário enviado de dentro do painel.
+    async fn postar(&self, quem: &str, caminho: &str, corpo: &str) -> Resposta {
         let pedido = Request::builder()
             .method("POST")
-            .uri("/painel/sites")
+            .uri(caminho)
             .header("host", HOST_DO_PAINEL)
             .header("origin", ORIGEM)
             .header("content-type", "application/x-www-form-urlencoded")
             .header("cookie", format!("avila_sso={}", token(quem)));
+        self.enviar(pedido, Body::from(corpo.to_string())).await
+    }
+
+    async fn criar_site(&self, quem: &str, slug: &str, nome: &str) -> Resposta {
         let corpo = format!("nome={}&slug={slug}", nome.replace(' ', "+"));
-        self.enviar(pedido, Body::from(corpo)).await
+        self.postar(quem, "/painel/sites", &corpo).await
     }
 }
 
@@ -488,4 +493,147 @@ async fn painel_e_sites_nao_se_misturam(pool: PgPool) {
             "{caminho}"
         );
     }
+}
+
+/// O caminho do convite, tirado do link que a tela mostra.
+fn caminho_do_convite(corpo: &str) -> String {
+    let inicio = corpo.find("/convite/").expect("a tela mostra o link");
+    corpo[inicio..]
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric() || *c == '/')
+        .collect()
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn dono_convida_pela_tela_de_equipe(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const EQUIPE: &str = "/painel/sites/padaria/equipe";
+    const CONVITES: &str = "/painel/sites/padaria/convites";
+
+    // A lista de sites leva o Dono à equipe.
+    assert!(
+        painel
+            .abrir(Some("ana"), "/painel")
+            .await
+            .corpo
+            .contains(&format!(r#"href="{EQUIPE}""#))
+    );
+    let equipe = painel.abrir(Some("ana"), EQUIPE).await;
+    assert_eq!(equipe.status, StatusCode::OK);
+    assert!(equipe.corpo.contains("Padaria da Ana"));
+    assert!(equipe.corpo.contains("ana@exemplo.example"));
+    assert_eq!(equipe.cabecalho("cache-control"), "private, no-store");
+
+    let recusado = painel
+        .postar("ana", CONVITES, "email=sem-arroba&papel=editor")
+        .await;
+    assert_eq!(recusado.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(recusado.corpo.contains("Informe um e-mail válido"));
+    assert!(recusado.corpo.contains(r#"value="sem-arroba""#));
+    assert_eq!(
+        painel
+            .postar("ana", CONVITES, "email=bia%40exemplo.example&papel=chefe")
+            .await
+            .status,
+        StatusCode::BAD_REQUEST
+    );
+
+    let criado = painel
+        .postar("ana", CONVITES, "email=Bia%40exemplo.example&papel=editor")
+        .await;
+    assert_eq!(criado.status, StatusCode::OK);
+    assert!(
+        criado
+            .corpo
+            .contains("Convite criado para bia@exemplo.example")
+    );
+    // Em aberto, o convite aparece na equipe com o papel e a validade.
+    assert!(criado.corpo.contains("Editor · convite até"));
+    let caminho = caminho_do_convite(&criado.corpo);
+    assert!(criado.corpo.contains(&format!("{ORIGEM}{caminho}")));
+    // O link só aparece na criação: reabrir a tela não o mostra de novo.
+    assert!(
+        !painel
+            .abrir(Some("ana"), EQUIPE)
+            .await
+            .corpo
+            .contains("/convite/")
+    );
+
+    assert_eq!(
+        painel.abrir(Some("bia"), &caminho).await.status,
+        StatusCode::SEE_OTHER
+    );
+    let depois = painel.abrir(Some("ana"), EQUIPE).await;
+    assert!(depois.corpo.contains("bia@exemplo.example"));
+    assert!(!depois.corpo.contains("convite até"));
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn equipe_e_so_do_dono_e_de_quem_e_do_site(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const EQUIPE: &str = "/painel/sites/padaria/equipe";
+    const CONVITES: &str = "/painel/sites/padaria/convites";
+    let corpo = "email=caio%40exemplo.example&papel=dono";
+
+    // Bia entra como Editora.
+    let convite = painel
+        .postar("ana", CONVITES, "email=bia%40exemplo.example&papel=editor")
+        .await;
+    painel
+        .abrir(Some("bia"), &caminho_do_convite(&convite.corpo))
+        .await;
+
+    // Editor participa, mas não administra: nem vê, nem convida.
+    assert_eq!(
+        painel.abrir(Some("bia"), EQUIPE).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        painel.postar("bia", CONVITES, corpo).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert!(
+        !painel
+            .abrir(Some("bia"), "/painel")
+            .await
+            .corpo
+            .contains(EQUIPE)
+    );
+
+    // Quem não é do site recebe o mesmo que para um site que não existe.
+    for caminho in [EQUIPE, "/painel/sites/nao-existe/equipe"] {
+        let resposta = painel.abrir(Some("caio"), caminho).await;
+        assert_eq!(resposta.status, StatusCode::NOT_FOUND, "{caminho}");
+        assert!(!resposta.corpo.contains("Padaria"), "{caminho}");
+    }
+    assert_eq!(
+        painel.postar("caio", CONVITES, corpo).await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // Formulário de fora do painel não cria convite.
+    let de_fora = Request::builder()
+        .method("POST")
+        .uri(CONVITES)
+        .header("host", HOST_DO_PAINEL)
+        .header("origin", "https://padaria.sites.teste")
+        .header("cookie", format!("avila_sso={}", token("ana")));
+    assert_eq!(
+        painel.enviar(de_fora, Body::from(corpo)).await.status,
+        StatusCode::FORBIDDEN
+    );
+    let convites: i64 = sqlx::query_scalar("select count(*) from convite")
+        .fetch_one(&pool)
+        .await
+        .expect("contagem");
+    assert_eq!(convites, 1);
+
+    // A equipe da Ávila Ops entra em qualquer site com poder de Dono.
+    assert_eq!(
+        painel.abrir(Some("equipe"), EQUIPE).await.status,
+        StatusCode::OK
+    );
 }

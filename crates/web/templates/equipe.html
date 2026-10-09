@@ -1,0 +1,37 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Equipe de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel">‹ Meus sites</a>
+<h1>Equipe</h1>
+<p class="quem">{{ site }}</p>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(convite) = criado %}
+<div class="recado aviso" role="status">
+<p>Convite criado para {{ convite.email }}. Vale até {{ convite.validade }} e só pode ser usado uma vez.</p>
+<label for="link">Link do convite: copie agora, ele não aparece de novo</label>
+<input id="link" readonly value="{{ convite.link }}">
+</div>
+{%- endif %}
+<ul>
+{%- for membro in membros %}
+<li><strong>{{ membro.email }}</strong><span class="etiquetas">{{ membro.papel }}</span></li>
+{%- endfor %}
+{%- for convite in pendentes %}
+<li><strong>{{ convite.email }}</strong><span class="etiquetas">{{ convite.papel }} · convite até {{ convite.validade }}</span></li>
+{%- endfor %}
+</ul>
+<h2>Convidar</h2>
+<form method="post" action="/painel/sites/{{ slug }}/convites">
+<label for="email">E-mail</label>
+<input id="email" name="email" type="email" required maxlength="254" autocomplete="off" autocapitalize="none" value="{{ email }}">
+<label for="papel">Papel</label>
+<select id="papel" name="papel">
+<option value="autor">Autor: escreve e envia para revisão</option>
+<option value="editor">Editor: revisa e publica</option>
+<option value="dono">Dono: equipe, domínio e aparência</option>
+</select>
+<button type="submit">Criar convite</button>
+</form>
+{% endblock %}

@@ -1,36 +1,6 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>Meus sites | CMS Ávila Ops</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;font:16px/1.4 system-ui,sans-serif;color:#1c1c1c;background:#f6f5f2}
-main{max-width:32rem;margin:0 auto;padding:1rem}
-h1{font-size:1.25rem;margin:0}
-h2{font-size:1rem;margin:1rem 0 .5rem}
-p{margin:.25rem 0}
-.quem{color:#555;font-size:.875rem}
-.recado{padding:.6rem .75rem;border-radius:.5rem;margin:.75rem 0;font-size:.9375rem}
-.erro{background:#fde8e6;color:#8a1c12}
-.aviso{background:#e5f3e8;color:#17502a}
-ul{list-style:none;margin:0;padding:0}
-li{background:#fff;border:1px solid #dedbd3;border-radius:.5rem;padding:.6rem .75rem;margin-bottom:.5rem}
-li strong{display:block}
-li a{color:#1a4fa0;word-break:break-all}
-.etiquetas{color:#555;font-size:.8125rem}
-form{background:#fff;border:1px solid #dedbd3;border-radius:.5rem;padding:.75rem}
-label{display:block;font-size:.875rem;margin-top:.5rem}
-label:first-child{margin-top:0}
-input{width:100%;font:inherit;padding:.55rem .6rem;border:1px solid #b9b5aa;border-radius:.4rem}
-.dica{color:#555;font-size:.8125rem}
-button{width:100%;margin-top:.75rem;font:inherit;font-weight:600;padding:.7rem;border:0;border-radius:.4rem;background:#1a4fa0;color:#fff}
-</style>
-</head>
-<body>
-<main>
+{% extends "painel_base.html" %}
+{% block titulo %}Meus sites{% endblock %}
+{% block conteudo %}
 <h1>Meus sites</h1>
 <p class="quem">{{ quem }}</p>
 {%- if let Some(erro) = erro %}
@@ -48,6 +18,9 @@ button{width:100%;margin-top:.75rem;font:inherit;font-weight:600;padding:.7rem;b
 <strong>{{ site.nome }}</strong>
 <a href="{{ site.url }}">{{ site.endereco }}</a>
 <span class="etiquetas">{{ site.situacao }} · {{ site.papel }}</span>
+{%- if let Some(equipe) = site.equipe %}
+<a class="acao" href="{{ equipe }}">Equipe</a>
+{%- endif %}
 </li>
 {%- endfor %}
 </ul>
@@ -61,6 +34,4 @@ button{width:100%;margin-top:.75rem;font:inherit;font-weight:600;padding:.7rem;b
 <p class="dica">Fica em <em>endereço</em>.{{ dominio_base }}. Depois dá para usar o seu domínio.</p>
 <button type="submit">Criar site</button>
 </form>
-</main>
-</body>
-</html>
+{% endblock %}

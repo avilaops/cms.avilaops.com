@@ -25,7 +25,7 @@ login. Nenhum site está no ar.
 | Site público | Site resolvido pelo host, páginas, posts, blog, sitemaps, `robots.txt`, `llms.txt`, mídia por site, semente de demonstração | Feita |
 | Fluxo de publicação | Rascunho, revisão, publicação validada pelo motor, datas do servidor, troca de endereço com 301, despublicação com 410, permissão por papel, histórico | Feita |
 | Esteira | `Dockerfile`, validação no GitHub Actions (`fmt`, `clippy`, testes contra Postgres), merge automático | Feita |
-| Login e participação | Entrada pelo Auth no host do painel, participação por site, criação de site com limites por conta e por dia, convites de 48 horas, primeira tela do painel ("Meus sites") | Feita; falta a tela de equipe e convites, e o cadastro do CMS no Auth |
+| Login e participação | Entrada pelo Auth no host do painel, participação por site, criação de site com limites por conta e por dia, convites de 48 horas, telas "Meus sites" e "Equipe" no painel | Feita |
 | Painel | Telas de conteúdo, editor de blocos, prévia | A fazer |
 | Mídia | Envio, fila de variantes, uso por documento | A fazer |
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |

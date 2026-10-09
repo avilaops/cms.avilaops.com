@@ -9,10 +9,11 @@ use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::{ErroDeConta, SiteDaConta};
 use cms_dominio::eventos::origem_do_site;
-use cms_dominio::{Conta, Situacao};
+use cms_dominio::{Conta, Papel, Situacao};
 use cms_integracoes::auth::{COOKIE_DE_SESSAO, RespostaDoAuth};
 use serde::Deserialize;
 
+use crate::equipe;
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
 
@@ -24,6 +25,8 @@ struct LinhaDeSite {
     endereco: String,
     situacao: &'static str,
     papel: &'static str,
+    /// A tela de equipe, para quem é Dono.
+    equipe: Option<String>,
 }
 
 impl LinhaDeSite {
@@ -44,6 +47,8 @@ impl LinhaDeSite {
                 Situacao::Suspenso => "Suspenso",
             },
             papel: site.papel.rotulo(),
+            equipe: (site.papel == Papel::Dono)
+                .then(|| format!("/painel/sites/{}/equipe", site.slug)),
         }
     }
 }
@@ -266,6 +271,45 @@ fn aviso_da_consulta(uri: &Uri) -> Option<String> {
     }
 }
 
+/// O que o painel atende. Qualquer outra coisa não existe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Rota<'a> {
+    Raiz,
+    Sites,
+    CriarSite,
+    Convite(&'a str),
+    Equipe(&'a str),
+    Convidar(&'a str),
+}
+
+impl<'a> Rota<'a> {
+    fn ler(metodo: &Method, caminho: &'a str) -> Option<Self> {
+        let do_site = |sufixo: &str| {
+            caminho
+                .strip_prefix("/painel/sites/")
+                .and_then(|resto| resto.strip_suffix(sufixo))
+                .filter(|slug| !slug.is_empty() && !slug.contains('/'))
+        };
+        if metodo == Method::GET {
+            match caminho {
+                "/" => Some(Rota::Raiz),
+                CAMINHO => Some(Rota::Sites),
+                _ => caminho
+                    .strip_prefix("/convite/")
+                    .map(Rota::Convite)
+                    .or_else(|| do_site("/equipe").map(Rota::Equipe)),
+            }
+        } else if metodo == Method::POST {
+            match caminho {
+                "/painel/sites" => Some(Rota::CriarSite),
+                _ => do_site("/convites").map(Rota::Convidar),
+            }
+        } else {
+            None
+        }
+    }
+}
+
 async fn responder(
     estado: &Estado,
     host: &str,
@@ -275,18 +319,15 @@ async fn responder(
     corpo: &[u8],
 ) -> Result<Response, ErroWeb> {
     let caminho = uri.path();
-    let rota_conhecida = if metodo == Method::GET {
-        caminho == "/" || caminho == CAMINHO || caminho.starts_with("/convite/")
-    } else {
-        metodo == Method::POST && caminho == "/painel/sites"
-    };
-    if !rota_conhecida {
+    let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
-    }
-    if caminho == "/" {
+    };
+    if rota == Rota::Raiz {
         return Ok(redirecionar(StatusCode::FOUND, CAMINHO));
     }
-    if metodo == Method::POST && !veio_do_painel(&estado.configuracao, host, cabecalhos) {
+    if matches!(rota, Rota::CriarSite | Rota::Convidar(_))
+        && !veio_do_painel(&estado.configuracao, host, cabecalhos)
+    {
         return Ok(simples(
             StatusCode::FORBIDDEN,
             "Pedido recusado: não veio do painel.",
@@ -297,17 +338,20 @@ async fn responder(
         Err(resposta) => return Ok(*resposta),
     };
 
-    if metodo == Method::POST {
-        return criar_site(estado, &conta, corpo).await;
-    }
-    match caminho.strip_prefix("/convite/") {
-        Some(token) => aceitar_convite(estado, &conta, token).await,
-        None => {
+    match rota {
+        Rota::Raiz | Rota::Sites => {
             let recado = Recado {
                 aviso: aviso_da_consulta(uri),
                 ..Recado::default()
             };
             pagina(estado, &conta, StatusCode::OK, recado).await
+        }
+        Rota::CriarSite => criar_site(estado, &conta, corpo).await,
+        Rota::Convite(token) => aceitar_convite(estado, &conta, token).await,
+        Rota::Equipe(slug) => equipe::abrir(estado, &conta, slug).await,
+        Rota::Convidar(slug) => {
+            let origem = origem_do_painel(&estado.configuracao, host);
+            equipe::convidar(estado, &conta, slug, &origem, corpo).await
         }
     }
 }

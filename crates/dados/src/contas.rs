@@ -196,6 +196,65 @@ pub async fn sites_da_conta(pool: &PgPool, conta: &str) -> Result<Vec<SiteDaCont
         .collect()
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Membro {
+    pub email: String,
+    pub papel: Papel,
+}
+
+/// Quem participa do site, em ordem de e-mail.
+pub async fn equipe_do_site(pool: &PgPool, site_id: Uuid) -> Result<Vec<Membro>, ErroDeDados> {
+    let linhas = sqlx::query!(
+        "select email, papel from participacao where site_id = $1 order by email",
+        site_id
+    )
+    .fetch_all(pool)
+    .await?;
+    linhas
+        .into_iter()
+        .map(|linha| {
+            Ok(Membro {
+                email: linha.email,
+                papel: papel_lido(&linha.papel)?,
+            })
+        })
+        .collect()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConvitePendente {
+    pub email: String,
+    pub papel: Papel,
+    pub expira_em: DateTime<Utc>,
+}
+
+/// Convites do site que ainda podem ser aceitos.
+pub async fn convites_pendentes(
+    pool: &PgPool,
+    site_id: Uuid,
+) -> Result<Vec<ConvitePendente>, ErroDeDados> {
+    let linhas = sqlx::query!(
+        r#"
+        select email, papel, expira_em from convite
+        where site_id = $1 and aceito_em is null and expira_em > now()
+        order by expira_em
+        "#,
+        site_id
+    )
+    .fetch_all(pool)
+    .await?;
+    linhas
+        .into_iter()
+        .map(|linha| {
+            Ok(ConvitePendente {
+                email: linha.email,
+                papel: papel_lido(&linha.papel)?,
+                expira_em: linha.expira_em,
+            })
+        })
+        .collect()
+}
+
 fn hash_do_token(token: &str) -> String {
     Sha256::digest(token.as_bytes())
         .iter()

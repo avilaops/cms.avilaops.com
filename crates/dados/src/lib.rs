@@ -11,8 +11,9 @@ use sqlx::PgPool;
 use sqlx::migrate::Migrator;
 
 pub use contas::{
-    ConviteCriado, ErroDeConta, SiteDaConta, aceitar_convite, criar_convite, criar_site_para,
-    papel_no_site, sites_da_conta,
+    ConviteCriado, ConvitePendente, ErroDeConta, Membro, SiteDaConta, aceitar_convite,
+    convites_pendentes, criar_convite, criar_site_para, equipe_do_site, papel_no_site,
+    sites_da_conta,
 };
 pub use documentos::{
     Ausencia, ItemDeNavegacao, ausencia, documento_publicado, documentos_publicados, navegacao,
