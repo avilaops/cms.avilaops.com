@@ -325,7 +325,12 @@ Todo e-mail sai de `noreply@avilaops.com`. O nome de exibição é o do site, e 
   `POST https://n8n.avilaops.com/webhook/cms-eventos` com `authorization`, e o
   n8n responde na hora. É o desenho do `lojas-eventos`.
 - **Corpo.** `{ id, tipo, chave, ocorridoEm, site, dados }`. `dados` é projeção
-  explícita por tipo, nunca a linha do banco.
+  explícita por tipo, nunca a linha do banco. `site` leva `id`, `slug`, `nome`,
+  `origem` (o endereço canônico), `naBusca` e, quando configurada,
+  `indexnowChave`: com isso o workflow monta as URLs e decide se avisa os
+  buscadores sem consultar o CMS.
+- **IndexNow.** A chave é configuração da instalação (`INDEXNOW_CHAVE`), e cada
+  site a serve em `/<chave>.txt`. Site fora da busca não gera aviso.
 - **Entrega.** Pelo menos uma vez. O mesmo fato tem o mesmo `id`, e o workflow
   descarta repetido.
 - **Volta.** O n8n encerra o evento em

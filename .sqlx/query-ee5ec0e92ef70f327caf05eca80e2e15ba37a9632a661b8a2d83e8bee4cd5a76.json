@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update evento set situacao = 'entregue', entregue_em = now()\n        where id = $1 and situacao = 'pendente'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ee5ec0e92ef70f327caf05eca80e2e15ba37a9632a661b8a2d83e8bee4cd5a76"
+}

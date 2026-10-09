@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        with reivindicado as (\n            update evento\n            set tentativas = tentativas + 1,\n                proxima_tentativa_em =\n                    now() + make_interval(mins => least(power(2, least(tentativas, 6))::int, 60))\n            where id in (\n                select id from evento\n                where situacao = 'pendente' and proxima_tentativa_em <= now()\n                order by ocorrido_em\n                limit $1\n                for update skip locked\n            )\n            returning id, site_id, tipo, chave, dados, ocorrido_em\n        )\n        select r.id as \"id!\", r.tipo as \"tipo!\", r.chave as \"chave!\", r.dados as \"dados!\",\n               r.ocorrido_em as \"ocorrido_em!\", r.site_id as \"site_id!\",\n               s.slug as \"site_slug!\", s.situacao as \"site_situacao!\",\n               s.provisorio_definitivo as \"site_provisorio_definitivo!\",\n               coalesce(s.perfil ->> 'nome', '') as \"site_nome!\",\n               (select d.host from dominio d\n                where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo\n        from reivindicado r\n        join site s on s.id = r.site_id\n        order by r.ocorrido_em\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "tipo!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "chave!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "dados!",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 4,
+        "name": "ocorrido_em!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "site_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "site_slug!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "site_situacao!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "site_provisorio_definitivo!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "site_nome!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "dominio_ativo",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "5bb448747c644eb7e75057596e3cbffefe60b4790335477f5c7528640f9da88f"
+}

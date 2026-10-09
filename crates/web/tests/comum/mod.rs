@@ -9,12 +9,14 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use cms_web::{Configuracao, Estado, roteador};
+use cms_web::{Configuracao, Estado, Segredo, roteador};
 use http_body_util::BodyExt;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
 pub const DOMINIO_BASE: &str = "sites.teste";
+pub const CHAVE_DO_INDEXNOW: &str = "0123456789abcdef0123456789abcdef";
+pub const TOKEN_DO_N8N: &str = "token-de-volta-do-teste";
 
 pub struct Resposta {
     pub status: StatusCode,
@@ -38,6 +40,8 @@ pub fn estado(pool: &PgPool, diretorio_de_midia: PathBuf) -> Estado {
             dominio_base: DOMINIO_BASE.into(),
             esquema: "https".into(),
             diretorio_de_midia,
+            token_do_n8n: Some(Segredo::novo(TOKEN_DO_N8N)),
+            chave_do_indexnow: Some(CHAVE_DO_INDEXNOW.into()),
         }),
     }
 }
@@ -48,6 +52,31 @@ pub async fn pedir_em(estado: Estado, host: &str, caminho: &str) -> Resposta {
         .header("host", host)
         .body(Body::empty())
         .expect("pedido válido");
+    responder(estado, pedido).await
+}
+
+/// Um `POST` com corpo JSON e, se houver, o cabeçalho `authorization`.
+pub async fn postar(
+    pool: &PgPool,
+    caminho: &str,
+    autorizacao: Option<&str>,
+    corpo: &str,
+) -> Resposta {
+    let mut pedido = Request::builder()
+        .method("POST")
+        .uri(caminho)
+        .header("host", "cms.teste")
+        .header("content-type", "application/json");
+    if let Some(autorizacao) = autorizacao {
+        pedido = pedido.header("authorization", autorizacao);
+    }
+    let pedido = pedido
+        .body(Body::from(corpo.to_string()))
+        .expect("pedido válido");
+    responder(estado(pool, PathBuf::from("midia-que-nao-existe")), pedido).await
+}
+
+async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
     let resposta = roteador(estado)
         .oneshot(pedido)
         .await

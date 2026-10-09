@@ -5,6 +5,9 @@
 //! motor são conferidas aqui, dentro da transação, e não em quem chama.
 
 use chrono::{DateTime, Utc};
+use cms_dominio::eventos::{
+    ConteudoDespublicado, ConteudoEnviadoParaRevisao, ConteudoPublicado, Evento,
+};
 use cms_dominio::fluxo::{self, Acao, Ator};
 use motor_web::tipos::{Conteudo, Documento};
 use motor_web::validacao::{Contexto, Problema, pode_publicar, validar};
@@ -14,6 +17,7 @@ use uuid::Uuid;
 
 use crate::ErroDeDados;
 use crate::documentos::especie_e_slug;
+use crate::eventos::emitir;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ErroDeFluxo {
@@ -119,6 +123,14 @@ fn caminho_de(conteudo: &Conteudo) -> Result<String, ErroDeDados> {
         .ok_or_else(|| ErroDeDados::DadoInvalido("o CMS não guarda produto".into()))
 }
 
+fn titulo_de(conteudo: &Conteudo) -> &str {
+    match conteudo {
+        Conteudo::Pagina(pagina) => &pagina.titulo,
+        Conteudo::Post(post) => &post.titulo,
+        Conteudo::Produto(produto) => &produto.nome,
+    }
+}
+
 async fn conteudo_da_versao(
     conexao: &mut PgConnection,
     versao_id: Uuid,
@@ -138,11 +150,12 @@ async fn registrar(
     documento_id: Uuid,
     ator: &Ator,
     acao: Acao,
-) -> Result<(), ErroDeFluxo> {
-    sqlx::query!(
+) -> Result<i64, ErroDeFluxo> {
+    let id = sqlx::query_scalar!(
         r#"
         insert into historico (site_id, documento_id, conta, equipe, acao)
         values ($1, $2, $3, $4, $5)
+        returning id
         "#,
         site_id,
         documento_id,
@@ -150,7 +163,28 @@ async fn registrar(
         ator.equipe,
         acao.como_texto()
     )
-    .execute(&mut *conexao)
+    .fetch_one(&mut *conexao)
+    .await?;
+    Ok(id)
+}
+
+/// Registra no histórico e grava o evento do mesmo fato. A linha do histórico
+/// é a chave do fato: uma ação gera um evento só.
+async fn registrar_com_evento(
+    conexao: &mut PgConnection,
+    site_id: Uuid,
+    documento_id: Uuid,
+    ator: &Ator,
+    acao: Acao,
+    evento: &Evento,
+) -> Result<(), ErroDeFluxo> {
+    let historico_id = registrar(conexao, site_id, documento_id, ator, acao).await?;
+    emitir(
+        conexao,
+        site_id,
+        &format!("historico:{historico_id}"),
+        evento,
+    )
     .await?;
     Ok(())
 }
@@ -358,12 +392,19 @@ pub async fn enviar_para_revisao(
     )
     .execute(&mut *transacao)
     .await?;
-    registrar(
+    let evento = Evento::ConteudoEnviadoParaRevisao(ConteudoEnviadoParaRevisao {
+        documento_id: linha.id,
+        especie: linha.especie.clone(),
+        titulo: titulo_de(&conteudo).to_string(),
+        pedido_por: ator.conta.clone(),
+    });
+    registrar_com_evento(
         &mut transacao,
         site_id,
         linha.id,
         ator,
         Acao::EnviarParaRevisao,
+        &evento,
     )
     .await?;
     transacao.commit().await?;
@@ -531,7 +572,22 @@ pub async fn publicar(
         Err(erro) => return Err(erro.into()),
     }
 
-    registrar(&mut transacao, site_id, linha.id, ator, Acao::Publicar).await?;
+    let evento = Evento::ConteudoPublicado(ConteudoPublicado {
+        documento_id: linha.id,
+        especie: linha.especie.clone(),
+        titulo: novo.titulo().to_string(),
+        caminho_anterior: linha.caminho.filter(|antigo| *antigo != novo.caminho),
+        caminho: novo.caminho,
+    });
+    registrar_com_evento(
+        &mut transacao,
+        site_id,
+        linha.id,
+        ator,
+        Acao::Publicar,
+        &evento,
+    )
+    .await?;
     transacao.commit().await?;
     Ok(())
 }
@@ -556,7 +612,20 @@ pub async fn despublicar(
     )
     .execute(&mut *transacao)
     .await?;
-    registrar(&mut transacao, site_id, linha.id, ator, Acao::Despublicar).await?;
+    let evento = Evento::ConteudoDespublicado(ConteudoDespublicado {
+        documento_id: linha.id,
+        especie: linha.especie.clone(),
+        caminho: linha.caminho.clone().unwrap_or_default(),
+    });
+    registrar_com_evento(
+        &mut transacao,
+        site_id,
+        linha.id,
+        ator,
+        Acao::Despublicar,
+        &evento,
+    )
+    .await?;
     transacao.commit().await?;
     Ok(())
 }

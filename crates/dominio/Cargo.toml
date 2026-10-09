@@ -9,3 +9,5 @@ publish.workspace = true
 chrono.workspace = true
 motor-web.workspace = true
 serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true

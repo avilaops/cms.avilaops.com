@@ -1,0 +1,11 @@
+[package]
+name = "cms-integracoes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+cms-dominio.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true

@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/dominio", "crates/dados", "crates/web", "crates/servidor"]
+members = [
+    "crates/dominio",
+    "crates/dados",
+    "crates/integracoes",
+    "crates/web",
+    "crates/servidor",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -11,6 +17,7 @@ publish = false
 [workspace.dependencies]
 cms-dominio = { path = "crates/dominio" }
 cms-dados = { path = "crates/dados" }
+cms-integracoes = { path = "crates/integracoes" }
 cms-web = { path = "crates/web" }
 
 # Fixado por commit: mudou o motor, este `rev` é atualizado de propósito.
@@ -18,12 +25,16 @@ motor-web = { git = "https://github.com/avilaops/motor-web", rev = "c21c3e90b2bb
 
 askama = "0.16"
 axum = "0.8"
+# Sem OpenSSL na imagem: TLS pelo rustls.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "std", "clock"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
+# Comparação de segredo em tempo constante.
+subtle = "2"
 thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "signal", "time"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
 uuid = { version = "1", features = ["serde", "v4"] }

@@ -6,12 +6,14 @@
 //! - `servidor semear-demonstracao`: recria o site de demonstração.
 
 mod configuracao;
+mod eventos;
 mod migracao;
 mod semente;
 
 use std::process::ExitCode;
 use std::sync::Arc;
 
+use cms_integracoes::ClienteN8n;
 use cms_web::Estado;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
@@ -101,6 +103,14 @@ async fn conectar(ambiente: &Ambiente) -> Result<PgPool, Erro> {
 
 async fn servir(ambiente: &Ambiente) -> Result<(), Erro> {
     let pool = conectar(ambiente).await?;
+    match &ambiente.n8n {
+        Some(saida) => {
+            let cliente = ClienteN8n::novo(&saida.url, saida.autorizacao.expor())
+                .map_err(|erro| Erro::Configuracao(erro.to_string()))?;
+            eventos::agendar(pool.clone(), cliente, ambiente.web.clone());
+        }
+        None => tracing::warn!("n8n não configurado: os eventos ficam na fila"),
+    }
     let estado = Estado {
         pool,
         configuracao: Arc::new(ambiente.web.clone()),

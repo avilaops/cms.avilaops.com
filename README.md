@@ -28,7 +28,7 @@ login. Nenhum site está no ar.
 | Login e participação | Sessão pelo Auth, tabela de participação, convites | A fazer |
 | Painel | Telas de conteúdo, editor de blocos, prévia | A fazer |
 | Mídia | Envio, fila de variantes, uso por documento | A fazer |
-| Eventos e n8n | Tabela de eventos, entrega por webhook, workflow `CMS - Operação` | A fazer |
+| Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para os eventos de conteúdo; o workflow está criado no n8n e ainda não publicado |
 | Conector | Autorização e ferramentas para assistentes de IA | A fazer |
 | Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |
 | Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |

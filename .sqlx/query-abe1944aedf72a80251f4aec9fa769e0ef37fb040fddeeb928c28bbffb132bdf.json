@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update evento\n        set situacao = 'encerrado', encerrado_em = now(), resultado = $2,\n            entregue_em = coalesce(entregue_em, now())\n        where id = $1 and situacao <> 'encerrado'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "abe1944aedf72a80251f4aec9fa769e0ef37fb040fddeeb928c28bbffb132bdf"
+}

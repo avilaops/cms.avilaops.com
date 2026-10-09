@@ -16,7 +16,7 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 use uuid::Uuid;
 
-use comum::{estado, host, pedir, pedir_em};
+use comum::{CHAVE_DO_INDEXNOW, estado, host, pedir, pedir_em};
 
 fn documentos_do_exemplo() -> Vec<Documento> {
     demonstracao::documentos()
@@ -483,4 +483,36 @@ async fn so_leitura_e_aceita_no_site_publico(pool: PgPool) {
         .await
         .expect("o roteador responde");
     assert_eq!(resposta.status(), StatusCode::METHOD_NOT_ALLOWED);
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn cada_site_serve_a_chave_do_indexnow(pool: PgPool) {
+    semear(&pool, "oficina", Situacao::Ativo, true).await;
+    let resposta = pedir(
+        &pool,
+        &host("oficina"),
+        &format!("/{CHAVE_DO_INDEXNOW}.txt"),
+    )
+    .await;
+    assert_eq!(resposta.status, StatusCode::OK);
+    assert!(resposta.cabecalho("content-type").starts_with("text/plain"));
+    assert_eq!(resposta.corpo, CHAVE_DO_INDEXNOW);
+
+    // Outro nome de arquivo não é a chave, e host desconhecido não a entrega.
+    assert_eq!(
+        pedir(&pool, &host("oficina"), "/outra-chave.txt")
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        pedir(
+            &pool,
+            "desconhecido.com.br",
+            &format!("/{CHAVE_DO_INDEXNOW}.txt")
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
 }

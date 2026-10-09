@@ -3,6 +3,7 @@
 
 pub mod datas;
 pub mod endereco;
+pub mod eventos;
 pub mod fluxo;
 pub mod site;
 

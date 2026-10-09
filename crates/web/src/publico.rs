@@ -120,6 +120,13 @@ async fn responder(
         "/robots.txt" => Ok(robots(&pedido)),
         "/llms.txt" | "/llms-full.txt" => descoberta_para_ia(estado, &pedido, caminho).await,
         CAMINHO_DO_BLOG => blog(estado, &pedido).await,
+        _ if eh_arquivo_do_indexnow(caminho, configuracao.chave_do_indexnow.as_deref()) => {
+            Ok(texto(
+                StatusCode::OK,
+                "text/plain; charset=utf-8",
+                configuracao.chave_do_indexnow.clone().unwrap_or_default(),
+            ))
+        }
         _ if caminho.starts_with("/sitemap") && caminho.ends_with(".xml") => {
             sitemap(estado, &pedido, caminho).await
         }
@@ -130,6 +137,14 @@ async fn responder(
             None => documento(estado, &pedido, caminho).await,
         },
     }
+}
+
+/// `/<chave>.txt`, com a chave no conteúdo: a prova que o IndexNow pede.
+fn eh_arquivo_do_indexnow(caminho: &str, chave: Option<&str>) -> bool {
+    let arquivo = caminho
+        .strip_prefix('/')
+        .and_then(|resto| resto.strip_suffix(".txt"));
+    chave.is_some() && arquivo == chave
 }
 
 fn robots(pedido: &Pedido) -> Response {
