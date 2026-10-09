@@ -27,7 +27,7 @@ login. Nenhum site está no ar.
 | Esteira | `Dockerfile`, validação no GitHub Actions (`fmt`, `clippy`, testes contra Postgres), merge automático | Feita |
 | Login e participação | Entrada pelo Auth no host do painel, participação por site, criação de site com limites por conta e por dia, convites de 48 horas, telas "Meus sites" e "Equipe" no painel | Feita |
 | Painel | Telas de conteúdo, editor de blocos, prévia | A fazer |
-| Mídia | Envio, fila de variantes, uso por documento | A fazer |
+| Mídia | Envio pelo painel com `alt` obrigatório, original em disco, rotina que gera AVIF e WebP, uso por documento, limite de espaço por site; imagem em uso não é apagada e sem variante não vai ao ar | Feita |
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
 | Conector | Autorização e ferramentas para assistentes de IA | A fazer |
 | Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |

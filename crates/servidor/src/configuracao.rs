@@ -54,6 +54,12 @@ fn obrigatoria(nome: &str) -> Result<String, Erro> {
     variavel(nome).ok_or_else(|| Erro::Configuracao(format!("defina {nome}")))
 }
 
+/// Um tamanho informado em MB, devolvido em bytes.
+fn megabytes(nome: &str, padrao: i64) -> Result<u64, Erro> {
+    let valor = u64::try_from(inteiro(nome, padrao)?).unwrap_or(0);
+    Ok(valor.saturating_mul(1024 * 1024))
+}
+
 impl Ambiente {
     pub fn ler() -> Result<Self, Erro> {
         let porta = match variavel("PORTA") {
@@ -128,6 +134,7 @@ impl Ambiente {
                 chave_do_indexnow,
                 host_do_painel,
                 limites_de_criacao,
+                limite_de_midia_por_site: megabytes("LIMITE_DE_MIDIA_MB_POR_SITE", 500)?,
             },
         })
     }

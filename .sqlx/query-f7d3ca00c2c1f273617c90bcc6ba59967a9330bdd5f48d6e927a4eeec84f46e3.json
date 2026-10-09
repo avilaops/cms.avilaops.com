@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select formato, largura, arquivo from variante where midia_id = $1 order by formato, largura",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "formato",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "arquivo",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f7d3ca00c2c1f273617c90bcc6ba59967a9330bdd5f48d6e927a4eeec84f46e3"
+}

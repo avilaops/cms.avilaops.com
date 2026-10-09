@@ -7,6 +7,7 @@
 
 mod configuracao;
 mod eventos;
+mod imagens;
 mod migracao;
 mod semente;
 
@@ -104,6 +105,7 @@ async fn conectar(ambiente: &Ambiente) -> Result<PgPool, Erro> {
 
 async fn servir(ambiente: &Ambiente) -> Result<(), Erro> {
     let pool = conectar(ambiente).await?;
+    imagens::agendar(pool.clone(), ambiente.web.diretorio_de_midia.clone());
     match &ambiente.n8n {
         Some(saida) => {
             let cliente = ClienteN8n::novo(&saida.url, saida.autorizacao.expor())

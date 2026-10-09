@@ -45,6 +45,7 @@ pub fn estado(pool: &PgPool, diretorio_de_midia: PathBuf) -> Estado {
             chave_do_indexnow: Some(CHAVE_DO_INDEXNOW.into()),
             host_do_painel: Some(HOST_DO_PAINEL.into()),
             limites_de_criacao: Default::default(),
+            limite_de_midia_por_site: 50 * 1024 * 1024,
         }),
         auth: None,
     }

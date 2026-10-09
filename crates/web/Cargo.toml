@@ -12,7 +12,11 @@ chrono.workspace = true
 cms-dados.workspace = true
 cms-dominio.workspace = true
 cms-integracoes.workspace = true
+futures-util = { version = "0.3", default-features = false }
+# Só para ler as dimensões no envio; as variantes são do motor.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 motor-web.workspace = true
+multer = "3"
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true

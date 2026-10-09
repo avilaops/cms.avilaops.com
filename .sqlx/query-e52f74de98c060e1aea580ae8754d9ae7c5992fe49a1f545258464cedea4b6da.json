@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update midia set situacao = 'falhou' where id = $1 and tentativas >= 3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e52f74de98c060e1aea580ae8754d9ae7c5992fe49a1f545258464cedea4b6da"
+}

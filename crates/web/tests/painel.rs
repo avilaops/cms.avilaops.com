@@ -75,6 +75,12 @@ async fn subir_auth() -> ClienteAuth {
 struct Painel {
     pool: PgPool,
     auth: ClienteAuth,
+    /// Uma pasta de mídia só deste teste.
+    diretorio: PathBuf,
+}
+
+fn pasta_de_teste() -> PathBuf {
+    std::env::temp_dir().join(format!("cms-painel-{}", Uuid::new_v4()))
 }
 
 impl Painel {
@@ -82,11 +88,12 @@ impl Painel {
         Self {
             pool: pool.clone(),
             auth: subir_auth().await,
+            diretorio: pasta_de_teste(),
         }
     }
 
     async fn enviar(&self, pedido: axum::http::request::Builder, corpo: Body) -> Resposta {
-        let mut estado = estado(&self.pool, PathBuf::from("midia-que-nao-existe"));
+        let mut estado = estado(&self.pool, self.diretorio.clone());
         estado.auth = Some(self.auth.clone());
         responder(estado, pedido.body(corpo).expect("pedido válido")).await
     }
@@ -171,6 +178,7 @@ async fn so_entra_quem_o_auth_liberou(pool: PgPool) {
     let fora_do_ar = Painel {
         pool: pool.clone(),
         auth: ClienteAuth::novo("http://127.0.0.1:9", "cms").expect("cliente"),
+        diretorio: pasta_de_teste(),
     };
     assert_eq!(
         fora_do_ar.abrir(Some("ana"), "/painel").await.status,
@@ -636,4 +644,220 @@ async fn equipe_e_so_do_dono_e_de_quem_e_do_site(pool: PgPool) {
         painel.abrir(Some("equipe"), EQUIPE).await.status,
         StatusCode::OK
     );
+}
+
+const LIMITE: &str = "----cms-teste";
+
+fn png(largura: u32, altura: u32, tom: u8) -> Vec<u8> {
+    let imagem = image::RgbImage::from_pixel(largura, altura, image::Rgb([tom, 90, 60]));
+    let mut bytes = Vec::new();
+    image::DynamicImage::ImageRgb8(imagem)
+        .write_to(
+            &mut std::io::Cursor::new(&mut bytes),
+            image::ImageFormat::Png,
+        )
+        .expect("png desenhado");
+    bytes
+}
+
+/// O corpo de um formulário de envio, como o navegador monta.
+fn formulario_de_envio(arquivo: &[u8], alt: &str) -> Vec<u8> {
+    let mut corpo = Vec::new();
+    let campo = |nome: &str, extra: &str| {
+        format!("--{LIMITE}\r\ncontent-disposition: form-data; name=\"{nome}\"{extra}\r\n\r\n")
+    };
+    corpo.extend(campo("arquivo", "; filename=\"Vitrine da Padaria.png\"").into_bytes());
+    corpo.extend_from_slice(arquivo);
+    corpo.extend(format!("\r\n{}{alt}\r\n", campo("alt", "")).into_bytes());
+    corpo.extend(format!("{}Foto: Ana\r\n--{LIMITE}--\r\n", campo("credito", "")).into_bytes());
+    corpo
+}
+
+impl Painel {
+    async fn enviar_imagem(&self, quem: &str, slug: &str, arquivo: &[u8], alt: &str) -> Resposta {
+        let pedido = Request::builder()
+            .method("POST")
+            .uri(format!("/painel/sites/{slug}/midia"))
+            .header("host", HOST_DO_PAINEL)
+            .header("origin", ORIGEM)
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={LIMITE}"),
+            )
+            .header("cookie", format!("avila_sso={}", token(quem)));
+        self.enviar(pedido, Body::from(formulario_de_envio(arquivo, alt)))
+            .await
+    }
+}
+
+async fn imagem_do_site(pool: &PgPool) -> (Uuid, String) {
+    sqlx::query_as("select id, situacao from midia")
+        .fetch_one(pool)
+        .await
+        .expect("uma imagem na biblioteca")
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn envio_de_imagem_grava_o_original_e_espera_as_variantes(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let id_do_site = site_id(&pool, "padaria").await;
+    const MIDIA: &str = "/painel/sites/padaria/midia";
+    let foto = png(1400, 800, 200);
+
+    let vazia = painel.abrir(Some("ana"), MIDIA).await;
+    assert_eq!(vazia.status, StatusCode::OK);
+    assert!(vazia.corpo.contains("Nenhuma imagem ainda"));
+
+    // Sem descrição, arquivo que não é imagem e imagem corrompida não entram.
+    let sem_alt = painel.enviar_imagem("ana", "padaria", &foto, "  ").await;
+    assert_eq!(sem_alt.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(sem_alt.corpo.contains("Escreva uma descrição da foto"));
+    let nao_e_imagem = painel
+        .enviar_imagem("ana", "padaria", b"%PDF-1.7 nada de imagem", "Um PDF")
+        .await;
+    assert_eq!(nao_e_imagem.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(nao_e_imagem.corpo.contains("JPG, PNG ou WebP"));
+    assert!(nao_e_imagem.corpo.contains(r#"value="Um PDF""#));
+    let corrompida = painel
+        .enviar_imagem("ana", "padaria", &foto[..40], "Foto cortada")
+        .await;
+    assert_eq!(corrompida.status, StatusCode::UNPROCESSABLE_ENTITY);
+
+    let enviada = painel
+        .enviar_imagem("ana", "padaria", &foto, "Vitrine da padaria com pães")
+        .await;
+    assert_eq!(enviada.status, StatusCode::OK);
+    assert!(enviada.corpo.contains("Imagem enviada"));
+    assert!(enviada.corpo.contains("Vitrine da padaria com pães"));
+    assert!(enviada.corpo.contains("1400 × 800 · preparando · sem uso"));
+    let (id, situacao) = imagem_do_site(&pool).await;
+    assert_eq!(situacao, "pendente");
+    let original = cms_web::caminho_do_original(&painel.diretorio, id_do_site, id);
+    assert_eq!(std::fs::read(&original).expect("original no disco"), foto);
+
+    // O mesmo arquivo não entra duas vezes.
+    let repetida = painel
+        .enviar_imagem("ana", "padaria", &foto, "A mesma foto")
+        .await;
+    assert_eq!(repetida.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(repetida.corpo.contains("já está na biblioteca"));
+
+    // Quem não é do site não vê nem envia; formulário de fora não vale.
+    assert_eq!(
+        painel.abrir(Some("caio"), MIDIA).await.status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        painel
+            .enviar_imagem("caio", "padaria", &png(10, 10, 1), "Outra")
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+
+    let apagada = painel
+        .postar("ana", &format!("{MIDIA}/{id}/apagar"), "")
+        .await;
+    assert_eq!(apagada.status, StatusCode::OK);
+    assert!(apagada.corpo.contains("Imagem apagada"));
+    assert!(!original.exists());
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn imagem_em_uso_nao_e_apagada_e_sem_variante_nao_vai_ao_ar(pool: PgPool) {
+    use cms_dados::fluxo::{self, ErroDeFluxo};
+    use motor_web::tipos::{Conteudo, Formato};
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let id_do_site = site_id(&pool, "padaria").await;
+    painel
+        .enviar_imagem(
+            "ana",
+            "padaria",
+            &png(1400, 800, 10),
+            "Vitrine da padaria com pães",
+        )
+        .await;
+    let (id, _) = imagem_do_site(&pool).await;
+    let dona = Ator::do_site("sub-ana", Papel::Dono);
+
+    // Uma página com a imagem da biblioteca como capa.
+    let mut conteudo = motor_web::demonstracao::documentos()
+        .into_iter()
+        .find(|documento| documento.caminho == "/sobre")
+        .expect("o exemplo tem /sobre")
+        .conteudo;
+    if let Conteudo::Pagina(pagina) = &mut conteudo {
+        pagina.capa = cms_dados::midia_para_conteudo(&pool, id_do_site, id)
+            .await
+            .expect("consulta");
+        assert!(pagina.capa.is_some());
+    }
+    let salvo = fluxo::salvar_rascunho(&pool, id_do_site, &dona, None, &conteudo)
+        .await
+        .expect("rascunho salvo");
+    assert!(
+        salvo
+            .problemas
+            .iter()
+            .any(|problema| problema.codigo == "midia.sem-variante")
+    );
+    assert!(matches!(
+        fluxo::publicar(
+            &pool,
+            id_do_site,
+            &dona,
+            salvo.documento_id,
+            chrono::Utc::now()
+        )
+        .await,
+        Err(ErroDeFluxo::Recusado(_))
+    ));
+
+    // Em uso, nem o Dono apaga, e a lista diz onde está.
+    let lista = painel
+        .abrir(Some("ana"), "/painel/sites/padaria/midia")
+        .await;
+    assert!(lista.corpo.contains("em 1 conteúdo"));
+    let recusada = painel
+        .postar(
+            "ana",
+            &format!("/painel/sites/padaria/midia/{id}/apagar"),
+            "",
+        )
+        .await;
+    assert_eq!(recusada.status, StatusCode::CONFLICT);
+    assert!(recusada.corpo.contains("está em uso"));
+
+    // Com as variantes prontas, a publicação passa e a página as usa, mesmo
+    // tendo sido salva antes de elas existirem.
+    let variante = cms_dados::VarianteGravada {
+        formato: Formato::Webp,
+        largura: 1400,
+        arquivo: "vitrine-da-padaria-0a1b2c3d-1400.webp".into(),
+        bytes: 1234,
+    };
+    cms_dados::concluir_midia(&pool, id, 1400, 800, &[variante])
+        .await
+        .expect("imagem pronta");
+    fluxo::publicar(
+        &pool,
+        id_do_site,
+        &dona,
+        salvo.documento_id,
+        chrono::Utc::now(),
+    )
+    .await
+    .expect("publicado");
+    let pagina = pedir(&pool, &host("padaria"), "/sobre").await;
+    assert_eq!(pagina.status, StatusCode::OK);
+    assert!(
+        pagina
+            .corpo
+            .contains("/midia/vitrine-da-padaria-0a1b2c3d-1400.webp")
+    );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }

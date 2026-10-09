@@ -1,6 +1,8 @@
 //! O servidor HTTP: resolve o site pelo host e serve o que está publicado.
 
+mod acesso;
 mod admin;
+mod biblioteca;
 mod equipe;
 mod midia;
 mod painel;
@@ -14,7 +16,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::State;
+use axum::extract::{DefaultBodyLimit, State};
 use axum::http::StatusCode;
 use axum::http::{HeaderMap, Method, Uri};
 use axum::response::Response;
@@ -22,6 +24,8 @@ use axum::routing::{get, post};
 use cms_dominio::LimitesDeCriacao;
 use cms_integracoes::auth::ClienteAuth;
 use sqlx::PgPool;
+
+pub use biblioteca::caminho_do_original;
 
 #[derive(Debug, Clone)]
 pub struct Configuracao {
@@ -41,7 +45,13 @@ pub struct Configuracao {
     /// aplicação só serve sites.
     pub host_do_painel: Option<String>,
     pub limites_de_criacao: LimitesDeCriacao,
+    /// Quanto de imagem original um site pode guardar, em bytes.
+    pub limite_de_midia_por_site: u64,
 }
+
+/// O maior corpo de pedido aceito: o limite de envio do motor e a folga do
+/// formulário em volta.
+const CORPO_MAXIMO: usize = motor_web::validacao::UPLOAD_MAXIMO_BYTES + 1024 * 1024;
 
 /// Um segredo de configuração. Não aparece em registro nem em `Debug`.
 #[derive(Clone)]
@@ -79,6 +89,7 @@ pub fn roteador(estado: Estado) -> Router {
             post(admin::encerrar_evento),
         )
         .fallback(despachar)
+        .layer(DefaultBodyLimit::max(CORPO_MAXIMO))
         .with_state(estado)
 }
 

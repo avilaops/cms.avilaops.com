@@ -6,10 +6,11 @@ use axum::http::StatusCode;
 use axum::response::Response;
 use cms_dados::{ErroDeConta, SiteGravado};
 use cms_dominio::conta::pode_administrar;
-use cms_dominio::{Ator, Conta, Papel, datas};
+use cms_dominio::{Conta, Papel, datas};
 use serde::Deserialize;
 
 use crate::Estado;
+use crate::acesso::{Acesso, ao_site};
 use crate::resposta::{ErroWeb, html_privado, simples};
 
 struct Linha {
@@ -52,28 +53,15 @@ struct NovoConvite {
     papel: String,
 }
 
-/// O site e o ator, ou a resposta que barra. Quem não participa recebe o
-/// mesmo 404 de um site que não existe: o painel não confirma endereços.
-async fn do_dono(
-    estado: &Estado,
-    conta: &Conta,
-    slug: &str,
-) -> Result<Result<(SiteGravado, Ator), Response>, ErroWeb> {
-    let nao_encontrado = || simples(StatusCode::NOT_FOUND, "Não encontrado.");
-    let Some(site) = cms_dados::site_por_slug(&estado.pool, slug).await? else {
-        return Ok(Err(nao_encontrado()));
-    };
-    let papel = cms_dados::papel_no_site(&estado.pool, site.id, &conta.sub).await?;
-    let Some(ator) = conta.ator(papel) else {
-        return Ok(Err(nao_encontrado()));
-    };
-    if !pode_administrar(&ator) {
-        return Ok(Err(simples(
+/// Só o Dono chega à equipe.
+async fn do_dono(estado: &Estado, conta: &Conta, slug: &str) -> Result<Acesso, ErroWeb> {
+    Ok(match ao_site(estado, conta, slug).await? {
+        Ok((_, ator)) if !pode_administrar(&ator) => Err(simples(
             StatusCode::FORBIDDEN,
             "Só o dono do site vê a equipe.",
-        )));
-    }
-    Ok(Ok((site, ator)))
+        )),
+        acesso => acesso,
+    })
 }
 
 async fn pagina(

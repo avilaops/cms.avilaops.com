@@ -133,6 +133,7 @@ mod testes {
             chave_do_indexnow: Some("0123456789abcdef".into()),
             host_do_painel: None,
             limites_de_criacao: Default::default(),
+            limite_de_midia_por_site: 0,
         }
     }
 

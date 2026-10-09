@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update midia\n        set tentativas = tentativas + 1, proxima_tentativa_em = now() + interval '5 minutes'\n        where id = (\n            select id from midia\n            where situacao = 'pendente' and proxima_tentativa_em <= now()\n            order by criado_em\n            limit 1\n            for update skip locked\n        )\n        returning id, site_id, nome\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "site_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "nome",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "01e31b9a308a46d8016bb8fe40b1b188af5491a5197c9749e7d7e24ff0aca86b"
+}

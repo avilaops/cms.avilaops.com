@@ -18,6 +18,7 @@ use uuid::Uuid;
 use crate::ErroDeDados;
 use crate::documentos::especie_e_slug;
 use crate::eventos::emitir;
+use crate::midias::{atualizar_usos, hidratar, problemas_de_midia};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ErroDeFluxo {
@@ -232,6 +233,7 @@ async fn problemas_de(
     };
     let mut problemas = validar(&documento, &contexto);
     problemas.extend(fluxo::problema_de_slug_reservado(conteudo));
+    problemas.extend(problemas_de_midia(conexao, site_id, conteudo).await?);
 
     let ocupado = sqlx::query_scalar!(
         r#"
@@ -352,6 +354,7 @@ pub async fn salvar_rascunho(
         conteudo,
     )
     .await?;
+    atualizar_usos(&mut transacao, site_id, documento_id).await?;
     transacao.commit().await?;
     Ok(Salvo {
         documento_id,
@@ -499,7 +502,7 @@ pub async fn publicar(
             .filter(|_| linha.situacao == "despublicado"))
         .ok_or(ErroDeFluxo::SemRascunho)?;
 
-    let conteudo = conteudo_da_versao(&mut transacao, versao_id).await?;
+    let mut conteudo = conteudo_da_versao(&mut transacao, versao_id).await?;
     let problemas = problemas_de(
         &mut transacao,
         site_id,
@@ -509,6 +512,8 @@ pub async fn publicar(
     )
     .await?;
     exigir_sem_bloqueio(problemas)?;
+    // As variantes podem ter ficado prontas depois do último salvamento.
+    hidratar(&mut transacao, site_id, &mut conteudo).await?;
 
     let ultima_no_ar = match linha.versao_publicada {
         Some(id) => Some(Documento {
@@ -572,6 +577,7 @@ pub async fn publicar(
         Err(erro) => return Err(erro.into()),
     }
 
+    atualizar_usos(&mut transacao, site_id, linha.id).await?;
     let evento = Evento::ConteudoPublicado(ConteudoPublicado {
         documento_id: linha.id,
         especie: linha.especie.clone(),

@@ -1,0 +1,43 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Imagens de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel">‹ Meus sites</a>
+<h1>Imagens</h1>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<form method="post" action="/painel/sites/{{ slug }}/midia" enctype="multipart/form-data">
+<label for="arquivo">Imagem (JPG, PNG ou WebP, até 15 MB)</label>
+<input id="arquivo" name="arquivo" type="file" accept="image/jpeg,image/png,image/webp" required>
+<label for="alt">Descrição para quem não enxerga a imagem</label>
+<input id="alt" name="alt" required maxlength="300" value="{{ alt }}">
+<label for="credito">Crédito (opcional)</label>
+<input id="credito" name="credito" maxlength="120">
+<button type="submit">Enviar imagem</button>
+</form>
+<h2>Biblioteca</h2>
+{%- if midias.is_empty() %}
+<p>Nenhuma imagem ainda.</p>
+{%- else %}
+<ul>
+{%- for midia in midias %}
+<li class="midia">
+{%- if let Some(miniatura) = midia.miniatura %}
+<img src="{{ miniatura }}" alt="" width="72" height="72" loading="lazy">
+{%- endif %}
+<div>
+<strong>{{ midia.alt }}</strong>
+<span class="etiquetas">{{ midia.dimensoes }} · {{ midia.situacao }} · {{ midia.uso }}</span>
+<code class="etiquetas">{{ midia.id }}</code>
+{%- if midia.pode_apagar %}
+<form class="discreto" method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}/apagar"><button type="submit">Apagar</button></form>
+{%- endif %}
+</div>
+</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{% endblock %}

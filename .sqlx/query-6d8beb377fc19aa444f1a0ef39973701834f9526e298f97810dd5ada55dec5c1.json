@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select arquivo from variante where midia_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "arquivo",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6d8beb377fc19aa444f1a0ef39973701834f9526e298f97810dd5ada55dec5c1"
+}

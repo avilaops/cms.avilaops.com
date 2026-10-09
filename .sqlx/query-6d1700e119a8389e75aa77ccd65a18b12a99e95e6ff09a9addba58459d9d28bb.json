@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into uso_de_midia (midia_id, documento_id)\n        select id, $1 from midia where site_id = $2 and id = any($3)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d1700e119a8389e75aa77ccd65a18b12a99e95e6ff09a9addba58459d9d28bb"
+}

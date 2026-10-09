@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select v.conteudo as \"conteudo: Json<Conteudo>\"\n        from documento d\n        join versao v on v.id in (d.versao_rascunho, d.versao_publicada)\n        where d.id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "conteudo: Json<Conteudo>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "031d3f5b612de30d250450c3ff19cea723743765a24f7d1a9d69742dd92d449b"
+}

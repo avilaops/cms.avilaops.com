@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update midia set situacao = 'pronta', largura = $2, altura = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "96d26d95d25c4e8bf8ce0651206788fe365bb7255d5e21cf3cb205643b5cb5d8"
+}

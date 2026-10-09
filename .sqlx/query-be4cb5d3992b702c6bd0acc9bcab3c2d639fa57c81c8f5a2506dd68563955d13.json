@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from uso_de_midia where documento_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "be4cb5d3992b702c6bd0acc9bcab3c2d639fa57c81c8f5a2506dd68563955d13"
+}

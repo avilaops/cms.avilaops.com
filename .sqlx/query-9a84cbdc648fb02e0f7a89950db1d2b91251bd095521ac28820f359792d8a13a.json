@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select enviado_por from midia where id = $1 and site_id = $2 for update",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "enviado_por",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9a84cbdc648fb02e0f7a89950db1d2b91251bd095521ac28820f359792d8a13a"
+}

@@ -4,6 +4,7 @@
 //! validação são de `cms_dados` e `cms_dominio`.
 
 use askama::Template;
+use axum::body::Bytes;
 use axum::http::header::{COOKIE, ORIGIN};
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
@@ -13,9 +14,9 @@ use cms_dominio::{Conta, Papel, Situacao};
 use cms_integracoes::auth::{COOKIE_DE_SESSAO, RespostaDoAuth};
 use serde::Deserialize;
 
-use crate::equipe;
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
+use crate::{biblioteca, equipe};
 
 const CAMINHO: &str = "/painel";
 
@@ -27,6 +28,7 @@ struct LinhaDeSite {
     papel: &'static str,
     /// A tela de equipe, para quem é Dono.
     equipe: Option<String>,
+    midia: String,
 }
 
 impl LinhaDeSite {
@@ -47,6 +49,7 @@ impl LinhaDeSite {
                 Situacao::Suspenso => "Suspenso",
             },
             papel: site.papel.rotulo(),
+            midia: format!("/painel/sites/{}/midia", site.slug),
             equipe: (site.papel == Papel::Dono)
                 .then(|| format!("/painel/sites/{}/equipe", site.slug)),
         }
@@ -280,33 +283,44 @@ enum Rota<'a> {
     Convite(&'a str),
     Equipe(&'a str),
     Convidar(&'a str),
+    Midia(&'a str),
+    EnviarMidia(&'a str),
+    ArquivoDeMidia(&'a str, &'a str),
+    ApagarMidia(&'a str, &'a str),
 }
 
 impl<'a> Rota<'a> {
     fn ler(metodo: &Method, caminho: &'a str) -> Option<Self> {
-        let do_site = |sufixo: &str| {
-            caminho
-                .strip_prefix("/painel/sites/")
-                .and_then(|resto| resto.strip_suffix(sufixo))
-                .filter(|slug| !slug.is_empty() && !slug.contains('/'))
-        };
-        if metodo == Method::GET {
-            match caminho {
-                "/" => Some(Rota::Raiz),
-                CAMINHO => Some(Rota::Sites),
-                _ => caminho
-                    .strip_prefix("/convite/")
-                    .map(Rota::Convite)
-                    .or_else(|| do_site("/equipe").map(Rota::Equipe)),
-            }
-        } else if metodo == Method::POST {
-            match caminho {
-                "/painel/sites" => Some(Rota::CriarSite),
-                _ => do_site("/convites").map(Rota::Convidar),
-            }
-        } else {
-            None
+        let leitura = metodo == Method::GET;
+        if !leitura && metodo != Method::POST {
+            return None;
         }
+        let partes: Vec<&'a str> = caminho.split('/').skip(1).collect();
+        match (leitura, partes.as_slice()) {
+            (true, [""]) => Some(Rota::Raiz),
+            (true, ["painel"]) => Some(Rota::Sites),
+            (true, ["convite", token]) => Some(Rota::Convite(token)),
+            (false, ["painel", "sites"]) => Some(Rota::CriarSite),
+            (true, ["painel", "sites", slug, "equipe"]) => Some(Rota::Equipe(slug)),
+            (false, ["painel", "sites", slug, "convites"]) => Some(Rota::Convidar(slug)),
+            (true, ["painel", "sites", slug, "midia"]) => Some(Rota::Midia(slug)),
+            (false, ["painel", "sites", slug, "midia"]) => Some(Rota::EnviarMidia(slug)),
+            (true, ["painel", "sites", slug, "midia", "arquivo", arquivo]) => {
+                Some(Rota::ArquivoDeMidia(slug, arquivo))
+            }
+            (false, ["painel", "sites", slug, "midia", id, "apagar"]) => {
+                Some(Rota::ApagarMidia(slug, id))
+            }
+            _ => None,
+        }
+    }
+
+    /// Rota que muda alguma coisa: só vale vinda do próprio painel.
+    fn escreve(self) -> bool {
+        matches!(
+            self,
+            Rota::CriarSite | Rota::Convidar(_) | Rota::EnviarMidia(_) | Rota::ApagarMidia(..)
+        )
     }
 }
 
@@ -316,7 +330,7 @@ async fn responder(
     metodo: &Method,
     cabecalhos: &HeaderMap,
     uri: &Uri,
-    corpo: &[u8],
+    corpo: &Bytes,
 ) -> Result<Response, ErroWeb> {
     let caminho = uri.path();
     let Some(rota) = Rota::ler(metodo, caminho) else {
@@ -325,9 +339,7 @@ async fn responder(
     if rota == Rota::Raiz {
         return Ok(redirecionar(StatusCode::FOUND, CAMINHO));
     }
-    if matches!(rota, Rota::CriarSite | Rota::Convidar(_))
-        && !veio_do_painel(&estado.configuracao, host, cabecalhos)
-    {
+    if rota.escreve() && !veio_do_painel(&estado.configuracao, host, cabecalhos) {
         return Ok(simples(
             StatusCode::FORBIDDEN,
             "Pedido recusado: não veio do painel.",
@@ -353,6 +365,14 @@ async fn responder(
             let origem = origem_do_painel(&estado.configuracao, host);
             equipe::convidar(estado, &conta, slug, &origem, corpo).await
         }
+        Rota::Midia(slug) => biblioteca::abrir(estado, &conta, slug).await,
+        Rota::EnviarMidia(slug) => {
+            biblioteca::enviar(estado, &conta, slug, cabecalhos, corpo).await
+        }
+        Rota::ArquivoDeMidia(slug, arquivo) => {
+            biblioteca::arquivo(estado, &conta, slug, arquivo).await
+        }
+        Rota::ApagarMidia(slug, id) => biblioteca::apagar(estado, &conta, slug, id).await,
     }
 }
 
@@ -362,7 +382,7 @@ pub async fn atender(
     metodo: &Method,
     cabecalhos: &HeaderMap,
     uri: &Uri,
-    corpo: &[u8],
+    corpo: &Bytes,
 ) -> Response {
     match responder(estado, host, metodo, cabecalhos, uri, corpo).await {
         Ok(resposta) => resposta,
