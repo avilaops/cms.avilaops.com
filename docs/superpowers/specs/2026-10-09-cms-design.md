@@ -313,6 +313,9 @@ vai para o n8n; o que decide se algo pode acontecer fica no Rust.**
 Com isso o CMS não tem cliente de SMTP, não tem modelo de e-mail e não tem
 cliente do IndexNow.
 
+Todo e-mail sai de `noreply@avilaops.com`. O nome de exibição é o do site, e o
+`Reply-To` é o e-mail de contato do site, quando houver.
+
 ### Contrato
 
 - **Saída.** O CMS grava o evento na tabela `evento`, na mesma transação do

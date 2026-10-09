@@ -235,6 +235,13 @@ WhatsApp pela Cloud API da Meta, como o Lojas já faz. A conexão com a Meta é 
 Auth: cada sistema lê por `GET /api/meta/ativos`. SMS e voz não fazem parte da
 plataforma.
 
+## Remetente de e-mail
+
+Decisão de Nicolas (09/10/2026): todo e-mail da plataforma sai de
+`noreply@avilaops.com`, seja enviado pelo servidor ou pelo n8n. O que muda por
+site ou por loja é o nome de exibição e o `Reply-To`, nunca o endereço do
+remetente. Não se cria remetente por produto nem por cliente.
+
 ## O que vai para o n8n
 
 Decisão de Nicolas (09/10/2026): o n8n assume o que não precisa ser código
