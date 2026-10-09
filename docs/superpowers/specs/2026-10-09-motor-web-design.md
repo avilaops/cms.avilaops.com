@@ -271,7 +271,9 @@ Rascunho salva sempre. A trava é na publicação.
 | Título ou descrição igual ao de outro documento do site | `seo.titulo.repetido`, `seo.descricao.repetida` | Bloqueia |
 | Título acima de 70 caracteres; descrição acima de 170 | `seo.titulo.excedido`, `seo.descricao.excedida` | Bloqueia |
 | Título acima de 60; descrição acima de 155 | `seo.titulo.longo`, `seo.descricao.longa` | Avisa |
+| Título do documento vazio | `titulo.vazio` | Bloqueia |
 | Slug vazio depois de normalizado (exceto a home) | `slug.vazio` | Bloqueia |
+| Slug diferente da forma normalizada | `slug.formato` | Bloqueia |
 | Slug alterado em documento publicado, sem redirecionamento | `slug.sem-redirecionamento` | Bloqueia |
 | Título de seção pulando nível, ou primeiro título diferente de 2 | `corpo.titulo.nivel` | Bloqueia |
 | Imagem sem `alt` | `midia.alt.vazio` | Bloqueia |
@@ -285,7 +287,7 @@ Rascunho salva sempre. A trava é na publicação.
 | `indexar` falso em documento publicado | `seo.noindex` | Avisa |
 | Página acima do orçamento de peso | `pagina.peso` | Avisa |
 | Upload acima de 15 MB | `upload.grande` | Recusa |
-| Upload fora de JPG, PNG, WebP e AVIF | `upload.formato` | Recusa |
+| Upload fora de JPG, PNG e WebP | `upload.formato` | Recusa |
 | Arquivo ilegível | `upload.ilegivel` | Recusa |
 
 Detalhes que a tabela não diz:
@@ -407,7 +409,12 @@ pub fn processar_imagem(nome_original: &str, bytes: &[u8])
 - O hash é SHA-256 do arquivo original, o que permite cache longo.
 - A função é síncrona e pesada. Quem chama decide a fila e a thread, conforme a
   base Rust.
-- Crates: `image`, `webp` e `ravif`.
+- Crates: `image`, que traz o codificador AVIF (`ravif`), e `webp`.
+- AVIF não é aceito como arquivo de entrada: decodificar AVIF exige uma
+  biblioteca nativa (`dav1d`) que não vale o custo de build. Quem envia foto
+  manda JPG, PNG ou WebP; o AVIF é só formato de saída.
+- `slug.formato` existe porque o conector e a API chegam sem passar pela tela:
+  quem chama normaliza com `normalizar_slug`, e a validação confere.
 
 ### `descoberta`
 
