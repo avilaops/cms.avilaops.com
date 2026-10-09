@@ -2,13 +2,15 @@
 //! consultas são conferidas na compilação.
 
 mod documentos;
+pub mod fluxo;
 mod sites;
 
 use sqlx::PgPool;
 use sqlx::migrate::Migrator;
 
 pub use documentos::{
-    ItemDeNavegacao, documento_publicado, documentos_publicados, navegacao, publicar,
+    Ausencia, ItemDeNavegacao, ausencia, documento_publicado, documentos_publicados, navegacao,
+    publicar,
 };
 pub use sites::{
     SiteGravado, apagar_site, ativar_dominio, criar_site, mudar_situacao, site_por_dominio,

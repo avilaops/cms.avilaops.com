@@ -14,7 +14,7 @@ pub async fn documento_publicado(
 ) -> Result<Option<Documento>, ErroDeDados> {
     let linha = sqlx::query!(
         r#"
-        select d.caminho, v.conteudo as "conteudo: Json<Conteudo>"
+        select d.caminho as "caminho!", v.conteudo as "conteudo: Json<Conteudo>"
         from documento d
         join versao v on v.id = d.versao_publicada
         where d.site_id = $1 and d.caminho = $2 and d.situacao = 'publicado'
@@ -37,7 +37,7 @@ pub async fn documentos_publicados(
 ) -> Result<Vec<Documento>, ErroDeDados> {
     let linhas = sqlx::query!(
         r#"
-        select d.caminho, v.conteudo as "conteudo: Json<Conteudo>"
+        select d.caminho as "caminho!", v.conteudo as "conteudo: Json<Conteudo>"
         from documento d
         join versao v on v.id = d.versao_publicada
         where d.site_id = $1 and d.situacao = 'publicado'
@@ -67,7 +67,7 @@ pub struct ItemDeNavegacao {
 pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegacao>, ErroDeDados> {
     let linhas = sqlx::query!(
         r#"
-        select d.caminho, d.especie, coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as "titulo!"
+        select d.caminho as "caminho!", d.especie, coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as "titulo!"
         from documento d
         join versao v on v.id = d.versao_publicada
         where d.site_id = $1 and d.situacao = 'publicado'
@@ -87,7 +87,51 @@ pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegac
         .collect())
 }
 
-fn especie_e_slug(conteudo: &Conteudo) -> Result<(&'static str, &str), ErroDeDados> {
+/// Por que um caminho não tem documento no ar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Ausencia {
+    /// O endereço mudou: o visitante é levado ao novo.
+    Redirecionado(String),
+    /// Já esteve no ar e foi tirado.
+    Despublicado,
+    Inexistente,
+}
+
+pub async fn ausencia(
+    pool: &PgPool,
+    site_id: Uuid,
+    caminho: &str,
+) -> Result<Ausencia, ErroDeDados> {
+    let destino = sqlx::query_scalar!(
+        "select para from redirecionamento where site_id = $1 and de = $2",
+        site_id,
+        caminho
+    )
+    .fetch_optional(pool)
+    .await?;
+    if let Some(destino) = destino {
+        return Ok(Ausencia::Redirecionado(destino));
+    }
+    let despublicado = sqlx::query_scalar!(
+        r#"
+        select exists(
+            select 1 from documento
+            where site_id = $1 and caminho = $2 and situacao = 'despublicado'
+        ) as "despublicado!"
+        "#,
+        site_id,
+        caminho
+    )
+    .fetch_one(pool)
+    .await?;
+    Ok(if despublicado {
+        Ausencia::Despublicado
+    } else {
+        Ausencia::Inexistente
+    })
+}
+
+pub(crate) fn especie_e_slug(conteudo: &Conteudo) -> Result<(&'static str, &str), ErroDeDados> {
     match conteudo {
         Conteudo::Pagina(pagina) => Ok(("pagina", &pagina.slug)),
         Conteudo::Post(post) => Ok(("post", &post.slug)),

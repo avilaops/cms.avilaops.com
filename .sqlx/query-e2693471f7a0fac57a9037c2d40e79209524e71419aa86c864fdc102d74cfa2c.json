@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update documento set revisao_pedida_em = null where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e2693471f7a0fac57a9037c2d40e79209524e71419aa86c864fdc102d74cfa2c"
+}

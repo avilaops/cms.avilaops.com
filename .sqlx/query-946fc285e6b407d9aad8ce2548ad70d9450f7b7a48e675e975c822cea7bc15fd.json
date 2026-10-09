@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                insert into documento (site_id, especie, criado_por)\n                values ($1, $2, $3)\n                returning id\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "946fc285e6b407d9aad8ce2548ad70d9450f7b7a48e675e975c822cea7bc15fd"
+}

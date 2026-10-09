@@ -3,7 +3,9 @@
 
 pub mod datas;
 pub mod endereco;
+pub mod fluxo;
 pub mod site;
 
 pub use endereco::{Endereco, Host, classificar, ler_host};
+pub use fluxo::{Acao, Ator, Papel};
 pub use site::{PerfilDoSite, Situacao, SituacaoDesconhecida};

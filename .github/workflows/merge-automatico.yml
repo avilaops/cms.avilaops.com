@@ -1,0 +1,42 @@
+name: Merge automático
+# O PR entra na main sozinho, mas só depois de a validação dele passar. É o
+# mesmo desenho do Lojas, sem a etapa de publicação: a do CMS segue pelo
+# caminho manual do infra.
+on:
+  workflow_run:
+    workflows: ["Validar"]
+    types: [completed]
+permissions:
+  contents: write
+  pull-requests: write
+# Um merge por vez: dois PRs abertos juntos não disputam a main.
+concurrency:
+  group: merge-automatico
+  cancel-in-progress: false
+jobs:
+  merge:
+    # Só validação de pull request que passou. PR de fork fica de fora: o
+    # GitHub não preenche `pull_requests` para ele, e o repositório é público.
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0].number != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      # `--match-head-commit` recusa o merge se a branch andou depois da
+      # validação: o que entra na main é exatamente o commit que foi testado.
+      - name: Juntar na main e apagar a branch
+        run: |
+          set -euo pipefail
+          estado=$(gh pr view "$PR" --json state,isDraft --jq '.state + " " + (.isDraft | tostring)')
+          if [[ "$estado" != "OPEN false" ]]; then
+            echo "PR #$PR não está aberto e pronto ($estado); nada a fazer."
+            exit 0
+          fi
+          gh pr merge "$PR" --squash --delete-branch --match-head-commit "$SHA"

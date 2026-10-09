@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{DateTime, Utc};
-use cms_dados::SiteGravado;
+use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::site::aparece_na_busca;
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
@@ -245,7 +245,13 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
     let Some(mut documento) =
         cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, caminho).await?
     else {
-        return nao_encontrado(estado, pedido).await;
+        return match cms_dados::ausencia(&estado.pool, pedido.gravado.id, caminho).await? {
+            Ausencia::Redirecionado(destino) => {
+                Ok(redirecionar(StatusCode::MOVED_PERMANENTLY, &destino))
+            }
+            Ausencia::Despublicado => saiu_do_ar(estado, pedido).await,
+            Ausencia::Inexistente => nao_encontrado(estado, pedido).await,
+        };
     };
     ajustar_indexacao(&mut documento, pedido.indexavel);
 
@@ -342,22 +348,55 @@ async fn blog(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
     Ok(html(StatusCode::OK, pagina, pedido.indexavel))
 }
 
-async fn nao_encontrado(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
+/// O que o visitante lê quando o endereço não tem página.
+struct Aviso {
+    status: StatusCode,
+    caminho: &'static str,
+    titulo: &'static str,
+    descricao: &'static str,
+    mensagem: &'static str,
+}
+
+async fn avisar(estado: &Estado, pedido: &Pedido, aviso: Aviso) -> Result<Response, ErroWeb> {
     let agora = Utc::now();
-    let aviso = pagina_avulsa(
+    let documento = pagina_avulsa(
         pedido,
-        "/pagina-nao-encontrada",
-        "Página não encontrada",
-        "O endereço pedido não existe neste site.".into(),
+        aviso.caminho,
+        aviso.titulo,
+        aviso.descricao.into(),
         false,
         (agora, agora),
     );
-    let moldura = moldura(estado, pedido, &aviso).await?;
+    let moldura = moldura(estado, pedido, &documento).await?;
     let pagina = PaginaDeAviso {
         moldura,
-        titulo: "Página não encontrada".into(),
-        mensagem: "O endereço que você abriu não existe ou saiu do ar.".into(),
+        titulo: aviso.titulo.into(),
+        mensagem: aviso.mensagem.into(),
     }
     .render()?;
-    Ok(html(StatusCode::NOT_FOUND, pagina, false))
+    Ok(html(aviso.status, pagina, false))
+}
+
+async fn nao_encontrado(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
+    let aviso = Aviso {
+        status: StatusCode::NOT_FOUND,
+        caminho: "/pagina-nao-encontrada",
+        titulo: "Página não encontrada",
+        descricao: "O endereço pedido não existe neste site.",
+        mensagem: "O endereço que você abriu não existe ou saiu do ar.",
+    };
+    avisar(estado, pedido, aviso).await
+}
+
+/// 410 diz ao buscador que a página saiu de vez, e ele a tira do índice mais
+/// rápido do que com 404.
+async fn saiu_do_ar(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
+    let aviso = Aviso {
+        status: StatusCode::GONE,
+        caminho: "/pagina-removida",
+        titulo: "Página removida",
+        descricao: "Esta página foi tirada do ar.",
+        mensagem: "O conteúdo que estava neste endereço foi tirado do ar.",
+    };
+    avisar(estado, pedido, aviso).await
 }

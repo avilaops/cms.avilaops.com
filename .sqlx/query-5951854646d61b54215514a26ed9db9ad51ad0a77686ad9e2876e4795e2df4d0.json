@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from redirecionamento where site_id = $1 and de = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5951854646d61b54215514a26ed9db9ad51ad0a77686ad9e2876e4795e2df4d0"
+}

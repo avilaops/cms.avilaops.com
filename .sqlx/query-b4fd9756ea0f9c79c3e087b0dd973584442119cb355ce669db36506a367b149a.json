@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select para from redirecionamento where site_id = $1 and de = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "para",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b4fd9756ea0f9c79c3e087b0dd973584442119cb355ce669db36506a367b149a"
+}

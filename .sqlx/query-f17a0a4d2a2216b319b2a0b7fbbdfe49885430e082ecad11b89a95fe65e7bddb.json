@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select d.caminho as \"caminho!\", v.conteudo as \"conteudo: Json<Conteudo>\"\n        from documento d\n        join versao v on v.id = d.versao_publicada\n        where d.site_id = $1 and d.caminho = $2 and d.situacao = 'publicado'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "caminho!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "conteudo: Json<Conteudo>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "f17a0a4d2a2216b319b2a0b7fbbdfe49885430e082ecad11b89a95fe65e7bddb"
+}

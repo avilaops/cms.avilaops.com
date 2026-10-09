@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                        update versao set conteudo = $2, gravado_por = $3, criado_em = now()\n                        where id = $1\n                        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d84d73765ba4020175d907a1a80669c743a5f75660b32e0b72543cc8752fb3ac"
+}

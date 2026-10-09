@@ -164,10 +164,12 @@ pub async fn ativar_dominio(pool: &PgPool, site_id: Uuid, host: &str) -> Result<
 /// Apaga o site e tudo o que é dele. Devolve se havia o que apagar.
 pub async fn apagar_site(pool: &PgPool, slug: &str) -> Result<bool, ErroDeDados> {
     let mut transacao = pool.begin().await?;
-    // A versão publicada é referenciada pelo documento; solta antes de apagar.
+    // As versões são referenciadas pelo documento; solta antes de apagar.
     sqlx::query!(
         r#"
-        update documento set situacao = 'despublicado', versao_publicada = null
+        update documento
+        set situacao = 'rascunho', versao_publicada = null, versao_rascunho = null,
+            revisao_pedida_em = null
         where site_id = (select id from site where slug = $1)
         "#,
         slug

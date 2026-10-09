@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update documento set situacao = 'despublicado' where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "13771b572667f1eec34651910e7fd8804fbcada2e7dc80d651e62c2729325507"
+}

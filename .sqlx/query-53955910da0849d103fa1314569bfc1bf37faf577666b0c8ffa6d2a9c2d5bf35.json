@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select d.caminho, d.especie, coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as \"titulo!\"\n        from documento d\n        join versao v on v.id = d.versao_publicada\n        where d.site_id = $1 and d.situacao = 'publicado'\n        order by d.caminho\n        ",
+  "query": "\n        select d.caminho as \"caminho!\", d.especie, coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as \"titulo!\"\n        from documento d\n        join versao v on v.id = d.versao_publicada\n        where d.site_id = $1 and d.situacao = 'publicado'\n        order by d.caminho\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "caminho",
+        "name": "caminho!",
         "type_info": "Text"
       },
       {
@@ -25,10 +25,10 @@
       ]
     },
     "nullable": [
-      false,
+      true,
       false,
       null
     ]
   },
-  "hash": "214533446d3dc8d2adb2c7826470d24f0f0f48dc8afa5c9833cbe5ca39c3be7c"
+  "hash": "53955910da0849d103fa1314569bfc1bf37faf577666b0c8ffa6d2a9c2d5bf35"
 }

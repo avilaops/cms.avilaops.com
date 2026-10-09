@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into versao (documento_id, numero, conteudo, gravado_por)\n        values ($1, (select coalesce(max(numero), 0) + 1 from versao where documento_id = $1), $2, $3)\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "81574560f25a0006628c1958774e5e5aba6408d7ed5265351409a17b0cadcda7"
+}

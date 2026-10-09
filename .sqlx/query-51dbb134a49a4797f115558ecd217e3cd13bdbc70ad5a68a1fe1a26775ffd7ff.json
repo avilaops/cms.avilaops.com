@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, especie, slug, caminho, situacao, versao_publicada, versao_rascunho,\n               revisao_pedida_em, publicado_em, criado_por\n        from documento\n        where id = $1 and site_id = $2\n        for update\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "especie",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "slug",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "caminho",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "situacao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "versao_publicada",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "versao_rascunho",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "revisao_pedida_em",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "publicado_em",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "criado_por",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "51dbb134a49a4797f115558ecd217e3cd13bdbc70ad5a68a1fe1a26775ffd7ff"
+}

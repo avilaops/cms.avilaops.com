@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select coalesce(v.conteudo -> 'dados' -> 'seo' ->> 'titulo', '') as \"titulo!\",\n               coalesce(v.conteudo -> 'dados' -> 'seo' ->> 'descricao', '') as \"descricao!\"\n        from documento d\n        join versao v on v.id = d.versao_publicada\n        where d.site_id = $1 and d.situacao = 'publicado' and d.id <> $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "titulo!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "descricao!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "8dde2247ac1d28a3231d25819fdb6b1b9b9bf9caa38aa75e5ef013749b4b6a51"
+}

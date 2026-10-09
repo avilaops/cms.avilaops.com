@@ -7,17 +7,48 @@ painel impede quem edita de estragar isso.
 
 ## Estado
 
-O motor está implementado e publicado como biblioteca. CMS e Lojas em Rust
-têm spec aprovada e nenhum código: nenhum site está no ar.
+O motor está implementado e publicado como biblioteca. O CMS tem o site
+público e o fluxo de publicação implementados e testados, sem painel e sem
+login. Nenhum site está no ar.
 
 | Frente | Entrega | Situação |
 |---|---|---|
 | Base | Convenções comuns em Rust: servidor, banco, login, publicação, n8n | Spec aprovada |
 | Motor | Crate `motor-web`: validação, cabeçalho, JSON-LD, imagens, sitemaps, `robots.txt`, `llms.txt` | Implementado e publicado em [avilaops/motor-web](https://github.com/avilaops/motor-web) |
-| CMS | Painel, conector MCP e renderização por host | Spec aprovada, código não iniciado |
+| CMS | Painel, conector MCP e renderização por host | Em implementação, por fatias |
 | Lojas | Reescrita do Lojas em Rust, por fatias de rota | Spec aprovada, código não iniciado |
 
-Este repositório hoje só tem documentos. O código do CMS vai morar aqui.
+### Fatias do CMS
+
+| Fatia | O que entrega | Situação |
+|---|---|---|
+| Site público | Site resolvido pelo host, páginas, posts, blog, sitemaps, `robots.txt`, `llms.txt`, mídia por site, semente de demonstração | Feita |
+| Fluxo de publicação | Rascunho, revisão, publicação validada pelo motor, datas do servidor, troca de endereço com 301, despublicação com 410, permissão por papel, histórico | Feita |
+| Esteira | `Dockerfile`, validação no GitHub Actions (`fmt`, `clippy`, testes contra Postgres), merge automático | Feita |
+| Login e participação | Sessão pelo Auth, tabela de participação, convites | A fazer |
+| Painel | Telas de conteúdo, editor de blocos, prévia | A fazer |
+| Mídia | Envio, fila de variantes, uso por documento | A fazer |
+| Eventos e n8n | Tabela de eventos, entrega por webhook, workflow `CMS - Operação` | A fazer |
+| Conector | Autorização e ferramentas para assistentes de IA | A fazer |
+| Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |
+| Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |
+
+## Como validar
+
+Precisa de Rust estável e de um Postgres 18 para os testes de integração, que
+criam uma base por teste.
+
+```bash
+export DATABASE_URL=postgres://postgres@127.0.0.1:5432/postgres
+export SQLX_OFFLINE=true
+cargo fmt --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+```
+
+Mudou uma consulta ou uma migração: aplique as migrações em um banco de
+desenvolvimento e regrave o diretório `.sqlx` com
+`cargo sqlx prepare --workspace`, sem `SQLX_OFFLINE`.
 
 ## Pilha
 
@@ -32,7 +63,9 @@ depois do fato e fala com terceiros.
   devolve os problemas que impedem a publicação e os artefatos da página. É
   usado pelo CMS e pelo Lojas, fixado por commit.
 - **CMS (este repositório)**: uma aplicação que serve vários sites por host,
-  com painel, login pelo Auth e conector para assistentes de IA.
+  com painel, login pelo Auth e conector para assistentes de IA. *Workspace*
+  Cargo com `dominio` (regras puras), `dados` (consultas e migrações), `web`
+  (Axum e templates) e `servidor` (o binário).
 - **Lojas**: dono de catálogo, carrinho e checkout. Passa do Next.js para Rust
   uma fatia de rotas por vez, no mesmo domínio e no mesmo banco.
 - **n8n**: recebe os eventos de cada produto por webhook e cuida de e-mail,

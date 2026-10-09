@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update redirecionamento set para = $3 where site_id = $1 and para = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1e2f9452091070d735cb916dfd65ecd90f09f507dfddae53ddca313505ad64ad"
+}
