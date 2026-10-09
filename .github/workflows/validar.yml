@@ -14,9 +14,10 @@ jobs:
     timeout-minutes: 45
     services:
       # A imagem de produção do Postgres. Cada teste de integração cria a
-      # própria base nela.
+      # própria base nela. Vem do espelho oficial no ECR público: o Docker
+      # Hub limita pull sem login pelo IP, que os runners dividem.
       postgres:
-        image: postgres:18-alpine
+        image: public.ecr.aws/docker/library/postgres:18-alpine
         env:
           POSTGRES_HOST_AUTH_METHOD: trust
         ports:
