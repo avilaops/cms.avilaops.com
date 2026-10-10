@@ -9,8 +9,8 @@ painel impede quem edita de estragar isso.
 
 O motor está implementado e publicado como biblioteca. O CMS tem todas as
 fatias de código implementadas e testadas: site público, painel, mídia,
-conector e rotinas. Nenhum site está no ar: falta a primeira subida, que
-depende das pendências da spec.
+conector e rotinas. A aplicação roda no servidor de aplicações, mas ainda não
+responde na internet: faltam os registros de DNS e o bloco no Caddy.
 
 | Frente | Entrega | Situação |
 |---|---|---|
@@ -32,7 +32,7 @@ depende das pendências da spec.
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
 | Conector | Servidor de autorização próprio (registro dinâmico, PKCE S256, tokens só como hash), ponto MCP com 15 ferramentas por escopo, tela de conexões com desconectar, registro de chamadas sem argumentos | Feita |
 | Domínio próprio, cache e rotinas | Pedido de domínio pelo Dono, conferência de DNS por rotina, resposta ao Caddy para TLS sob demanda, endereço provisório assumido como definitivo, cache de página em memória derrubado ao publicar, publicação agendada, limpeza de histórico, catálogo de rotinas com trava no banco | Feita |
-| Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |
+| Primeira subida | Container no servidor de aplicações e site de demonstração no ar | Container no ar por dentro desde 10/10/2026, com o site de demonstração semeado e o banco no backup diário. Falta o que o deixa acessível: registros de DNS `cms` e `*.sites`, bloco no Caddy e o repasse da pergunta de certificado pelo Lojas |
 
 ## Como validar
 
