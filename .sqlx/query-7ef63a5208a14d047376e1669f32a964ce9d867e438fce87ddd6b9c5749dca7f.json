@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select coalesce(p.email, h.conta) as \"conta!\", h.equipe, h.acao,\n               v.conteudo -> 'dados' ->> 'titulo' as titulo, h.criado_em\n        from historico h\n        left join participacao p on p.site_id = h.site_id and p.conta = h.conta\n        left join documento d on d.id = h.documento_id\n        left join versao v on v.id = coalesce(d.versao_rascunho, d.versao_publicada)\n        where h.site_id = $1\n        order by h.id desc\n        limit $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "conta!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "equipe",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "acao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "titulo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "criado_em",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      false,
+      false,
+      null,
+      false
+    ]
+  },
+  "hash": "7ef63a5208a14d047376e1669f32a964ce9d867e438fce87ddd6b9c5749dca7f"
+}

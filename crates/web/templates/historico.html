@@ -1,0 +1,15 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Histórico de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Histórico</h1>
+{%- if linhas.is_empty() %}
+<p>Nada aconteceu ainda.</p>
+{%- else %}
+<ul>
+{%- for linha in linhas %}
+<li><strong>{{ linha.0 }}</strong><span class="etiquetas">{{ linha.1 }}</span></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{% endblock %}

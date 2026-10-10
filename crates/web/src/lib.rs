@@ -9,6 +9,7 @@ mod conteudo;
 mod dominio;
 mod editor;
 mod equipe;
+mod identidade;
 mod midia;
 mod painel;
 mod publico;

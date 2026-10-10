@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update site set perfil = $2, atualizado_em = now() where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e5ef8465620c354c3c081242a527fa81881f01e8097fb4ea049724bfa74b2ca7"
+}

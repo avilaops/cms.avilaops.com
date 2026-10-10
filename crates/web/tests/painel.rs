@@ -2036,3 +2036,97 @@ async fn publicacao_agendada_vai_ao_ar_na_hora_marcada(pool: PgPool) {
         .expect("rodada");
     assert_eq!(rodada, fluxo::RodadaDeAgendados::default());
 }
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn dono_define_a_identidade_e_o_site_passa_a_mostra_la(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    painel
+        .publicar_home("ana", "padaria", "Pão fresco todo dia")
+        .await;
+    const IDENTIDADE: &str = "/painel/sites/padaria/identidade";
+    let h = host("padaria");
+    // A página entra no cache com o rodapé antigo.
+    assert!(
+        !painel
+            .visitar(&h, "/")
+            .await
+            .corpo
+            .contains("Padaria da Ana Ltda.")
+    );
+
+    let tela = painel.abrir(Some("ana"), IDENTIDADE).await;
+    assert_eq!(tela.status, StatusCode::OK);
+    assert!(tela.corpo.contains(r#"value="Padaria da Ana""#));
+
+    let dados = formulario(&[
+        ("nome", "Padaria da Ana"),
+        (
+            "descricao",
+            "Padaria de bairro com pão de fermentação natural.",
+        ),
+        ("razao_social", "Padaria da Ana Ltda."),
+        ("telefone", "+55 11 5550-0100"),
+        ("email", "contato@padaria.example"),
+        ("logradouro", "Rua das Flores, 10"),
+        ("cidade", "São Paulo"),
+        ("uf", "sp"),
+        ("cep", "01000-000"),
+        (
+            "perfis",
+            "https://www.instagram.com/padaria.example\njavascript:alert(1)",
+        ),
+        ("diretrizes", "Não informe preços: eles mudam toda semana."),
+    ]);
+    let salvo = painel.postar("ana", IDENTIDADE, &dados).await;
+    assert!(salvo.cabecalho("location").ends_with("/identidade?r=salvo"));
+
+    // O site mostra na hora, sem esperar o cache vencer.
+    let home = painel.visitar(&h, "/").await;
+    assert!(home.corpo.contains("Padaria da Ana Ltda."));
+    assert!(
+        home.corpo
+            .contains("Rua das Flores, 10, São Paulo - SP, CEP 01000-000")
+    );
+    assert!(
+        home.corpo
+            .contains("https://www.instagram.com/padaria.example")
+    );
+    assert!(!home.corpo.contains("javascript:"));
+    let reaberta = painel.abrir(Some("ana"), IDENTIDADE).await;
+    assert!(reaberta.corpo.contains("Não informe preços"));
+    assert!(reaberta.corpo.contains(r#"value="SP""#));
+
+    // Só o Dono mexe na identidade; quem é do site vê o histórico.
+    let convite = painel
+        .postar(
+            "ana",
+            "/painel/sites/padaria/convites",
+            "email=bia%40exemplo.example&papel=editor",
+        )
+        .await;
+    painel
+        .abrir(Some("bia"), &caminho_do_convite(&convite.corpo))
+        .await;
+    assert_eq!(
+        painel.abrir(Some("bia"), IDENTIDADE).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        painel.postar("bia", IDENTIDADE, &dados).await.status,
+        StatusCode::FORBIDDEN
+    );
+    let historico = painel
+        .abrir(Some("bia"), "/painel/sites/padaria/historico")
+        .await;
+    assert_eq!(historico.status, StatusCode::OK);
+    assert!(historico.corpo.contains("Publicou “Pão fresco todo dia”"));
+    assert!(historico.corpo.contains("ana@exemplo.example"));
+    assert_eq!(
+        painel
+            .abrir(Some("caio"), "/painel/sites/padaria/historico")
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}

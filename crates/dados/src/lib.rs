@@ -49,8 +49,8 @@ pub use midias::{
 };
 pub use rotinas::{Agendado, limpar_historico, reivindicar_rotina};
 pub use sites::{
-    SiteGravado, apagar_site, ativar_dominio, criar_site, mudar_situacao, site_por_dominio,
-    site_por_slug,
+    LinhaDoHistorico, SiteGravado, apagar_site, ativar_dominio, atualizar_perfil, criar_site,
+    historico_do_site, mudar_situacao, site_por_dominio, site_por_slug,
 };
 
 pub static MIGRADOR: Migrator = sqlx::migrate!("./migrations");

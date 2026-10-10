@@ -1,0 +1,44 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Identidade de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Identidade do site</h1>
+{%- if salvo %}
+<p class="recado aviso" role="status">Identidade salva.</p>
+{%- endif %}
+<form method="post" action="/painel/sites/{{ slug }}/identidade">
+<label for="nome">Nome do site</label>
+<input id="nome" name="nome" required maxlength="80" value="{{ p.nome }}">
+<label for="descricao">O que é o negócio, em uma ou duas frases</label>
+<textarea id="descricao" name="descricao" maxlength="400">{{ p.descricao }}</textarea>
+<label for="logo">Logo</label>
+<select id="logo" name="logo">
+<option value="">Sem logo</option>
+{%- for opcao in logos %}
+<option value="{{ opcao.0 }}"{% if opcao.2 %} selected{% endif %}>{{ opcao.1 }}</option>
+{%- endfor %}
+</select>
+<fieldset>
+<legend>Quem está por trás do site</legend>
+<label for="razao_social">Razão social</label>
+<input id="razao_social" name="razao_social" maxlength="120" value="{{ razao_social }}">
+<label for="telefone">Telefone</label>
+<input id="telefone" name="telefone" maxlength="30" inputmode="tel" value="{{ telefone }}">
+<label for="email">E-mail de contato</label>
+<input id="email" name="email" type="email" maxlength="254" value="{{ email }}">
+<label for="logradouro">Endereço</label>
+<input id="logradouro" name="logradouro" maxlength="160" value="{{ logradouro }}">
+<label for="cidade">Cidade</label>
+<input id="cidade" name="cidade" maxlength="80" value="{{ cidade }}">
+<label for="uf">UF</label>
+<input id="uf" name="uf" maxlength="2" value="{{ uf }}">
+<label for="cep">CEP</label>
+<input id="cep" name="cep" maxlength="9" inputmode="numeric" value="{{ cep }}">
+<label for="perfis">Redes sociais (endereços https), uma por linha</label>
+<textarea id="perfis" name="perfis">{{ perfis }}</textarea>
+</fieldset>
+<label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
+<textarea id="diretrizes" name="diretrizes">{{ diretrizes }}</textarea>
+<button type="submit">Salvar identidade</button>
+</form>
+{% endblock %}

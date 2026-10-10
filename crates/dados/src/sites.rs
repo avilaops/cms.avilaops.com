@@ -1,4 +1,6 @@
-use cms_dominio::{PerfilDoSite, Situacao};
+use chrono::{DateTime, Utc};
+use cms_dominio::conta::pode_administrar;
+use cms_dominio::{Ator, PerfilDoSite, Situacao};
 use sqlx::PgPool;
 use sqlx::types::Json;
 use uuid::Uuid;
@@ -181,4 +183,64 @@ pub async fn apagar_site(pool: &PgPool, slug: &str) -> Result<bool, ErroDeDados>
         .await?;
     transacao.commit().await?;
     Ok(apagados.rows_affected() > 0)
+}
+
+/// Regrava o que o Dono define sobre o site: nome, descrição, logo,
+/// organização e diretrizes para IA. Devolve se a conta podia.
+pub async fn atualizar_perfil(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    perfil: &PerfilDoSite,
+) -> Result<bool, ErroDeDados> {
+    if !pode_administrar(ator) {
+        return Ok(false);
+    }
+    sqlx::query!(
+        "update site set perfil = $2, atualizado_em = now() where id = $1",
+        site_id,
+        Json(perfil) as _
+    )
+    .execute(pool)
+    .await?;
+    Ok(true)
+}
+
+/// Uma linha do histórico do site: quem fez o quê, e quando.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LinhaDoHistorico {
+    pub conta: String,
+    pub equipe: bool,
+    pub acao: String,
+    /// O título do documento, se ele ainda existe.
+    pub titulo: Option<String>,
+    pub criado_em: DateTime<Utc>,
+}
+
+/// As últimas ações no site, da mais recente para trás. Quem assina é o
+/// e-mail de quem participa; conta que saiu do site aparece pelo identificador.
+pub async fn historico_do_site(
+    pool: &PgPool,
+    site_id: Uuid,
+    limite: i64,
+) -> Result<Vec<LinhaDoHistorico>, ErroDeDados> {
+    let linhas = sqlx::query_as!(
+        LinhaDoHistorico,
+        r#"
+        select coalesce(p.email, h.conta) as "conta!", h.equipe, h.acao,
+               v.conteudo -> 'dados' ->> 'titulo' as titulo, h.criado_em
+        from historico h
+        left join participacao p on p.site_id = h.site_id and p.conta = h.conta
+        left join documento d on d.id = h.documento_id
+        left join versao v on v.id = coalesce(d.versao_rascunho, d.versao_publicada)
+        where h.site_id = $1
+        order by h.id desc
+        limit $2
+        "#,
+        site_id,
+        limite
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(linhas)
 }

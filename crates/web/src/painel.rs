@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conector, conteudo, dominio, equipe};
+use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade};
 
 const CAMINHO: &str = "/painel";
 
@@ -311,6 +311,9 @@ enum Rota<'a> {
     RevogarConexao(&'a str),
     Dominio(&'a str),
     GravarDominio(&'a str, dominio::Pedido),
+    Identidade(&'a str),
+    GravarIdentidade(&'a str),
+    Historico(&'a str),
 }
 
 impl<'a> Rota<'a> {
@@ -345,6 +348,9 @@ impl<'a> Rota<'a> {
             (false, ["painel", "sites", slug, "dominio", "provisorio"]) => {
                 Some(Rota::GravarDominio(slug, dominio::Pedido::Provisorio))
             }
+            (true, ["painel", "sites", slug, "identidade"]) => Some(Rota::Identidade(slug)),
+            (false, ["painel", "sites", slug, "identidade"]) => Some(Rota::GravarIdentidade(slug)),
+            (true, ["painel", "sites", slug, "historico"]) => Some(Rota::Historico(slug)),
             (true, ["oauth", "authorize"]) => Some(Rota::Autorizar),
             (false, ["oauth", "authorize"]) => Some(Rota::Decidir),
             (true, ["painel", "conector"]) => Some(Rota::Conector),
@@ -379,6 +385,7 @@ impl<'a> Rota<'a> {
                 | Rota::Decidir
                 | Rota::RevogarConexao(_)
                 | Rota::GravarDominio(..)
+                | Rota::GravarIdentidade(_)
         )
     }
 }
@@ -472,6 +479,9 @@ async fn responder(
             conector::tela(estado, &conta, &origem).await
         }
         Rota::RevogarConexao(id) => conector::revogar(estado, &conta, id).await,
+        Rota::Identidade(slug) => identidade::abrir(estado, &conta, slug, uri).await,
+        Rota::GravarIdentidade(slug) => identidade::gravar(estado, &conta, slug, corpo).await,
+        Rota::Historico(slug) => identidade::historico(estado, &conta, slug).await,
         Rota::Dominio(slug) => dominio::abrir(estado, &conta, slug, uri).await,
         Rota::GravarDominio(slug, pedido) => {
             dominio::gravar(estado, &conta, slug, pedido, corpo).await
