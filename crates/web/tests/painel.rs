@@ -2101,7 +2101,7 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
         home.corpo
             .contains(r#"<header class="abertura com-imagem">"#)
     );
-    assert!(home.corpo.contains(r#"<div class="faixa larga">"#));
+    assert!(home.corpo.contains(r#"<body class="larga">"#));
     assert!(!home.corpo.contains(r#"<div class="capa">"#));
     for secao in [
         "s-cartoes",

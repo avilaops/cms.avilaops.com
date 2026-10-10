@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block largura %}{% if larga %} larga{% endif %}{% endblock %}
+{% block largura %}{% if larga %} class="larga"{% endif %}{% endblock %}
 {% block conteudo %}
 <article>
 {%- if abertura.is_empty() %}
