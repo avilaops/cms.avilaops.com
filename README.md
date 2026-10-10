@@ -32,7 +32,18 @@ demonstração publicado.
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
 | Conector | Servidor de autorização próprio (registro dinâmico, PKCE S256, tokens só como hash), ponto MCP com 15 ferramentas por escopo, tela de conexões com desconectar, registro de chamadas sem argumentos | Feita |
 | Domínio próprio, cache e rotinas | Pedido de domínio pelo Dono, conferência de DNS por rotina, resposta ao Caddy para TLS sob demanda, endereço provisório assumido como definitivo, cache de página em memória derrubado ao publicar, publicação agendada, limpeza de histórico, catálogo de rotinas com trava no banco | Feita |
-| Primeira subida | Container no servidor de aplicações e site de demonstração no ar | Feita em 10/10/2026: painel em [cms.avilaops.com](https://cms.avilaops.com) e demonstração em [demonstracao.sites.avilaops.com](https://demonstracao.sites.avilaops.com), com Lighthouse 100 nas quatro categorias no celular (página inicial, post e listagem). O Caddy já encaminha domínio próprio de cliente. Falta o modo de migração sem Prisma no `avila-deploy`: publicar versão nova ainda é manual |
+| Primeira subida | Container no servidor de aplicações e site de demonstração no ar | Feita em 10/10/2026: painel em [cms.avilaops.com](https://cms.avilaops.com) e demonstração em [demonstracao.sites.avilaops.com](https://demonstracao.sites.avilaops.com), com Lighthouse 100 nas quatro categorias no celular (página inicial, post e listagem). O Caddy já encaminha domínio próprio de cliente. Versão nova vai ao ar com `scripts/publicar.sh` |
+
+## Como publicar
+
+```bash
+scripts/publicar.sh
+```
+
+Publica o commit de `origin/main`: build no `apps-noclient`, imagem levada ao
+servidor de aplicações, dump do banco antes de migrar quando há migração
+pendente, troca do contêiner e volta à imagem anterior se o novo não ficar
+saudável. Precisa de `apps-noclient` e `applications` no `~/.ssh/config`.
 
 ## Como validar
 
