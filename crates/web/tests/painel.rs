@@ -2073,6 +2073,33 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
     .expect("imagem pronta");
     let dados = &mut conteudo["dados"];
     dados["titulo"] = json!("Pão de fermentação natural todo dia");
+    // Uma segunda página, com nome curto para o menu.
+    let (erro, sobre) = painel
+        .ferramenta(&token, "ver_modelo", json!({ "modelo": "perguntas" }))
+        .await;
+    assert!(!erro);
+    let mut sobre = sobre["conteudo"].clone();
+    sobre["dados"]["menu"] = json!("Dúvidas");
+    sobre["dados"]["seo"]["titulo"] = json!("Perguntas frequentes da Padaria da Ana");
+    sobre["dados"]["seo"]["descricao"] = json!(
+        "Horários, encomendas, formas de pagamento e entregas: as respostas para as dúvidas mais comuns da Padaria da Ana."
+    );
+    let (erro, criada) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": sobre }),
+        )
+        .await;
+    assert!(!erro && criada["problemas"] == json!([]), "{criada}");
+    let (erro, no_ar) = painel
+        .ferramenta(
+            &token,
+            "publicar",
+            json!({ "site": "padaria", "documento": criada["documento"] }),
+        )
+        .await;
+    assert!(!erro, "{no_ar}");
     dados["capa"] = json!(imagem);
     dados["seo"]["titulo"] = json!("Padaria da Ana: pão fresco todo dia");
     dados["seo"]["descricao"] = json!(
@@ -2102,6 +2129,13 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
             .contains(r#"<header class="abertura com-imagem">"#)
     );
     assert!(home.corpo.contains(r#"<body class="larga">"#));
+    // No menu, a página aparece com o nome curto que ela definiu.
+    assert!(
+        home.corpo
+            .contains(r#"<a href="/perguntas-frequentes">Dúvidas</a>"#)
+    );
+    let duvidas = pedir(&pool, &host("padaria"), "/perguntas-frequentes").await;
+    assert!(duvidas.corpo.contains("<h1>Perguntas frequentes</h1>"));
     assert!(!home.corpo.contains(r#"<div class="capa">"#));
     for secao in [
         "s-cartoes",
@@ -2143,6 +2177,12 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
     assert!(editor.corpo.contains("Seção: cartões"));
     assert!(editor.corpo.contains(r#"name="abertura_texto""#));
     assert!(editor.corpo.contains(&format!("| {imagem}")));
+    // A lista de códigos fica ao lado da seção que os usa.
+    assert!(editor.corpo.contains("Códigos das imagens"));
+    assert!(editor.corpo.contains(&format!(
+        r#"Forno a lenha aceso<code class="etiquetas">{imagem}</code>"#
+    )));
+    assert!(editor.corpo.contains(r#"name="menu""#));
 
     // Página sem seção continua no leiaute de leitura.
     let modelos = painel.abrir(Some("ana"), "/painel/sites/padaria").await;

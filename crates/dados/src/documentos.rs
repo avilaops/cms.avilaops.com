@@ -63,11 +63,17 @@ pub struct ItemDeNavegacao {
     pub eh_post: bool,
 }
 
-/// Caminho e título do que está no ar, sem carregar o corpo.
+/// Caminho e nome no menu do que está no ar, sem carregar o corpo. O nome é
+/// o que a página definiu para o menu ou, sem ele, o título.
 pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegacao>, ErroDeDados> {
     let linhas = sqlx::query!(
         r#"
-        select d.caminho as "caminho!", d.especie, coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as "titulo!"
+        select d.caminho as "caminho!", d.especie,
+               coalesce(
+                   nullif(btrim(v.conteudo -> 'dados' ->> 'menu'), ''),
+                   v.conteudo -> 'dados' ->> 'titulo',
+                   ''
+               ) as "titulo!"
         from documento d
         join versao v on v.id = d.versao_publicada
         where d.site_id = $1 and d.situacao = 'publicado'

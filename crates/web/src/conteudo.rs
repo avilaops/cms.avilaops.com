@@ -171,6 +171,8 @@ struct BlocoNaTela {
     niveis: Vec<Opcao>,
     usa_midia: bool,
     usa_texto: bool,
+    /// A seção cita imagens pelo código, nas linhas: a tela lista os códigos.
+    lista_codigos: bool,
     midias: Vec<Opcao>,
     usa_ordenada: bool,
     ordenada: bool,
@@ -207,6 +209,7 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
             | "faixa"
             | "contato"
     );
+    let lista_codigos = matches!(tipo, "cartoes" | "depoimentos" | "galeria" | "logos");
     let dica = match tipo {
         "titulo" => "Texto do título",
         "lista" => "Um item por linha",
@@ -231,9 +234,7 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         "planos" => {
             "Cada plano em um grupo, com linha em branco entre eles. Linha 1: Nome | Preço | Período | Descrição (comece o nome com * no plano recomendado). Linha 2: Texto do botão | Endereço. Depois, um item incluído por linha"
         }
-        "galeria" | "logos" => {
-            "Um código de imagem por linha. O código de cada imagem está na tela Imagens"
-        }
+        "galeria" | "logos" => "Um código de imagem por linha. Os códigos estão logo abaixo",
         "faixa" => "Um botão por linha: Texto do botão | Endereço. No máximo dois",
         "contato" => {
             "Um canal por linha, com o nome na frente: telefone: …, whatsapp: …, email: …, endereco: …, horario: …"
@@ -256,7 +257,8 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         },
         usa_midia: tipo == "imagem" || tipo == "destaque",
         usa_texto: tipo != "imagem",
-        midias: if tipo == "imagem" || tipo == "destaque" {
+        lista_codigos,
+        midias: if tipo == "imagem" || tipo == "destaque" || lista_codigos {
             biblioteca
                 .iter()
                 .map(|(id, rotulo)| opcao(id, rotulo, &bloco.midia))

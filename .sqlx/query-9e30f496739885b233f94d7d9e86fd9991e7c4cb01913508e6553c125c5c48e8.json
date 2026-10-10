@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select d.caminho as \"caminho!\", d.especie,\n               coalesce(\n                   nullif(btrim(v.conteudo -> 'dados' ->> 'menu'), ''),\n                   v.conteudo -> 'dados' ->> 'titulo',\n                   ''\n               ) as \"titulo!\"\n        from documento d\n        join versao v on v.id = d.versao_publicada\n        where d.site_id = $1 and d.situacao = 'publicado'\n        order by d.caminho\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "caminho!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "especie",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "titulo!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "9e30f496739885b233f94d7d9e86fd9991e7c4cb01913508e6553c125c5c48e8"
+}

@@ -387,6 +387,7 @@ fn pagina_avulsa(
             // O endereço é o caminho; o slug só precisa passar pela validação.
             slug: normalizar_slug(caminho),
             titulo: titulo.to_string(),
+            menu: None,
             corpo: Vec::new(),
             capa: None,
             abertura: None,

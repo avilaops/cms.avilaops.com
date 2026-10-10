@@ -25,6 +25,10 @@
 <input id="titulo" name="titulo" maxlength="160" value="{{ f.titulo }}">
 <label for="slug">Endereço{% if !f.eh_post %} (em branco é a página inicial){% endif %}</label>
 <input id="slug" name="slug" maxlength="80" autocapitalize="none" spellcheck="false" value="{{ f.slug }}">
+{%- if !f.eh_post %}
+<label for="menu">Nome no menu (em branco usa o título)</label>
+<input id="menu" name="menu" maxlength="24" value="{{ f.menu }}">
+{%- endif %}
 {%- if f.eh_post %}
 <label for="tipo_do_post">Tipo</label>
 <select id="tipo_do_post" name="tipo_do_post">
@@ -101,6 +105,16 @@
 {%- if bloco.usa_texto %}
 <label for="b{{ bloco.i }}_texto">{{ bloco.dica }}</label>
 <textarea id="b{{ bloco.i }}_texto" name="b{{ bloco.i }}_texto">{{ bloco.texto }}</textarea>
+{%- endif %}
+{%- if bloco.lista_codigos %}
+<details>
+<summary>Códigos das imagens</summary>
+<ul>
+{%- for opcao in bloco.midias %}
+<li>{{ opcao.rotulo }}<code class="etiquetas">{{ opcao.valor }}</code></li>
+{%- endfor %}
+</ul>
+</details>
 {%- endif %}
 {%- if bloco.usa_invertido %}
 <label class="marcar"><input type="checkbox" name="b{{ bloco.i }}_invertido" value="1"{% if bloco.invertido %} checked{% endif %}> Imagem à direita</label>

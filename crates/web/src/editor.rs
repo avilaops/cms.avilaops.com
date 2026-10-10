@@ -74,6 +74,8 @@ pub struct Formulario {
     pub eh_post: bool,
     pub acao: String,
     pub titulo: String,
+    /// O nome curto da página no menu do site.
+    pub menu: String,
     pub slug: String,
     pub seo_titulo: String,
     pub seo_descricao: String,
@@ -143,6 +145,7 @@ impl Formulario {
             eh_post: campo("especie") == "post",
             acao: campo("acao"),
             titulo: campo("titulo"),
+            menu: campo("menu"),
             slug: campo("slug").trim().to_lowercase(),
             seo_titulo: campo("seo_titulo"),
             seo_descricao: campo("seo_descricao"),
@@ -224,6 +227,7 @@ impl Formulario {
             Conteudo::Pagina(pagina) => {
                 let abertura = pagina.abertura.clone().unwrap_or_default();
                 Self {
+                    menu: pagina.menu.clone().unwrap_or_default(),
                     abertura_sobretitulo: abertura.sobretitulo.unwrap_or_default(),
                     abertura_texto: abertura.texto,
                     abertura_acoes: escrever_botoes(&abertura.acoes),
@@ -351,6 +355,7 @@ impl Formulario {
                 },
                 slug: self.slug.clone(),
                 titulo,
+                menu: opcional(&self.menu),
                 corpo,
                 capa,
                 abertura: self.abertura(),

@@ -613,6 +613,7 @@ pub fn conteudo_do_modelo(id: &str, agora: DateTime<Utc>) -> Option<Conteudo> {
         return Some(Conteudo::Pagina(Pagina {
             slug: slug.into(),
             titulo: nome.into(),
+            menu: None,
             corpo,
             capa: None,
             abertura,
