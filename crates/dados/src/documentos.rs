@@ -63,8 +63,8 @@ pub struct ItemDeNavegacao {
     pub eh_post: bool,
 }
 
-/// Caminho e nome no menu do que está no ar, sem carregar o corpo. O nome é
-/// o que a página definiu para o menu ou, sem ele, o título.
+/// Caminho e nome no menu do que está no ar e entra no menu, sem carregar o
+/// corpo. O nome é o que a página definiu para o menu ou, sem ele, o título.
 pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegacao>, ErroDeDados> {
     let linhas = sqlx::query!(
         r#"
@@ -77,6 +77,10 @@ pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegac
         from documento d
         join versao v on v.id = d.versao_publicada
         where d.site_id = $1 and d.situacao = 'publicado'
+          -- Página filha (com outra acima dela na trilha, além do início)
+          -- fica fora do menu principal: chega-se a ela pela página de cima.
+          and (d.especie = 'post'
+               or jsonb_array_length(coalesce(v.conteudo -> 'dados' -> 'trilha', '[]'::jsonb)) <= 2)
         order by d.caminho
         "#,
         site_id

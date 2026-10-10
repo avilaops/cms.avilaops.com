@@ -870,11 +870,18 @@ impl Chamada<'_> {
             if let Some(midia) = bloco.get_mut("midia") {
                 self.imagem(site_id, midia).await?;
             }
-            // Nas seções, a imagem está em cada item: o item inteiro (galeria
-            // e logos), a imagem do cartão ou a foto do depoimento.
+            // Nas seções, a imagem está em cada item: o item inteiro na
+            // galeria e nos logos, a imagem do cartão ou a foto do depoimento.
+            // Em lista e nos outros blocos, item em texto é texto.
+            let item_e_imagem = matches!(
+                bloco.get("tipo").and_then(Value::as_str),
+                Some("galeria" | "logos")
+            );
             let itens = bloco.get_mut("itens").and_then(Value::as_array_mut);
             for item in itens.into_iter().flatten() {
-                self.imagem(site_id, item).await?;
+                if item_e_imagem {
+                    self.imagem(site_id, item).await?;
+                }
                 for campo in ["midia", "foto"] {
                     if let Some(midia) = item.get_mut(campo) {
                         self.imagem(site_id, midia).await?;

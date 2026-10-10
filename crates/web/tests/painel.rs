@@ -1985,7 +1985,9 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
                 "capa": imagem,
                 "corpo": [
                     { "tipo": "paragrafo", "trechos": [{ "texto": "Comece pelo fermento." }] },
-                    { "tipo": "imagem", "midia": imagem }
+                    { "tipo": "imagem", "midia": imagem },
+                    // Item de lista é texto: não é referência de imagem.
+                    { "tipo": "lista", "ordenada": true, "itens": ["Misture a farinha.", "Espere dobrar."] }
                 ],
                 "autor": autor,
                 "categoria": "receitas",
@@ -2031,6 +2033,7 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
         })
     );
     assert_eq!(dados["corpo"][1]["midia"]["largura"], 1400);
+    assert_eq!(dados["corpo"][2]["itens"][1], "Espere dobrar.");
 
     // Sem a permissão de identidade, a conexão não mexe nela.
     let (_, outro, _) = painel.conectar("ana", &["sites:ler"]).await;
