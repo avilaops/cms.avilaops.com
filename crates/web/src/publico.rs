@@ -389,6 +389,7 @@ fn pagina_avulsa(
             titulo: titulo.to_string(),
             corpo: Vec::new(),
             capa: None,
+            abertura: None,
             publicado_em: datas.0,
             atualizado_em: datas.1,
             seo: Seo {

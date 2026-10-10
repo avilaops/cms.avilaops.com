@@ -282,6 +282,7 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `publicar`, `despublicar` | `conteudo:publicar` |
 | `listar_midia`, `enviar_midia`, `editar_midia` | `midia:escrever` |
 | `listar_autores`, `listar_categorias` | `conteudo:ler` |
+| `listar_modelos`, `ver_modelo` | `conteudo:ler` |
 | `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
 | `editar_identidade` | `sites:editar` |
 
@@ -289,6 +290,16 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- Página de apresentação: a página aceita `abertura` (o topo, com o `<h1>`,
+  texto, até dois botões e a capa ao lado) e o corpo aceita seções de página
+  inteira: `cartoes`, `destaque`, `depoimentos`, `numeros`, `passos`, `planos`,
+  `galeria`, `logos`, `faixa` e `contato`. Continua sem HTML livre: cada seção
+  é tipada, validada e sai com o estilo único do motor. Página com abertura ou
+  seção usa o leiaute largo; as demais, o de leitura.
+- `listar_modelos` e `ver_modelo` entregam doze rascunhos prontos (início,
+  sobre, serviços, serviço, preços, contato, perguntas, campanha, privacidade,
+  termos, artigo e guia). O texto do modelo é orientação do que escrever, e a
+  descrição de busca vem vazia para ele não ir ao ar como nasceu.
 - `enviar_midia` e `editar_midia` recebem legenda, crédito e direitos da imagem
   (autoria, aviso, licença e página de aquisição). É o que sai no `ImageObject`
   de cada página, de onde a busca de imagens tira o crédito e o selo de imagem

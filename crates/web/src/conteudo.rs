@@ -13,6 +13,7 @@ use cms_dados::{DadosDoAutor, DocumentoAberto, ErroDeCatalogo, SiteGravado};
 use cms_dominio::conta::pode_administrar;
 use cms_dominio::eventos::origem_do_site;
 use cms_dominio::fluxo::pode;
+use cms_dominio::modelos::{MODELOS, Modelo, conteudo_do_modelo};
 use cms_dominio::{Acao as Permissao, Ator, Conta, Situacao};
 use motor_web::tipos::Documento;
 use motor_web::validacao::Gravidade;
@@ -103,6 +104,7 @@ struct PaginaDoSite {
     situacao: &'static str,
     dono: bool,
     documentos: Vec<LinhaDeDocumento>,
+    modelos: &'static [Modelo],
 }
 
 /// A página do site no painel: atalhos e a lista de páginas e posts.
@@ -154,6 +156,7 @@ pub async fn inicio(estado: &Estado, conta: &Conta, slug: &str) -> Result<Respon
         site: site.perfil.nome,
         slug: site.slug,
         documentos,
+        modelos: &MODELOS,
     }
     .render()?;
     Ok(html_privado(StatusCode::OK, corpo))
@@ -167,6 +170,7 @@ struct BlocoNaTela {
     texto: String,
     niveis: Vec<Opcao>,
     usa_midia: bool,
+    usa_texto: bool,
     midias: Vec<Opcao>,
     usa_ordenada: bool,
     ordenada: bool,
@@ -176,6 +180,12 @@ struct BlocoNaTela {
     rotulo: String,
     usa_url: bool,
     url: String,
+    usa_titulo: bool,
+    titulo: String,
+    usa_resumo: bool,
+    resumo: String,
+    usa_invertido: bool,
+    invertido: bool,
 }
 
 fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)]) -> BlocoNaTela {
@@ -184,6 +194,19 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         .iter()
         .find(|(valor, _)| *valor == tipo)
         .map_or("Parágrafo", |(_, nome)| *nome);
+    let eh_secao = matches!(
+        tipo,
+        "cartoes"
+            | "destaque"
+            | "depoimentos"
+            | "numeros"
+            | "passos"
+            | "planos"
+            | "galeria"
+            | "logos"
+            | "faixa"
+            | "contato"
+    );
     let dica = match tipo {
         "titulo" => "Texto do título",
         "lista" => "Um item por linha",
@@ -196,6 +219,25 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         }
         "video" => "Título do vídeo",
         "chamada" => "Texto da chamada",
+        "cartoes" => {
+            "Um cartão por linha: Título | Texto | Texto do link | Endereço | Código da imagem. Os três últimos são opcionais"
+        }
+        "destaque" => "Texto. Uma linha em branco separa os parágrafos",
+        "depoimentos" => {
+            "Um depoimento por linha: Texto | Nome | Cargo ou cidade | Código da foto. Os dois últimos são opcionais"
+        }
+        "numeros" => "Um número por linha: Valor | O que ele conta",
+        "passos" => "Um passo por linha: Título | Texto",
+        "planos" => {
+            "Cada plano em um grupo, com linha em branco entre eles. Linha 1: Nome | Preço | Período | Descrição (comece o nome com * no plano recomendado). Linha 2: Texto do botão | Endereço. Depois, um item incluído por linha"
+        }
+        "galeria" | "logos" => {
+            "Um código de imagem por linha. O código de cada imagem está na tela Imagens"
+        }
+        "faixa" => "Um botão por linha: Texto do botão | Endereço. No máximo dois",
+        "contato" => {
+            "Um canal por linha, com o nome na frente: telefone: …, whatsapp: …, email: …, endereco: …, horario: …"
+        }
         _ => "Texto. **negrito**, _itálico_ e [texto](endereço)",
     };
     BlocoNaTela {
@@ -212,8 +254,9 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         } else {
             Vec::new()
         },
-        usa_midia: tipo == "imagem",
-        midias: if tipo == "imagem" {
+        usa_midia: tipo == "imagem" || tipo == "destaque",
+        usa_texto: tipo != "imagem",
+        midias: if tipo == "imagem" || tipo == "destaque" {
             biblioteca
                 .iter()
                 .map(|(id, rotulo)| opcao(id, rotulo, &bloco.midia))
@@ -225,10 +268,17 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         ordenada: bloco.ordenada,
         usa_fonte: tipo == "citacao",
         fonte: bloco.fonte.clone(),
-        usa_rotulo: tipo == "chamada",
+        usa_rotulo: tipo == "chamada" || tipo == "destaque",
         rotulo: bloco.rotulo.clone(),
-        usa_url: tipo == "video" || tipo == "chamada",
+        usa_url: tipo == "video" || tipo == "chamada" || tipo == "destaque",
         url: bloco.url.clone(),
+        // Toda seção tem título; as de texto corrido, não.
+        usa_titulo: eh_secao,
+        titulo: bloco.titulo.clone(),
+        usa_resumo: matches!(tipo, "cartoes" | "faixa" | "contato"),
+        resumo: bloco.resumo.clone(),
+        usa_invertido: tipo == "destaque",
+        invertido: bloco.invertido,
     }
 }
 
@@ -386,7 +436,8 @@ async fn editor(
     Ok(html_privado(StatusCode::OK, corpo))
 }
 
-/// O editor vazio, para uma página ou um post novo.
+/// O editor de um documento novo: vazio, para página ou post, ou já montado
+/// a partir de um modelo.
 pub async fn novo(
     estado: &Estado,
     conta: &Conta,
@@ -394,15 +445,16 @@ pub async fn novo(
     especie: &str,
     uri: &Uri,
 ) -> Result<Response, ErroWeb> {
-    let eh_post = match especie {
-        "post" => true,
-        "pagina" => false,
-        _ => return Ok(nao_encontrado()),
+    let formulario = match especie {
+        "post" => Formulario::novo(true),
+        "pagina" => Formulario::novo(false),
+        modelo => match conteudo_do_modelo(modelo, Utc::now()) {
+            Some(conteudo) => Formulario::do_conteudo(&conteudo),
+            None => return Ok(nao_encontrado()),
+        },
     };
     match ao_site(estado, conta, slug).await? {
-        Ok((site, ator)) => {
-            editor(estado, &site, &ator, None, Formulario::novo(eh_post), uri).await
-        }
+        Ok((site, ator)) => editor(estado, &site, &ator, None, formulario, uri).await,
         Err(resposta) => Ok(resposta),
     }
 }

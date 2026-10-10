@@ -1541,7 +1541,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        19
+        21
     );
 
     let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
@@ -1987,6 +1987,184 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
         .await;
     assert!(erro);
     assert!(recusa.as_str().expect("frase").contains("sites:editar"));
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgPool) {
+    use base64::Engine;
+    use motor_web::tipos::Formato;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "conteudo:ler",
+                "conteudo:escrever",
+                "conteudo:publicar",
+                "midia:escrever",
+            ],
+        )
+        .await;
+
+    let (erro, lista) = painel.ferramenta(&token, "listar_modelos", json!({})).await;
+    assert!(!erro, "{lista}");
+    assert_eq!(lista["modelos"].as_array().expect("modelos").len(), 12);
+    assert_eq!(lista["modelos"][0]["modelo"], "inicio");
+    let (erro, recusa) = painel
+        .ferramenta(&token, "ver_modelo", json!({ "modelo": "nenhum" }))
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("listar_modelos"));
+    let (_, modelo) = painel
+        .ferramenta(&token, "ver_modelo", json!({ "modelo": "inicio" }))
+        .await;
+    let mut conteudo = modelo["conteudo"].clone();
+    assert_eq!(conteudo["especie"], "pagina");
+    assert_eq!(conteudo["dados"]["corpo"][0]["tipo"], "cartoes");
+
+    // O modelo, do jeito que veio, é salvo mas não vai ao ar.
+    let (erro, criado) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": conteudo }),
+        )
+        .await;
+    assert!(!erro, "{criado}");
+    let alvo = json!({ "site": "padaria", "documento": criado["documento"] });
+    let faltas: Vec<&str> = criado["problemas"]
+        .as_array()
+        .expect("problemas")
+        .iter()
+        .filter_map(|p| p["codigo"].as_str())
+        .collect();
+    assert!(faltas.contains(&"seo.descricao.vazia"), "{faltas:?}");
+    assert!(faltas.contains(&"secao.imagem.falta"), "{faltas:?}");
+    let (erro, _) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
+    assert!(erro);
+
+    // Com a imagem escolhida pelo id e a busca preenchida, publica.
+    let base64 = base64::engine::general_purpose::STANDARD.encode(png(1400, 800, 90));
+    let (_, enviada) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({ "site": "padaria", "nome": "forno.png", "alt": "Forno a lenha aceso", "base64": base64 }),
+        )
+        .await;
+    let imagem = enviada["id"].as_str().expect("id").to_string();
+    let variante = cms_dados::VarianteGravada {
+        formato: Formato::Webp,
+        largura: 1400,
+        arquivo: "forno-0a1b2c3d-1400.webp".into(),
+        bytes: 999,
+    };
+    cms_dados::concluir_midia(
+        &pool,
+        Uuid::parse_str(&imagem).expect("uuid"),
+        1400,
+        800,
+        &[variante],
+    )
+    .await
+    .expect("imagem pronta");
+    let dados = &mut conteudo["dados"];
+    dados["titulo"] = json!("Pão de fermentação natural todo dia");
+    dados["capa"] = json!(imagem);
+    dados["seo"]["titulo"] = json!("Padaria da Ana: pão fresco todo dia");
+    dados["seo"]["descricao"] = json!(
+        "Padaria de bairro com pão de fermentação natural, aberta desde 1998. Conheça os pães e faça a sua encomenda."
+    );
+    dados["corpo"][0]["itens"][0]["midia"] = json!(imagem);
+    dados["corpo"][1]["midia"] = json!(imagem);
+    dados["corpo"][3]["itens"][0]["foto"] = json!(imagem);
+    dados["corpo"]
+        .as_array_mut()
+        .expect("corpo")
+        .push(json!({ "tipo": "galeria", "titulo": "A padaria", "itens": [imagem] }));
+    let mut editado = alvo.clone();
+    editado["conteudo"] = conteudo;
+    let (erro, salvo) = painel.ferramenta(&token, "editar_rascunho", editado).await;
+    assert!(!erro, "{salvo}");
+    assert_eq!(salvo["problemas"], json!([]), "{salvo}");
+    let (erro, publicado) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
+    assert!(!erro, "{publicado}");
+
+    let home = pedir(&pool, &host("padaria"), "/").await;
+    assert_eq!(home.status, StatusCode::OK);
+    // Um h1 só, na abertura, com a capa ao lado e o leiaute largo.
+    assert_eq!(home.corpo.matches("<h1>").count(), 1);
+    assert!(
+        home.corpo
+            .contains(r#"<header class="abertura com-imagem">"#)
+    );
+    assert!(home.corpo.contains(r#"<div class="faixa larga">"#));
+    assert!(!home.corpo.contains(r#"<div class="capa">"#));
+    for secao in [
+        "s-cartoes",
+        "s-destaque",
+        "s-numeros",
+        "s-depoimento",
+        "s-faixa",
+        "s-galeria",
+    ] {
+        assert!(home.corpo.contains(secao), "{secao}");
+    }
+    assert!(home.corpo.contains(".s-grade{"));
+    // As imagens das seções são da biblioteca: em uso, não se apagam.
+    assert!(
+        home.corpo
+            .matches("/midia/forno-0a1b2c3d-1400.webp")
+            .count()
+            >= 5
+    );
+    let recusada = painel
+        .postar(
+            "ana",
+            &format!("/painel/sites/padaria/midia/{imagem}/apagar"),
+            "",
+        )
+        .await;
+    assert_eq!(recusada.status, StatusCode::CONFLICT);
+
+    // O painel abre a página com as seções no formulário e a regrava igual.
+    let (_, antes) = painel
+        .ferramenta(&token, "ver_documento", alvo.clone())
+        .await;
+    let caminho = format!(
+        "/painel/sites/padaria/doc/{}",
+        alvo["documento"].as_str().expect("id")
+    );
+    let editor = painel.abrir(Some("ana"), &caminho).await;
+    assert_eq!(editor.status, StatusCode::OK);
+    assert!(editor.corpo.contains("Seção: cartões"));
+    assert!(editor.corpo.contains(r#"name="abertura_texto""#));
+    assert!(editor.corpo.contains(&format!("| {imagem}")));
+
+    // Página sem seção continua no leiaute de leitura.
+    let modelos = painel.abrir(Some("ana"), "/painel/sites/padaria").await;
+    assert!(
+        modelos
+            .corpo
+            .contains("/painel/sites/padaria/novo/campanha")
+    );
+    let do_modelo = painel
+        .abrir(Some("ana"), "/painel/sites/padaria/novo/privacidade")
+        .await;
+    assert_eq!(do_modelo.status, StatusCode::OK);
+    assert!(do_modelo.corpo.contains("Política de privacidade"));
+    assert!(do_modelo.corpo.contains("Quais dados coletamos"));
+    assert_eq!(
+        painel
+            .abrir(Some("ana"), "/painel/sites/padaria/novo/inexistente")
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(antes["situacao"], "publicado");
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
 

@@ -457,9 +457,7 @@ pub async fn falhar_midia(pool: &PgPool, midia_id: Uuid) -> Result<(), ErroDeDad
 fn para_cada_midia(conteudo: &mut Conteudo, mut visitar: impl FnMut(&mut Midia)) {
     let no_corpo = |corpo: &mut [Bloco], visitar: &mut dyn FnMut(&mut Midia)| {
         for bloco in corpo {
-            if let Bloco::Imagem { midia } = bloco {
-                visitar(midia);
-            }
+            bloco.midias_mut().into_iter().for_each(&mut *visitar);
         }
     };
     match conteudo {

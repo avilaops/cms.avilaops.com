@@ -9,12 +9,12 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use motor_web::tipos::{
-    Autor, Bloco, Categoria, Conteudo, ItemTrilha, Midia, Pagina, Pergunta, Post, Seo, TipoPost,
-    Trecho,
+    Abertura, Acao as Botao, Autor, Bloco, Cartao, Categoria, Conteudo, Depoimento, ItemTrilha,
+    Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoPost, Trecho,
 };
 
 /// Os tipos de bloco, na ordem em que aparecem para escolher.
-pub const TIPOS_DE_BLOCO: [(&str, &str); 9] = [
+pub const TIPOS_DE_BLOCO: [(&str, &str); 19] = [
     ("paragrafo", "Parágrafo"),
     ("titulo", "Título"),
     ("lista", "Lista"),
@@ -24,6 +24,16 @@ pub const TIPOS_DE_BLOCO: [(&str, &str); 9] = [
     ("tabela", "Tabela"),
     ("video", "Vídeo"),
     ("chamada", "Chamada com botão"),
+    ("cartoes", "Seção: cartões"),
+    ("destaque", "Seção: imagem e texto"),
+    ("depoimentos", "Seção: depoimentos"),
+    ("numeros", "Seção: números"),
+    ("passos", "Seção: passo a passo"),
+    ("planos", "Seção: planos e preços"),
+    ("galeria", "Seção: galeria"),
+    ("logos", "Seção: logos"),
+    ("faixa", "Seção: faixa de chamada"),
+    ("contato", "Seção: contato"),
 ];
 
 /// Um bloco como está no formulário: tudo texto, do jeito que foi digitado.
@@ -38,6 +48,12 @@ pub struct BlocoDigitado {
     pub rotulo: String,
     /// O identificador da imagem na biblioteca.
     pub midia: String,
+    /// O título de uma seção.
+    pub titulo: String,
+    /// O texto de apresentação de uma seção, abaixo do título.
+    pub resumo: String,
+    /// Na seção de imagem e texto, a imagem vai para a direita.
+    pub invertido: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,6 +87,11 @@ pub struct Formulario {
     pub novo_tipo: String,
     /// Data e hora de Brasília, como o campo `datetime-local` manda.
     pub agendar_para: String,
+    /// A abertura da página: a linha acima do título, o texto abaixo dele e
+    /// os botões, um por linha, como `Rótulo | endereço`.
+    pub abertura_sobretitulo: String,
+    pub abertura_texto: String,
+    pub abertura_acoes: String,
     pub blocos: Vec<BlocoDigitado>,
 }
 
@@ -90,7 +111,11 @@ impl Formulario {
 
     /// Lê os pares do formulário enviado.
     pub fn ler(pares: Vec<(String, String)>) -> Self {
-        let campos: HashMap<String, String> = pares.into_iter().collect();
+        // O navegador manda quebra de linha como `\r\n`; aqui é sempre `\n`.
+        let campos: HashMap<String, String> = pares
+            .into_iter()
+            .map(|(nome, valor)| (nome, valor.replace("\r\n", "\n")))
+            .collect();
         let campo = |nome: &str| campos.get(nome).cloned().unwrap_or_default();
         let total = campo("n")
             .parse::<usize>()
@@ -108,6 +133,9 @@ impl Formulario {
                     url: do_bloco("url"),
                     rotulo: do_bloco("rotulo"),
                     midia: do_bloco("midia"),
+                    titulo: do_bloco("titulo"),
+                    resumo: do_bloco("resumo"),
+                    invertido: do_bloco("invertido") == "1",
                 }
             })
             .collect();
@@ -127,6 +155,9 @@ impl Formulario {
             tags: campo("tags"),
             novo_tipo: campo("novo_tipo"),
             agendar_para: campo("agendar_para"),
+            abertura_sobretitulo: campo("abertura_sobretitulo"),
+            abertura_texto: campo("abertura_texto"),
+            abertura_acoes: campo("abertura_acoes"),
             blocos,
         }
     }
@@ -190,13 +221,21 @@ impl Formulario {
                 ..Self::default()
             };
         match conteudo {
-            Conteudo::Pagina(pagina) => comum(
-                &pagina.titulo,
-                &pagina.slug,
-                &pagina.seo,
-                pagina.capa.as_ref(),
-                &pagina.corpo,
-            ),
+            Conteudo::Pagina(pagina) => {
+                let abertura = pagina.abertura.clone().unwrap_or_default();
+                Self {
+                    abertura_sobretitulo: abertura.sobretitulo.unwrap_or_default(),
+                    abertura_texto: abertura.texto,
+                    abertura_acoes: escrever_botoes(&abertura.acoes),
+                    ..comum(
+                        &pagina.titulo,
+                        &pagina.slug,
+                        &pagina.seo,
+                        pagina.capa.as_ref(),
+                        &pagina.corpo,
+                    )
+                }
+            }
             Conteudo::Post(post) => Self {
                 eh_post: true,
                 tipo_do_post: match post.tipo {
@@ -224,7 +263,7 @@ impl Formulario {
     /// Os identificadores das imagens escolhidas: a capa e as dos blocos.
     pub fn midias_escolhidas(&self) -> Vec<&str> {
         std::iter::once(self.capa.as_str())
-            .chain(self.blocos.iter().map(|bloco| bloco.midia.as_str()))
+            .chain(self.blocos.iter().flat_map(imagens_citadas))
             .filter(|id| !id.is_empty())
             .collect()
     }
@@ -314,11 +353,24 @@ impl Formulario {
                 titulo,
                 corpo,
                 capa,
+                abertura: self.abertura(),
                 publicado_em: agora,
                 atualizado_em: agora,
                 seo,
             })
         }
+    }
+}
+
+impl Formulario {
+    /// A abertura digitada. Tudo em branco é página sem abertura.
+    fn abertura(&self) -> Option<Abertura> {
+        let abertura = Abertura {
+            sobretitulo: opcional(&self.abertura_sobretitulo),
+            texto: self.abertura_texto.trim().to_string(),
+            acoes: ler_botoes(&self.abertura_acoes),
+        };
+        (abertura != Abertura::default()).then_some(abertura)
     }
 }
 
@@ -353,8 +405,379 @@ pub fn ler_agendamento(digitado: &str) -> Option<DateTime<Utc>> {
     Some((local + chrono::Duration::hours(3)).and_utc())
 }
 
+fn opcional(texto: &str) -> Option<String> {
+    Some(texto.trim().to_string()).filter(|texto| !texto.is_empty())
+}
+
+/// A célula `i` de uma linha, ou vazio.
+fn celula(celulas: &[String], i: usize) -> &str {
+    celulas.get(i).map_or("", String::as_str)
+}
+
+/// Junta as células de uma linha, sem as vazias do fim.
+fn escrever_linha(celulas: &[&str]) -> String {
+    let usadas = celulas
+        .iter()
+        .rposition(|celula| !celula.trim().is_empty())
+        .map_or(0, |ultima| ultima + 1);
+    celulas[..usadas].join(" | ")
+}
+
+/// Um botão só existe com rótulo ou endereço: o que faltar, a validação cobra.
+fn botao(rotulo: &str, url: &str) -> Option<Botao> {
+    (!rotulo.is_empty() || !url.is_empty()).then(|| Botao {
+        rotulo: rotulo.to_string(),
+        url: url.to_string(),
+    })
+}
+
+/// Um botão por linha, como `Rótulo | endereço`.
+fn ler_botoes(texto: &str) -> Vec<Botao> {
+    linhas(texto)
+        .iter()
+        .filter_map(|linha| {
+            let celulas = celulas(linha);
+            botao(celula(&celulas, 0), celula(&celulas, 1))
+        })
+        .collect()
+}
+
+fn escrever_botoes(botoes: &[Botao]) -> String {
+    botoes
+        .iter()
+        .map(|botao| escrever_linha(&[&botao.rotulo, &botao.url]))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Em que coluna das linhas de uma seção fica o identificador da imagem.
+fn coluna_da_imagem(tipo: &str) -> Option<usize> {
+    match tipo {
+        "cartoes" => Some(4),
+        "depoimentos" => Some(3),
+        "galeria" | "logos" => Some(0),
+        _ => None,
+    }
+}
+
+/// Os identificadores de imagem que um bloco cita: o do campo de imagem e os
+/// escritos nas linhas de uma seção.
+fn imagens_citadas(bloco: &BlocoDigitado) -> Vec<&str> {
+    let nas_linhas = coluna_da_imagem(&bloco.tipo)
+        .into_iter()
+        .flat_map(|coluna| {
+            bloco
+                .texto
+                .lines()
+                .filter_map(move |linha| linha.split('|').nth(coluna))
+                .map(str::trim)
+        });
+    std::iter::once(bloco.midia.as_str())
+        .chain(nas_linhas)
+        .collect()
+}
+
+/// A imagem citada. Identificador que a biblioteca não tem vira imagem vazia,
+/// e a validação pede para escolher outra.
+fn imagem(resolvido: &Resolvido, id: &str) -> Option<Midia> {
+    (!id.is_empty()).then(|| {
+        resolvido
+            .midias
+            .get(id)
+            .cloned()
+            .unwrap_or_else(cms_dados::midia_vazia)
+    })
+}
+
+/// As linhas de contato, como `telefone: (11) 4000-0000`.
+const CANAIS: [&str; 5] = ["telefone", "whatsapp", "email", "endereco", "horario"];
+
+/// Do que foi digitado para a seção do motor. `None` para o que não é seção.
+fn montar_secao(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Option<Bloco> {
+    let titulo = opcional(&bloco.titulo);
+    let por_linha = || {
+        linhas(&bloco.texto)
+            .into_iter()
+            .map(|linha| celulas(&linha))
+    };
+    Some(match bloco.tipo.as_str() {
+        "cartoes" => Bloco::Cartoes {
+            titulo,
+            texto: opcional(&bloco.resumo),
+            itens: por_linha()
+                .map(|c| Cartao {
+                    titulo: celula(&c, 0).to_string(),
+                    texto: celula(&c, 1).to_string(),
+                    acao: botao(celula(&c, 2), celula(&c, 3)),
+                    midia: imagem(resolvido, celula(&c, 4)),
+                })
+                .collect(),
+        },
+        "destaque" => Bloco::Destaque {
+            titulo: bloco.titulo.trim().to_string(),
+            texto: bloco.texto.trim().to_string(),
+            midia: imagem(resolvido, &bloco.midia).unwrap_or_else(cms_dados::midia_vazia),
+            invertido: bloco.invertido,
+            acao: botao(bloco.rotulo.trim(), bloco.url.trim()),
+        },
+        "depoimentos" => Bloco::Depoimentos {
+            titulo,
+            itens: por_linha()
+                .map(|c| Depoimento {
+                    texto: celula(&c, 0).to_string(),
+                    autor: celula(&c, 1).to_string(),
+                    cargo: opcional(celula(&c, 2)),
+                    foto: imagem(resolvido, celula(&c, 3)),
+                })
+                .collect(),
+        },
+        "numeros" => Bloco::Numeros {
+            titulo,
+            itens: por_linha()
+                .map(|c| Numero {
+                    valor: celula(&c, 0).to_string(),
+                    rotulo: celula(&c, 1).to_string(),
+                })
+                .collect(),
+        },
+        "passos" => Bloco::Passos {
+            titulo,
+            itens: por_linha()
+                .map(|c| Passo {
+                    titulo: celula(&c, 0).to_string(),
+                    texto: celula(&c, 1).to_string(),
+                })
+                .collect(),
+        },
+        "planos" => Bloco::Planos {
+            titulo,
+            itens: bloco
+                .texto
+                .split("\n\n")
+                .filter_map(|grupo| {
+                    let mut do_plano = linhas(grupo).into_iter();
+                    let cabeca = celulas(&do_plano.next()?);
+                    let acao = do_plano
+                        .next()
+                        .map(|linha| celulas(&linha))
+                        .unwrap_or_default();
+                    let nome = celula(&cabeca, 0);
+                    Some(Plano {
+                        nome: nome.trim_start_matches('*').trim().to_string(),
+                        preco: celula(&cabeca, 1).to_string(),
+                        periodo: opcional(celula(&cabeca, 2)),
+                        descricao: opcional(celula(&cabeca, 3)),
+                        itens: do_plano.collect(),
+                        acao: botao(celula(&acao, 0), celula(&acao, 1)).unwrap_or_default(),
+                        destaque: nome.starts_with('*'),
+                    })
+                })
+                .collect(),
+        },
+        "galeria" | "logos" => {
+            let itens = linhas(&bloco.texto)
+                .iter()
+                .filter_map(|id| imagem(resolvido, id))
+                .collect();
+            if bloco.tipo == "galeria" {
+                Bloco::Galeria { titulo, itens }
+            } else {
+                Bloco::Logos { titulo, itens }
+            }
+        }
+        "faixa" => Bloco::Faixa {
+            titulo: bloco.titulo.trim().to_string(),
+            texto: opcional(&bloco.resumo),
+            acoes: ler_botoes(&bloco.texto),
+        },
+        "contato" => {
+            let canal = |nome: &str| {
+                linhas(&bloco.texto).iter().find_map(|linha| {
+                    let (chave, valor) = linha.split_once(':')?;
+                    (chave.trim().to_lowercase() == nome)
+                        .then(|| opcional(valor))
+                        .flatten()
+                })
+            };
+            Bloco::Contato {
+                titulo,
+                texto: opcional(&bloco.resumo),
+                telefone: canal(CANAIS[0]),
+                whatsapp: canal(CANAIS[1]),
+                email: canal(CANAIS[2]),
+                endereco: canal(CANAIS[3]),
+                horario: canal(CANAIS[4]),
+            }
+        }
+        _ => return None,
+    })
+}
+
+/// O identificador de uma imagem que pode faltar, ou vazio.
+fn id(midia: &Option<Midia>) -> &str {
+    midia.as_ref().map_or("", |midia| midia.id.as_str())
+}
+
+/// Da seção do motor para o que aparece no formulário.
+fn digitar_secao(bloco: &Bloco) -> Option<BlocoDigitado> {
+    let texto = |texto: &Option<String>| texto.clone().unwrap_or_default();
+    let base = |tipo: &str, titulo: &Option<String>, linhas: Vec<String>| BlocoDigitado {
+        tipo: tipo.to_string(),
+        titulo: titulo.clone().unwrap_or_default(),
+        texto: linhas.join("\n"),
+        nivel: 2,
+        ..BlocoDigitado::default()
+    };
+    Some(match bloco {
+        Bloco::Cartoes {
+            titulo,
+            texto: resumo,
+            itens,
+        } => BlocoDigitado {
+            resumo: texto(resumo),
+            ..base(
+                "cartoes",
+                titulo,
+                itens
+                    .iter()
+                    .map(|item| {
+                        let acao = item.acao.clone().unwrap_or_default();
+                        escrever_linha(&[
+                            &item.titulo,
+                            &item.texto,
+                            &acao.rotulo,
+                            &acao.url,
+                            id(&item.midia),
+                        ])
+                    })
+                    .collect(),
+            )
+        },
+        Bloco::Destaque {
+            titulo,
+            texto,
+            midia,
+            invertido,
+            acao,
+        } => {
+            let acao = acao.clone().unwrap_or_default();
+            BlocoDigitado {
+                tipo: "destaque".to_string(),
+                titulo: titulo.clone(),
+                texto: texto.clone(),
+                midia: midia.id.clone(),
+                invertido: *invertido,
+                rotulo: acao.rotulo,
+                url: acao.url,
+                nivel: 2,
+                ..BlocoDigitado::default()
+            }
+        }
+        Bloco::Depoimentos { titulo, itens } => base(
+            "depoimentos",
+            titulo,
+            itens
+                .iter()
+                .map(|item| {
+                    escrever_linha(&[
+                        &item.texto,
+                        &item.autor,
+                        item.cargo.as_deref().unwrap_or(""),
+                        id(&item.foto),
+                    ])
+                })
+                .collect(),
+        ),
+        Bloco::Numeros { titulo, itens } => base(
+            "numeros",
+            titulo,
+            itens
+                .iter()
+                .map(|item| escrever_linha(&[&item.valor, &item.rotulo]))
+                .collect(),
+        ),
+        Bloco::Passos { titulo, itens } => base(
+            "passos",
+            titulo,
+            itens
+                .iter()
+                .map(|item| escrever_linha(&[&item.titulo, &item.texto]))
+                .collect(),
+        ),
+        Bloco::Planos { titulo, itens } => BlocoDigitado {
+            texto: itens
+                .iter()
+                .map(|plano| {
+                    let nome = if plano.destaque {
+                        format!("* {}", plano.nome)
+                    } else {
+                        plano.nome.clone()
+                    };
+                    let mut do_plano = vec![
+                        escrever_linha(&[
+                            &nome,
+                            &plano.preco,
+                            plano.periodo.as_deref().unwrap_or(""),
+                            plano.descricao.as_deref().unwrap_or(""),
+                        ]),
+                        escrever_linha(&[&plano.acao.rotulo, &plano.acao.url]),
+                    ];
+                    do_plano.extend(plano.itens.iter().cloned());
+                    do_plano.join("\n")
+                })
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+            ..base("planos", titulo, Vec::new())
+        },
+        Bloco::Galeria { titulo, itens } => base(
+            "galeria",
+            titulo,
+            itens.iter().map(|midia| midia.id.clone()).collect(),
+        ),
+        Bloco::Logos { titulo, itens } => base(
+            "logos",
+            titulo,
+            itens.iter().map(|midia| midia.id.clone()).collect(),
+        ),
+        Bloco::Faixa {
+            titulo,
+            texto: resumo,
+            acoes,
+        } => BlocoDigitado {
+            titulo: titulo.clone(),
+            resumo: texto(resumo),
+            texto: escrever_botoes(acoes),
+            ..base("faixa", &None, Vec::new())
+        },
+        Bloco::Contato {
+            titulo,
+            texto: resumo,
+            telefone,
+            whatsapp,
+            email,
+            endereco,
+            horario,
+        } => BlocoDigitado {
+            resumo: texto(resumo),
+            ..base(
+                "contato",
+                titulo,
+                CANAIS
+                    .iter()
+                    .zip([telefone, whatsapp, email, endereco, horario])
+                    .filter_map(|(nome, valor)| Some(format!("{nome}: {}", valor.as_ref()?)))
+                    .collect(),
+            )
+        },
+        _ => return None,
+    })
+}
+
 /// Do que foi digitado para o bloco do motor.
 fn montar(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Bloco {
+    if let Some(secao) = montar_secao(bloco, resolvido) {
+        return secao;
+    }
     let texto = bloco.texto.trim();
     match bloco.tipo.as_str() {
         "titulo" => Bloco::Titulo {
@@ -416,6 +839,9 @@ fn montar(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Bloco {
 
 /// Do bloco do motor para o que aparece no formulário.
 fn digitar(bloco: &Bloco) -> BlocoDigitado {
+    if let Some(secao) = digitar_secao(bloco) {
+        return secao;
+    }
     let base = |tipo: &str, texto: String| BlocoDigitado {
         tipo: tipo.to_string(),
         texto,
@@ -464,7 +890,8 @@ fn digitar(bloco: &Bloco) -> BlocoDigitado {
             rotulo: rotulo.clone(),
             url: url.clone(),
             ..base("chamada", texto.clone())
-        },
+        }, // As seções saíram acima, por `digitar_secao`.
+        _ => base("paragrafo", String::new()),
     }
 }
 
@@ -677,6 +1104,92 @@ mod testes {
             assert_eq!(digitar(&montar(&digitado, &resolvido)), digitado);
         }
 
+        let secao = |tipo: &str, titulo: &str, texto: &str| BlocoDigitado {
+            tipo: tipo.into(),
+            titulo: titulo.into(),
+            texto: texto.into(),
+            nivel: 2,
+            ..BlocoDigitado::default()
+        };
+        let secoes = [
+            BlocoDigitado {
+                resumo: "Do desenho à instalação.".into(),
+                ..secao(
+                    "cartoes",
+                    "O que fazemos",
+                    "Móveis sob medida | Feitos para o espaço | Saiba mais | /servicos\nRestauro | Peças de família recuperadas",
+                )
+            },
+            BlocoDigitado {
+                invertido: true,
+                rotulo: "Conheça".into(),
+                url: "/sobre".into(),
+                ..secao(
+                    "destaque",
+                    "Madeira com procedência",
+                    "Toda tábua tem origem.\n\nVocê recebe o registro.",
+                )
+            },
+            secao(
+                "depoimentos",
+                "Clientes",
+                "Ficou ótimo | Marina Teles | Ribeirão Preto\nRecomendo | Caio",
+            ),
+            secao(
+                "numeros",
+                "Em números",
+                "15 anos | de oficina\n1.200 | peças entregues",
+            ),
+            secao(
+                "passos",
+                "Como funciona",
+                "Visita | Medimos o espaço\nProjeto | Você aprova o desenho",
+            ),
+            secao(
+                "planos",
+                "Formas de contratar",
+                "Peça única | R$ 1.800 | por projeto | Um móvel\nPedir orçamento | /contato\nVisita técnica\nDesenho\n\n* Ambiente completo | Sob consulta\nFalar com a oficina | /contato",
+            ),
+            BlocoDigitado {
+                titulo: "Vamos conversar?".into(),
+                resumo: "A visita é sem compromisso.".into(),
+                ..secao(
+                    "faixa",
+                    "",
+                    "Agendar visita | /contato\nVer serviços | /servicos",
+                )
+            },
+            BlocoDigitado {
+                resumo: "Respondemos em um dia útil.".into(),
+                ..secao(
+                    "contato",
+                    "Fale com a oficina",
+                    "telefone: (16) 5550-0100\nemail: contato@oficina.example\nhorario: Segunda a sexta, das 8h às 18h",
+                )
+            },
+        ];
+        for digitado in secoes {
+            assert_eq!(
+                digitar(&montar(&digitado, &resolvido)),
+                digitado,
+                "{}",
+                digitado.tipo
+            );
+        }
+        let Bloco::Planos { itens, .. } = montar(
+            &secao(
+                "planos",
+                "",
+                "* Completo | R$ 900 | por mês\nQuero este | /contato\nSuporte",
+            ),
+            &resolvido,
+        ) else {
+            panic!("seção de planos");
+        };
+        assert!(itens[0].destaque);
+        assert_eq!(itens[0].nome, "Completo");
+        assert_eq!(itens[0].itens, vec!["Suporte".to_string()]);
+
         let Bloco::Perguntas { itens } = montar(
             &BlocoDigitado {
                 tipo: "perguntas".into(),
@@ -688,6 +1201,40 @@ mod testes {
             panic!("bloco de perguntas");
         };
         assert_eq!(itens[0].resposta, "Uns trinta dias.");
+    }
+
+    #[test]
+    fn quebra_de_linha_do_navegador_separa_grupos_como_a_digitada() {
+        let formulario = Formulario::ler(pares(&[
+            ("n", "1"),
+            ("b0_tipo", "perguntas"),
+            (
+                "b0_texto",
+                "Entregam?\r\nSim.\r\n\r\nParcelam?\r\nEm três vezes.",
+            ),
+            ("abertura_texto", "Pão fresco."),
+            (
+                "abertura_acoes",
+                "Encomendar | /contato\r\nVer pães | /paes",
+            ),
+        ]));
+        let Conteudo::Pagina(pagina) = formulario.para_conteudo(&Resolvido::default(), Utc::now())
+        else {
+            panic!("página");
+        };
+        let Bloco::Perguntas { itens } = &pagina.corpo[0] else {
+            panic!("perguntas");
+        };
+        assert_eq!(itens.len(), 2);
+        let abertura = pagina.abertura.expect("abertura");
+        assert_eq!(abertura.acoes.len(), 2);
+        assert_eq!(abertura.acoes[1].url, "/paes");
+        // Página sem nada na abertura não ganha uma vazia.
+        let sem = Formulario::ler(pares(&[("n", "0")]));
+        let Conteudo::Pagina(pagina) = sem.para_conteudo(&Resolvido::default(), Utc::now()) else {
+            panic!("página");
+        };
+        assert_eq!(pagina.abertura, None);
     }
 
     #[test]

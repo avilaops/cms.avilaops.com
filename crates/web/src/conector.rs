@@ -15,6 +15,7 @@ use cms_dados::{
     Autorizacao, Conexao, DadosDoAutor, DescricaoDaMidia, ESCOPO_DE_PUBLICAR, ESCOPOS,
     ErroDeCatalogo, ErroDeConector, ErroDeMidia, Tokens,
 };
+use cms_dominio::modelos::{MODELOS, conteudo_do_modelo};
 use cms_dominio::{Ator, Conta};
 use motor_web::tipos::{Conteudo, Direitos};
 use motor_web::validacao::Problema;
@@ -420,7 +421,7 @@ struct Ferramenta {
 
 const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (slug).");
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
-const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). As datas são do servidor.";
+const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. As datas são do servidor.";
 
 const LEGENDA: (&str, &str) = ("legenda", "A legenda, que aparece embaixo da imagem.");
 const CREDITO: (&str, &str) = ("credito", "Quem leva o crédito, como aparece em \"Foto:\".");
@@ -473,7 +474,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 19] = [
+const FERRAMENTAS: [Ferramenta; 21] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -517,6 +518,22 @@ const FERRAMENTAS: [Ferramenta; 19] = [
         escopo: "conteudo:ler",
         descricao: "Devolve o conteúdo de um documento: o rascunho, ou o que está no ar quando não há rascunho.",
         argumentos: &[SITE, DOCUMENTO],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "listar_modelos",
+        escopo: "conteudo:ler",
+        descricao: "Lista os modelos de página e de post: início, sobre, serviços, preços, contato, campanha e outros.",
+        argumentos: &[],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "ver_modelo",
+        escopo: "conteudo:ler",
+        descricao: "Devolve o conteúdo de um modelo, no contrato do CMS, com todas as seções daquele tipo de página. Troque os textos de orientação pelos do negócio e mande em criar_rascunho.",
+        argumentos: &[("modelo", "O id do modelo, como em listar_modelos.")],
         com_conteudo: false,
         opcionais: &[],
     },
@@ -834,6 +851,17 @@ impl Chamada<'_> {
             if let Some(midia) = bloco.get_mut("midia") {
                 self.imagem(site_id, midia).await?;
             }
+            // Nas seções, a imagem está em cada item: o item inteiro (galeria
+            // e logos), a imagem do cartão ou a foto do depoimento.
+            let itens = bloco.get_mut("itens").and_then(Value::as_array_mut);
+            for item in itens.into_iter().flatten() {
+                self.imagem(site_id, item).await?;
+                for campo in ["midia", "foto"] {
+                    if let Some(midia) = item.get_mut(campo) {
+                        self.imagem(site_id, midia).await?;
+                    }
+                }
+            }
         }
         Ok(())
     }
@@ -902,6 +930,26 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             })
             .collect();
         return Ok(da_conta(json!({ "sites": sites })));
+    }
+    if ferramenta == "listar_modelos" {
+        let modelos: Vec<Value> = MODELOS
+            .iter()
+            .map(|modelo| {
+                json!({
+                    "modelo": modelo.id,
+                    "nome": modelo.nome,
+                    "descricao": modelo.descricao,
+                    "especie": if modelo.eh_post { "post" } else { "pagina" },
+                })
+            })
+            .collect();
+        return Ok(da_conta(json!({ "modelos": modelos })));
+    }
+    if ferramenta == "ver_modelo" {
+        let id = chamada.texto("modelo")?;
+        let conteudo = conteudo_do_modelo(id, Utc::now())
+            .ok_or_else(|| recusa(format!("Modelo \"{id}\" não existe. Use listar_modelos.")))?;
+        return Ok(da_conta(json!({ "conteudo": conteudo })));
     }
     if ferramenta == "criar_site" {
         let slug = chamada.texto("slug")?.to_lowercase();

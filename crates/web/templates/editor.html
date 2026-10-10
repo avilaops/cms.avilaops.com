@@ -58,6 +58,17 @@
 <option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
 {%- endfor %}
 </select>
+{%- if !f.eh_post %}
+<details{% if !f.abertura_texto.is_empty() %} open{% endif %}>
+<summary>Abertura da página (para página de apresentação)</summary>
+<label for="abertura_sobretitulo">Linha acima do título</label>
+<input id="abertura_sobretitulo" name="abertura_sobretitulo" maxlength="80" value="{{ f.abertura_sobretitulo }}">
+<label for="abertura_texto">Texto abaixo do título</label>
+<textarea id="abertura_texto" name="abertura_texto" maxlength="400">{{ f.abertura_texto }}</textarea>
+<label for="abertura_acoes">Botões, um por linha: Texto do botão | Endereço. No máximo dois</label>
+<textarea id="abertura_acoes" name="abertura_acoes">{{ f.abertura_acoes }}</textarea>
+</details>
+{%- endif %}
 {%- for bloco in blocos %}
 <fieldset>
 <legend>{{ bloco.nome }}</legend>
@@ -70,6 +81,14 @@
 {%- endfor %}
 </select>
 {%- endif %}
+{%- if bloco.usa_titulo %}
+<label for="b{{ bloco.i }}_titulo">Título da seção</label>
+<input id="b{{ bloco.i }}_titulo" name="b{{ bloco.i }}_titulo" maxlength="160" value="{{ bloco.titulo }}">
+{%- endif %}
+{%- if bloco.usa_resumo %}
+<label for="b{{ bloco.i }}_resumo">Texto de apresentação</label>
+<textarea id="b{{ bloco.i }}_resumo" name="b{{ bloco.i }}_resumo" maxlength="400">{{ bloco.resumo }}</textarea>
+{%- endif %}
 {%- if bloco.usa_midia %}
 <label for="b{{ bloco.i }}_midia">Imagem da biblioteca</label>
 <select id="b{{ bloco.i }}_midia" name="b{{ bloco.i }}_midia">
@@ -78,9 +97,13 @@
 <option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
 {%- endfor %}
 </select>
-{%- else %}
+{%- endif %}
+{%- if bloco.usa_texto %}
 <label for="b{{ bloco.i }}_texto">{{ bloco.dica }}</label>
 <textarea id="b{{ bloco.i }}_texto" name="b{{ bloco.i }}_texto">{{ bloco.texto }}</textarea>
+{%- endif %}
+{%- if bloco.usa_invertido %}
+<label class="marcar"><input type="checkbox" name="b{{ bloco.i }}_invertido" value="1"{% if bloco.invertido %} checked{% endif %}> Imagem à direita</label>
 {%- endif %}
 {%- if bloco.usa_ordenada %}
 <label class="marcar"><input type="checkbox" name="b{{ bloco.i }}_ordenada" value="1"{% if bloco.ordenada %} checked{% endif %}> Numerada</label>

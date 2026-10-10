@@ -72,18 +72,18 @@ fn para_cada_midia(conteudo: &mut Conteudo, visitar: &mut dyn FnMut(&mut Midia))
         };
     capa.into_iter().chain(autor).for_each(&mut *visitar);
     for bloco in corpo {
-        if let Bloco::Imagem { midia } = bloco {
-            visitar(midia);
-        }
+        bloco.midias_mut().into_iter().for_each(&mut *visitar);
     }
 }
 
 /// O conteúdo do exemplo que o CMS serve. Catálogo e checkout são do Lojas:
 /// os produtos ficam de fora.
 fn exemplo() -> (PerfilDoSite, Vec<Documento>) {
+    // A página de apresentação entra junto: é a referência das seções.
     let documentos = demonstracao::documentos()
         .into_iter()
         .filter(|d| !matches!(d.conteudo, Conteudo::Produto(_)))
+        .chain([demonstracao::apresentacao()])
         .collect();
     (PerfilDoSite::from(demonstracao::site()), documentos)
 }
@@ -325,7 +325,7 @@ mod testes {
         let resumo = semear_demonstracao(&pool, &diretorio)
             .await
             .expect("demonstração semeada");
-        assert_eq!(resumo.documentos, 9);
+        assert_eq!(resumo.documentos, 10);
         assert!(resumo.arquivos > 0);
 
         // Tudo no ar, e cada publicação passou pelo histórico e virou evento.
@@ -339,7 +339,7 @@ mod testes {
         .fetch_one(&pool)
         .await
         .expect("contagens");
-        assert_eq!((no_ar, publicacoes, eventos), (9, 9, 9));
+        assert_eq!((no_ar, publicacoes, eventos), (10, 10, 10));
 
         // As imagens estão na biblioteca, prontas e em uso, e os posts citam
         // autor e categoria do cadastro: a demonstração abre no editor inteira.

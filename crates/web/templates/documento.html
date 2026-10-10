@@ -1,14 +1,19 @@
 {% extends "base.html" %}
+{% block largura %}{% if larga %} larga{% endif %}{% endblock %}
 {% block conteudo %}
 <article>
+{%- if abertura.is_empty() %}
 {%- include "trilha.html" %}
 <h1>{{ titulo }}</h1>
+{%- else %}
+{{ abertura|safe }}
+{%- endif %}
 {%- if let Some(datas) = datas %}
 <p class="datas">Publicado em <time datetime="{{ datas.publicado_iso }}">{{ datas.publicado }}</time>
 {%- if datas.mostrar_atualizado %} · Atualizado em <time datetime="{{ datas.atualizado_iso }}">{{ datas.atualizado }}</time>{% endif %}
 {%- if let Some(categoria) = categoria %} · Em <a href="{{ categoria.url }}">{{ categoria.rotulo }}</a>{% endif %}</p>
 {%- endif %}
-{%- if !capa.is_empty() %}
+{%- if !capa.is_empty() && abertura.is_empty() %}
 <div class="capa">{{ capa|safe }}</div>
 {%- endif %}
 {{ corpo|safe }}

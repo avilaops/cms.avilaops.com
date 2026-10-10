@@ -52,6 +52,9 @@ iframe{width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:.5rem;mar
 .cartao p{margin:.25rem 0}
 footer.rodape{border-top:1px solid var(--linha);padding:1.5rem 0;font-size:.9375rem;color:var(--suave)}
 footer.rodape p{margin:.15rem 0}
+.faixa.larga{max-width:72rem}
+.faixa.larga article>:not(section):not(.abertura){max-width:var(--largura);margin-left:auto;margin-right:auto}
+{{ moldura.estilo_das_secoes|safe }}
 </style>
 </head>
 <body>
@@ -68,7 +71,7 @@ footer.rodape p{margin:.15rem 0}
 </div>
 </header>
 <main>
-<div class="faixa">
+<div class="faixa{% block largura %}{% endblock %}">
 {% block conteudo %}{% endblock %}
 </div>
 </main>

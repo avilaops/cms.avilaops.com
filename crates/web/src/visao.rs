@@ -6,6 +6,7 @@ use cms_dados::ItemDeNavegacao;
 use cms_dominio::datas;
 use motor_web::conteudo::renderizar_corpo;
 use motor_web::midia::{Papel, renderizar_midia};
+use motor_web::secoes::{ESTILO_DAS_SECOES, renderizar_abertura};
 use motor_web::tipos::{Autor, Conteudo, Documento, ItemTrilha, Post, Site};
 
 pub struct Link {
@@ -22,6 +23,8 @@ pub struct Moldura {
     pub nome_do_site: String,
     pub navegacao: Vec<Link>,
     pub rodape: Vec<String>,
+    /// O estilo das seções, que vem do motor para ser igual em todo site.
+    pub estilo_das_secoes: &'static str,
 }
 
 impl Moldura {
@@ -75,6 +78,7 @@ impl Moldura {
             nome_do_site: site.nome.clone(),
             navegacao,
             rodape,
+            estilo_das_secoes: ESTILO_DAS_SECOES,
         }
     }
 }
@@ -145,6 +149,10 @@ pub struct PaginaDeDocumento {
     pub moldura: Moldura,
     pub trilha: Vec<ItemTrilha>,
     pub titulo: String,
+    /// O topo de uma página de apresentação, já com o `<h1>`. Vazio nas outras.
+    pub abertura: String,
+    /// Página de apresentação: o conteúdo ocupa a largura inteira.
+    pub larga: bool,
     pub datas: Option<Datas>,
     /// A categoria do post, com o endereço da listagem dela.
     pub categoria: Option<Link>,
@@ -163,6 +171,11 @@ impl PaginaDeDocumento {
             moldura,
             trilha: documento.trilha().to_vec(),
             titulo: documento.titulo().to_string(),
+            abertura: match &documento.conteudo {
+                Conteudo::Pagina(pagina) => renderizar_abertura(pagina).unwrap_or_default(),
+                _ => String::new(),
+            },
+            larga: documento.eh_larga(),
             datas: post.map(Datas::do_post),
             categoria: post.map(|post| Link {
                 rotulo: post.categoria.nome.clone(),

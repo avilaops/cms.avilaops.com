@@ -16,6 +16,14 @@
 <a href="/painel/sites/{{ slug }}/historico">Histórico</a>
 {%- endif %}
 </nav>
+<details>
+<summary>Começar por um modelo</summary>
+<ul>
+{%- for modelo in modelos %}
+<li><a href="/painel/sites/{{ slug }}/novo/{{ modelo.id }}"><strong>{{ modelo.nome }}</strong></a><span class="etiquetas">{{ modelo.descricao }}</span></li>
+{%- endfor %}
+</ul>
+</details>
 {%- if documentos.is_empty() %}
 <p>O site ainda não tem conteúdo. Comece pela página inicial: uma página nova com o endereço em branco.</p>
 {%- else %}
