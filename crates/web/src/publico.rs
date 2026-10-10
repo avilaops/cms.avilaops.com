@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::origem_do_site;
-use cms_dominio::site::aparece_na_busca;
+use cms_dominio::site::{aparece_na_busca, conferir_cor};
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
     ItensDoSite, OpcoesRobots, PaginaDeCategoria, gerar_llms, gerar_llms_completo, gerar_robots,
@@ -324,12 +324,16 @@ async fn moldura(
 ) -> Result<Moldura, ErroWeb> {
     let head = montar_cabecalho(documento, &pedido.site)?.para_html();
     let itens = cms_dados::navegacao(&estado.pool, pedido.gravado.id).await?;
-    Ok(Moldura::nova(
-        &pedido.site,
-        head,
-        &itens,
-        &documento.caminho,
-    ))
+    let mut moldura = Moldura::nova(&pedido.site, head, &itens, &documento.caminho);
+    // Só entra na página a cor que passa na conferência: o que está gravado
+    // pode ser de antes de a regra existir.
+    moldura.cor_de_destaque = pedido
+        .gravado
+        .perfil
+        .cor_de_destaque
+        .as_deref()
+        .and_then(|cor| conferir_cor(cor).ok());
+    Ok(moldura)
 }
 
 async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Response, ErroWeb> {

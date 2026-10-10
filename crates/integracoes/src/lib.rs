@@ -2,6 +2,7 @@
 //! dizem se chegou.
 
 pub mod auth;
+pub mod busca;
 pub mod n8n;
 
 pub use n8n::{ClienteN8n, ErroDeEntrega};

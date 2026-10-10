@@ -10,6 +10,7 @@ cms-dominio.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

@@ -37,6 +37,8 @@
 <label for="perfis">Redes sociais (endereços https), uma por linha</label>
 <textarea id="perfis" name="perfis">{{ d.perfis }}</textarea>
 </fieldset>
+<label for="cor">Cor da marca, como #225cf2 (em branco usa a cor do tema)</label>
+<input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
 <textarea id="diretrizes" name="diretrizes">{{ d.diretrizes }}</textarea>
 <button type="submit">Salvar identidade</button>

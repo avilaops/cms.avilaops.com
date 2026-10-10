@@ -6,6 +6,7 @@ use axum::http::{StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
+use cms_dominio::site::conferir_cor;
 use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
@@ -13,7 +14,7 @@ use uuid::Uuid;
 
 use crate::Estado;
 use crate::acesso::{Acesso, ao_site};
-use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
+use crate::resposta::{ErroWeb, html_privado, redirecionar, simples, texto};
 
 /// A identidade como é digitada, no formulário do painel e nos argumentos do
 /// conector. Listas vêm com um item por linha.
@@ -33,6 +34,8 @@ pub(crate) struct DadosDaIdentidade {
     cep: String,
     perfis: String,
     diretrizes: String,
+    /// A cor da marca, como `#225cf2`; vazio usa a cor do tema.
+    cor: String,
 }
 
 impl DadosDaIdentidade {
@@ -59,6 +62,7 @@ impl DadosDaIdentidade {
             cep: endereco.cep,
             perfis: organizacao.perfis.join("\n"),
             diretrizes: perfil.diretrizes_ia.join("\n"),
+            cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
         }
     }
 
@@ -77,6 +81,7 @@ impl DadosDaIdentidade {
             "cep" => &mut self.cep,
             "perfis" => &mut self.perfis,
             "diretrizes" => &mut self.diretrizes,
+            "corDeDestaque" => &mut self.cor,
             _ => return None,
         })
     }
@@ -153,12 +158,21 @@ pub(crate) async fn aplicar(
     estado: &Estado,
     site: &SiteGravado,
     ator: &Ator,
-    dados: &DadosDaIdentidade,
-) -> Result<Result<(), &'static str>, ErroWeb> {
-    let nome = dados.nome.trim();
+    dados: &mut DadosDaIdentidade,
+) -> Result<Result<(), String>, ErroWeb> {
+    let nome = dados.nome.trim().to_string();
     if nome.is_empty() {
-        return Ok(Err("Dê um nome ao site."));
+        return Ok(Err("Dê um nome ao site.".to_string()));
     }
+    let cor_de_destaque = match opcional(&dados.cor) {
+        Some(cor) => match conferir_cor(&cor) {
+            Ok(cor) => Some(cor),
+            Err(recusa) => return Ok(Err(recusa.to_string())),
+        },
+        None => None,
+    };
+    // Quem chamou recebe de volta a cor como ficou gravada.
+    dados.cor = cor_de_destaque.clone().unwrap_or_default();
     // A logo é da biblioteca do site; qualquer outra coisa fica sem logo.
     let logo = match Uuid::parse_str(dados.logo.trim()) {
         Ok(id) => cms_dados::midia_para_conteudo(&estado.pool, site.id, id).await?,
@@ -194,10 +208,11 @@ pub(crate) async fn aplicar(
                 .collect(),
         },
         diretrizes_ia: linhas(&dados.diretrizes),
+        cor_de_destaque,
         ..site.perfil.clone()
     };
     if !cms_dados::atualizar_perfil(&estado.pool, site.id, ator, &perfil).await? {
-        return Ok(Err(SO_O_DONO));
+        return Ok(Err(SO_O_DONO.to_string()));
     }
     // O nome e o rodapé aparecem em todas as páginas do site.
     estado.cache.invalidar_site(site.id);
@@ -214,13 +229,17 @@ pub async fn gravar(
         Ok(acesso) => acesso,
         Err(resposta) => return Ok(resposta),
     };
-    let dados = serde_urlencoded::from_bytes::<DadosDaIdentidade>(corpo).unwrap_or_default();
-    Ok(match aplicar(estado, &site, &ator, &dados).await? {
+    let mut dados = serde_urlencoded::from_bytes::<DadosDaIdentidade>(corpo).unwrap_or_default();
+    Ok(match aplicar(estado, &site, &ator, &mut dados).await? {
         Ok(()) => redirecionar(
             StatusCode::SEE_OTHER,
             &format!("/painel/sites/{}/identidade?r=salvo", site.slug),
         ),
-        Err(motivo) => simples(StatusCode::UNPROCESSABLE_ENTITY, motivo),
+        Err(motivo) => texto(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "text/plain; charset=utf-8",
+            motivo,
+        ),
     })
 }
 

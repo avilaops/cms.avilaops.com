@@ -5,7 +5,9 @@
 //! resolve o papel da conta no site e chama a mesma função que o painel usa.
 
 use askama::Template;
-use axum::http::header::{AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, WWW_AUTHENTICATE};
+use axum::http::header::{
+    AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE, USER_AGENT, WWW_AUTHENTICATE,
+};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
@@ -17,8 +19,9 @@ use cms_dados::{
 };
 use cms_dominio::modelos::{MODELOS, conteudo_do_modelo};
 use cms_dominio::{Ator, Conta};
+use cms_integracoes::busca;
 use motor_web::tipos::{Conteudo, Direitos};
-use motor_web::validacao::Problema;
+use motor_web::validacao::{Problema, UPLOAD_MAXIMO_BYTES};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -441,10 +444,6 @@ const AQUISICAO: (&str, &str) = (
     "O endereço onde se pede a licença: https:// ou um caminho do site.",
 );
 
-/// O texto que acompanha uma imagem: legenda, crédito e direitos. É o que a
-/// busca de imagens lê para o crédito e o selo de imagem licenciável.
-const TEXTOS_DA_IMAGEM: &[(&str, &str)] = &[LEGENDA, CREDITO, AUTORIA, AVISO, LICENCA, AQUISICAO];
-
 /// O que o dono define sobre o site. Os mesmos nomes saem em ver_site.
 const IDENTIDADE: &[(&str, &str)] = &[
     ("nome", "O nome do site."),
@@ -473,6 +472,10 @@ const IDENTIDADE: &[(&str, &str)] = &[
     (
         "diretrizes",
         "Orientações para assistentes de IA sobre o site, uma por linha.",
+    ),
+    (
+        "corDeDestaque",
+        "A cor da marca, como #225cf2: pinta links, botões e destaques. Precisa ser escura o bastante para ler sobre branco. Vazio volta à cor do tema.",
     ),
 ];
 
@@ -598,7 +601,7 @@ const FERRAMENTAS: [Ferramenta; 21] = [
     Ferramenta {
         nome: "enviar_midia",
         escopo: "midia:escrever",
-        descricao: "Envia uma imagem JPG, PNG ou WebP para a biblioteca. Ela fica pronta para uso em instantes.",
+        descricao: "Envia uma imagem JPG, PNG ou WebP para a biblioteca, pelo endereço dela (url) ou pelo arquivo (base64). Prefira o endereço: o CMS busca a imagem. Ela fica pronta para uso em instantes.",
         argumentos: &[
             SITE,
             ("nome", "O nome do arquivo, como foto-da-fachada.jpg."),
@@ -606,10 +609,24 @@ const FERRAMENTAS: [Ferramenta; 21] = [
                 "alt",
                 "A descrição da imagem para quem não a enxerga. Obrigatória.",
             ),
-            ("base64", "O arquivo, em base64."),
         ],
         com_conteudo: false,
-        opcionais: TEXTOS_DA_IMAGEM,
+        opcionais: &[
+            (
+                "url",
+                "O endereço https da imagem, público e que abra direto no arquivo, sem redirecionar.",
+            ),
+            (
+                "base64",
+                "O arquivo, em base64. Só para imagem pequena, quando não há endereço.",
+            ),
+            LEGENDA,
+            CREDITO,
+            AUTORIA,
+            AVISO,
+            LICENCA,
+            AQUISICAO,
+        ],
     },
     Ferramenta {
         nome: "editar_midia",
@@ -993,7 +1010,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     *campo = valor.to_string();
                 }
             }
-            match identidade::aplicar(chamada.estado, &site, &ator, &dados).await? {
+            match identidade::aplicar(chamada.estado, &site, &ator, &mut dados).await? {
                 Ok(()) => Ok(do_site(
                     json!({ "identidade": identidade_em_json(&mut dados) }),
                     None,
@@ -1070,9 +1087,23 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             Ok(do_site(json!({ "midias": midias }), None))
         }
         "enviar_midia" => {
-            let bytes = base64::engine::general_purpose::STANDARD
-                .decode(chamada.texto("base64")?)
-                .map_err(|_| recusa("O argumento \"base64\" não é base64 válido."))?;
+            let endereco = chamada
+                .opcional("url")
+                .map(str::trim)
+                .filter(|url| !url.is_empty());
+            let bytes = match (endereco, chamada.opcional("base64")) {
+                (Some(url), _) => busca::baixar(url, UPLOAD_MAXIMO_BYTES)
+                    .await
+                    .map_err(|erro| recusa(erro.to_string()))?,
+                (None, Some(arquivo)) => base64::engine::general_purpose::STANDARD
+                    .decode(arquivo.trim())
+                    .map_err(|_| recusa("O argumento \"base64\" não é base64 válido."))?,
+                (None, None) => {
+                    return Err(recusa(
+                        "Informe \"url\", o endereço https da imagem, ou \"base64\", o arquivo.",
+                    ));
+                }
+            };
             let texto = |nome: &str| chamada.opcional(nome).map(str::to_string);
             let envio = biblioteca::Envio {
                 nome: chamada.texto("nome")?.to_string(),
@@ -1260,6 +1291,44 @@ async fn chamar(estado: &Estado, conexao: &Conexao, parametros: &Value) -> Resul
     )
     .await?;
     Ok(conteudo_de_ferramenta(texto, eh_erro))
+}
+
+/// Registra um pedido de assistente no log: caminho, resposta, se veio com
+/// token, quem pediu e o método do MCP. Nunca o token, os argumentos nem o
+/// resultado. É o que permite ver por que um assistente não conectou.
+pub fn anotar_pedido(
+    caminho: &str,
+    metodo: &Method,
+    cabecalhos: &HeaderMap,
+    corpo: &[u8],
+    resposta: &Result<Response, ErroWeb>,
+) {
+    let status = match resposta {
+        Ok(resposta) => resposta.status().as_u16(),
+        Err(_) => 500,
+    };
+    let agente: String = cabecalhos
+        .get(USER_AGENT)
+        .and_then(|valor| valor.to_str().ok())
+        .unwrap_or("")
+        .chars()
+        .take(60)
+        .collect();
+    // Só o método do JSON-RPC, e só em `/mcp`: o corpo dos outros é segredo.
+    let rpc = (caminho == "/mcp")
+        .then(|| serde_json::from_slice::<Value>(corpo).ok())
+        .flatten()
+        .and_then(|mensagem| mensagem.get("method")?.as_str().map(str::to_string))
+        .unwrap_or_default();
+    tracing::info!(
+        caminho,
+        metodo = metodo.as_str(),
+        status,
+        com_token = token_do_pedido(cabecalhos).is_some(),
+        agente,
+        rpc,
+        "pedido de assistente"
+    );
 }
 
 fn token_do_pedido(cabecalhos: &HeaderMap) -> Option<&str> {

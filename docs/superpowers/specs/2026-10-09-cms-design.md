@@ -300,6 +300,17 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   sobre, serviços, serviço, preços, contato, perguntas, campanha, privacidade,
   termos, artigo e guia). O texto do modelo é orientação do que escrever, e a
   descrição de busca vem vazia para ele não ir ao ar como nasceu.
+- `enviar_midia` aceita a imagem pelo endereço (`url`) ou pelo arquivo
+  (`base64`). Pelo endereço vale a regra da base Rust para endereço informado
+  por cliente: só `https` na porta padrão, nome resolvido antes e recusado se
+  for rede interna, conexão no endereço conferido e sem seguir
+  redirecionamento. É o caminho normal de um assistente: arquivo em base64 não
+  cabe no contexto dele.
+- A identidade aceita `corDeDestaque`, a cor da marca. Ela pinta links, botões
+  e destaques do site e só entra se tiver contraste de 4,5 contra o branco.
+- Cada pedido de assistente em `/mcp`, `/oauth/token` e `/oauth/register` vai
+  ao log com caminho, resposta, se veio com token, agente e método do MCP;
+  nunca o token, os argumentos ou o resultado.
 - `enviar_midia` e `editar_midia` recebem legenda, crédito e direitos da imagem
   (autoria, aviso, licença e página de aquisição). É o que sai no `ImageObject`
   de cada página, de onde a busca de imagens tira o crédito e o selo de imagem

@@ -417,6 +417,7 @@ dependencies = [
  "motor-web",
  "serde",
  "serde_json",
+ "thiserror",
  "uuid",
 ]
 
@@ -429,6 +430,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

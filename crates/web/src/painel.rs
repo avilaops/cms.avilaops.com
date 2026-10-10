@@ -410,14 +410,25 @@ async fn responder(
         "/.well-known/oauth-authorization-server" if leitura => {
             return Ok(conector::metadados(&origem));
         }
-        "/.well-known/oauth-protected-resource" if leitura => {
+        // O segundo endereço é o que a RFC 9728 monta para um recurso em
+        // `/mcp`; há assistente que pede um e há o que pede o outro.
+        "/.well-known/oauth-protected-resource" | "/.well-known/oauth-protected-resource/mcp"
+            if leitura =>
+        {
             return Ok(conector::recurso_protegido(&origem));
         }
-        "/oauth/register" if metodo == Method::POST => {
-            return conector::registrar(estado, corpo).await;
+        "/oauth/register" | "/oauth/token" | "/mcp" => {
+            let resposta = match caminho {
+                "/oauth/register" if metodo == Method::POST => {
+                    conector::registrar(estado, corpo).await
+                }
+                "/oauth/token" if metodo == Method::POST => conector::token(estado, corpo).await,
+                "/mcp" => conector::mcp(estado, &origem, metodo, cabecalhos, corpo).await,
+                _ => Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST.")),
+            };
+            conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);
+            return resposta;
         }
-        "/oauth/token" if metodo == Method::POST => return conector::token(estado, corpo).await,
-        "/mcp" => return conector::mcp(estado, &origem, metodo, cabecalhos, corpo).await,
         _ => {}
     }
     let Some(rota) = Rota::ler(metodo, caminho) else {

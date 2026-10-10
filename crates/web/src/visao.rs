@@ -25,6 +25,8 @@ pub struct Moldura {
     pub rodape: Vec<String>,
     /// O estilo das seções, que vem do motor para ser igual em todo site.
     pub estilo_das_secoes: &'static str,
+    /// A cor da marca do site, já conferida. Sem ela, vale a do tema.
+    pub cor_de_destaque: Option<String>,
 }
 
 impl Moldura {
@@ -79,6 +81,7 @@ impl Moldura {
             navegacao,
             rodape,
             estilo_das_secoes: ESTILO_DAS_SECOES,
+            cor_de_destaque: None,
         }
     }
 }

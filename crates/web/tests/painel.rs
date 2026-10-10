@@ -1715,6 +1715,29 @@ async fn assistente_com_permissao_envia_imagem_e_publica(pool: PgPool) {
         .await;
 
     let base64 = base64::engine::general_purpose::STANDARD.encode(png(1400, 800, 33));
+    // Sem endereço nem arquivo não há o que enviar, e endereço da própria
+    // rede não é buscado.
+    for (argumentos, esperado) in [
+        (
+            json!({ "site": "padaria", "nome": "f.png", "alt": "Fachada" }),
+            "url",
+        ),
+        (
+            json!({ "site": "padaria", "nome": "f.png", "alt": "Fachada", "url": "https://127.0.0.1/f.png" }),
+            "rede interna",
+        ),
+        (
+            json!({ "site": "padaria", "nome": "f.png", "alt": "Fachada", "url": "http://exemplo.example/f.png" }),
+            "https://",
+        ),
+    ] {
+        let (erro, recusa) = painel.ferramenta(&token, "enviar_midia", argumentos).await;
+        assert!(erro, "{recusa}");
+        assert!(
+            recusa.as_str().expect("frase").contains(esperado),
+            "{recusa}"
+        );
+    }
     let (erro, sem_alt) = painel
         .ferramenta(
             &token,
@@ -1915,6 +1938,31 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
         .await;
     assert_eq!(site["identidade"]["nome"], "Padaria da Ana");
     assert_eq!(site["identidade"]["telefone"], "(11) 4000-0000");
+    // A cor da marca entra pela identidade, se der para ler.
+    let (erro, clara) = painel
+        .ferramenta(
+            &token,
+            "editar_identidade",
+            json!({ "site": "padaria", "corDeDestaque": "#f4c544" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(clara.as_str().expect("frase").contains("clara demais"));
+    let (erro, pintada) = painel
+        .ferramenta(
+            &token,
+            "editar_identidade",
+            json!({ "site": "padaria", "corDeDestaque": "#225CF2" }),
+        )
+        .await;
+    assert!(!erro, "{pintada}");
+    assert_eq!(pintada["identidade"]["corDeDestaque"], "#225cf2");
+    // Toda página do site sai com a cor, inclusive a de aviso.
+    let aviso = pedir(&pool, &host("padaria"), "/nao-existe").await;
+    assert!(
+        aviso.corpo.contains(":root{--destaque:#225cf2}"),
+        "sem a cor"
+    );
     assert_eq!(site["identidade"]["logo"], imagem);
     let (erro, sem_nome) = painel
         .ferramenta(

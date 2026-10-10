@@ -55,6 +55,9 @@ footer.rodape p{margin:.15rem 0}
 .larga .faixa{max-width:72rem}
 .larga article>:not(section):not(.abertura){max-width:var(--largura);margin-left:auto;margin-right:auto}
 {{ moldura.estilo_das_secoes|safe }}
+{%- if let Some(cor) = moldura.cor_de_destaque %}
+:root{--destaque:{{ cor }}}
+{%- endif %}
 </style>
 </head>
 <body{% block largura %}{% endblock %}>
