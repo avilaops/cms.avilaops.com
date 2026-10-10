@@ -21,7 +21,7 @@ cms-integracoes = { path = "crates/integracoes" }
 cms-web = { path = "crates/web" }
 
 # Fixado por commit: mudou o motor, este `rev` é atualizado de propósito.
-motor-web = { git = "https://github.com/avilaops/motor-web", rev = "c21c3e90b2bbb5ec9a1cd4615f672fbfc87411be" }
+motor-web = { git = "https://github.com/avilaops/motor-web", rev = "3b2d4cb00dfcd5c6cfed0efdb3d59d1acbb51f97" }
 
 askama = "0.16"
 axum = "0.8"

@@ -1,4 +1,4 @@
-//! A tela de imagens de um site: envio, lista e remoção.
+//! A tela de imagens de um site: envio, lista, correção e remoção.
 //!
 //! O envio grava o original e responde. As variantes saem depois, pela rotina
 //! de imagens do servidor.
@@ -11,9 +11,11 @@ use axum::body::Bytes;
 use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
-use cms_dados::{ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
+use cms_dados::{DescricaoDaMidia, ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
 use cms_dominio::{Ator, Conta, Papel};
+use motor_web::tipos::Direitos;
 use motor_web::validacao::validar_upload;
+use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::acesso::ao_site;
@@ -28,6 +30,12 @@ struct Linha {
     situacao: &'static str,
     uso: String,
     pode_apagar: bool,
+    legenda: String,
+    credito: String,
+    autoria: String,
+    aviso: String,
+    licenca: String,
+    aquisicao: String,
 }
 
 impl Linha {
@@ -51,6 +59,12 @@ impl Linha {
             },
             // Quem enviou não vem na lista: o Autor tenta, e o banco decide.
             pode_apagar: midia.usos == 0 && ator.papel != Papel::Autor,
+            legenda: midia.legenda.unwrap_or_default(),
+            credito: midia.credito.unwrap_or_default(),
+            autoria: midia.autoria.unwrap_or_default(),
+            aviso: midia.aviso.unwrap_or_default(),
+            licenca: midia.licenca.unwrap_or_default(),
+            aquisicao: midia.aquisicao.unwrap_or_default(),
         }
     }
 }
@@ -126,7 +140,9 @@ pub struct Envio {
     pub nome: String,
     pub bytes: Bytes,
     pub alt: String,
+    pub legenda: String,
     pub credito: String,
+    pub direitos: Direitos,
 }
 
 /// Lê o formulário de envio. `None` para o que não é um formulário válido.
@@ -145,9 +161,21 @@ async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<Envio> {
                 envio.nome = nome_do_arquivo.unwrap_or_default();
                 envio.bytes = dados;
             }
-            Some("alt") => envio.alt = String::from_utf8_lossy(&dados).trim().to_string(),
-            Some("credito") => envio.credito = String::from_utf8_lossy(&dados).trim().to_string(),
-            _ => {}
+            Some(campo) => {
+                let texto = String::from_utf8_lossy(&dados).trim().to_string();
+                let direitos = &mut envio.direitos;
+                match campo {
+                    "alt" => envio.alt = texto,
+                    "legenda" => envio.legenda = texto,
+                    "credito" => envio.credito = texto,
+                    "autoria" => direitos.autoria = Some(texto),
+                    "aviso" => direitos.aviso = Some(texto),
+                    "licenca" => direitos.licenca = Some(texto),
+                    "aquisicao" => direitos.aquisicao = Some(texto),
+                    _ => {}
+                }
+            }
+            None => {}
         }
     }
     Some(envio)
@@ -193,8 +221,9 @@ pub async fn registrar(
         largura,
         altura,
         alt: envio.alt,
-        legenda: None,
+        legenda: Some(envio.legenda),
         credito: Some(envio.credito),
+        direitos: envio.direitos,
         bytes: envio.bytes.len() as u64,
     };
     let limite = estado.configuracao.limite_de_midia_por_site;
@@ -255,6 +284,77 @@ pub async fn enviar(
             },
         ),
     };
+    pagina(estado, &site, &ator, status, recado).await
+}
+
+/// A correção de uma imagem, como o formulário da lista a manda.
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct Correcao {
+    alt: String,
+    legenda: String,
+    credito: String,
+    autoria: String,
+    aviso: String,
+    licenca: String,
+    aquisicao: String,
+}
+
+pub async fn corrigir(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    midia_id: &str,
+    corpo: &[u8],
+) -> Result<Response, ErroWeb> {
+    let (site, ator) = match ao_site(estado, conta, slug).await? {
+        Ok(acesso) => acesso,
+        Err(resposta) => return Ok(resposta),
+    };
+    let Ok(midia_id) = Uuid::parse_str(midia_id) else {
+        return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
+    };
+    let correcao = serde_urlencoded::from_bytes::<Correcao>(corpo).unwrap_or_default();
+    let descricao = DescricaoDaMidia {
+        alt: correcao.alt,
+        legenda: Some(correcao.legenda),
+        credito: Some(correcao.credito),
+        direitos: Direitos {
+            autoria: Some(correcao.autoria),
+            aviso: Some(correcao.aviso),
+            licenca: Some(correcao.licenca),
+            aquisicao: Some(correcao.aquisicao),
+        },
+    };
+    let (status, recado) =
+        match cms_dados::atualizar_midia(&estado.pool, site.id, &ator, midia_id, &descricao).await
+        {
+            Ok(()) => (
+                StatusCode::OK,
+                Recado {
+                    aviso: Some(
+                        "Imagem corrigida. Onde ela já está no ar, a mudança entra na próxima publicação."
+                            .to_string(),
+                    ),
+                    ..Recado::default()
+                },
+            ),
+            Err(ErroDeMidia::Dados(erro)) => return Err(erro.into()),
+            Err(erro) => {
+                let status = match erro {
+                    ErroDeMidia::Inexistente => StatusCode::NOT_FOUND,
+                    ErroDeMidia::SemPermissao => StatusCode::FORBIDDEN,
+                    _ => StatusCode::UNPROCESSABLE_ENTITY,
+                };
+                (
+                    status,
+                    Recado {
+                        erro: Some(erro.to_string()),
+                        ..Recado::default()
+                    },
+                )
+            }
+        };
     pagina(estado, &site, &ator, status, recado).await
 }
 

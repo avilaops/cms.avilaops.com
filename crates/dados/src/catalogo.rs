@@ -2,7 +2,7 @@
 
 use chrono::{DateTime, Utc};
 use cms_dominio::{Ator, Papel};
-use motor_web::tipos::{Autor, Categoria, Conteudo, Midia};
+use motor_web::tipos::{Autor, Categoria, Conteudo, Direitos, Midia};
 use motor_web::validacao::normalizar_slug;
 use sqlx::PgPool;
 use sqlx::types::Json;
@@ -182,6 +182,7 @@ pub fn midia_vazia() -> Midia {
         variantes: Vec::new(),
         legenda: None,
         credito: None,
+        direitos: Direitos::default(),
     }
 }
 

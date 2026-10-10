@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use motor_web::tipos::{Midia, Organizacao, Site};
+use motor_web::tipos::{Direitos, Midia, Organizacao, Site};
 use serde::{Deserialize, Serialize};
 
 /// Peso máximo recomendado de uma página, até o Dono mudar.
@@ -39,6 +39,7 @@ impl PerfilDoSite {
                 variantes: Vec::new(),
                 legenda: None,
                 credito: None,
+                direitos: Direitos::default(),
             },
             organizacao: Organizacao::default(),
             diretrizes_ia: Vec::new(),

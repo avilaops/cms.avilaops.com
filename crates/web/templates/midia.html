@@ -14,8 +14,21 @@
 <input id="arquivo" name="arquivo" type="file" accept="image/jpeg,image/png,image/webp" required>
 <label for="alt">Descrição para quem não enxerga a imagem</label>
 <input id="alt" name="alt" required maxlength="300" value="{{ alt }}">
-<label for="credito">Crédito (opcional)</label>
+<details>
+<summary>Legenda, crédito e direitos (opcional)</summary>
+<label for="legenda">Legenda (aparece embaixo da imagem)</label>
+<input id="legenda" name="legenda" maxlength="300">
+<label for="credito">Crédito (quem aparece em "Foto:")</label>
 <input id="credito" name="credito" maxlength="120">
+<label for="autoria">Quem fez a imagem</label>
+<input id="autoria" name="autoria" maxlength="120">
+<label for="aviso">Aviso de direitos, como © 2026 Nome da empresa</label>
+<input id="aviso" name="aviso" maxlength="160">
+<label for="licenca">Endereço da licença de uso</label>
+<input id="licenca" name="licenca" maxlength="300" inputmode="url">
+<label for="aquisicao">Endereço onde se pede a licença</label>
+<input id="aquisicao" name="aquisicao" maxlength="300" inputmode="url">
+</details>
 <button type="submit">Enviar imagem</button>
 </form>
 <h2>Biblioteca</h2>
@@ -32,6 +45,26 @@
 <strong>{{ midia.alt }}</strong>
 <span class="etiquetas">{{ midia.dimensoes }} · {{ midia.situacao }} · {{ midia.uso }}</span>
 <code class="etiquetas">{{ midia.id }}</code>
+<details>
+<summary>Corrigir</summary>
+<form method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}">
+<label for="m{{ loop.index }}-alt">Descrição para quem não enxerga a imagem</label>
+<input id="m{{ loop.index }}-alt" name="alt" required maxlength="300" value="{{ midia.alt }}">
+<label for="m{{ loop.index }}-legenda">Legenda (aparece embaixo da imagem)</label>
+<input id="m{{ loop.index }}-legenda" name="legenda" maxlength="300" value="{{ midia.legenda }}">
+<label for="m{{ loop.index }}-credito">Crédito (quem aparece em "Foto:")</label>
+<input id="m{{ loop.index }}-credito" name="credito" maxlength="120" value="{{ midia.credito }}">
+<label for="m{{ loop.index }}-autoria">Quem fez a imagem</label>
+<input id="m{{ loop.index }}-autoria" name="autoria" maxlength="120" value="{{ midia.autoria }}">
+<label for="m{{ loop.index }}-aviso">Aviso de direitos, como © 2026 Nome da empresa</label>
+<input id="m{{ loop.index }}-aviso" name="aviso" maxlength="160" value="{{ midia.aviso }}">
+<label for="m{{ loop.index }}-licenca">Endereço da licença de uso</label>
+<input id="m{{ loop.index }}-licenca" name="licenca" maxlength="300" inputmode="url" value="{{ midia.licenca }}">
+<label for="m{{ loop.index }}-aquisicao">Endereço onde se pede a licença</label>
+<input id="m{{ loop.index }}-aquisicao" name="aquisicao" maxlength="300" inputmode="url" value="{{ midia.aquisicao }}">
+<button type="submit">Salvar</button>
+</form>
+</details>
 {%- if midia.pode_apagar %}
 <form class="discreto" method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}/apagar"><button type="submit">Apagar</button></form>
 {%- endif %}

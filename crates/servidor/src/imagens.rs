@@ -159,6 +159,7 @@ mod testes {
             alt: "Bancada da oficina com ferramentas".into(),
             legenda: None,
             credito: None,
+            direitos: Default::default(),
             bytes: bytes.len() as u64,
         };
         let id = cms_dados::registrar_midia(

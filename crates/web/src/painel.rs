@@ -296,6 +296,7 @@ enum Rota<'a> {
     EnviarMidia(&'a str),
     ArquivoDeMidia(&'a str, &'a str),
     ApagarMidia(&'a str, &'a str),
+    CorrigirMidia(&'a str, &'a str),
     Site(&'a str),
     NovoDocumento(&'a str, &'a str),
     GravarNovo(&'a str),
@@ -338,6 +339,7 @@ impl<'a> Rota<'a> {
             (false, ["painel", "sites", slug, "midia", id, "apagar"]) => {
                 Some(Rota::ApagarMidia(slug, id))
             }
+            (false, ["painel", "sites", slug, "midia", id]) => Some(Rota::CorrigirMidia(slug, id)),
             (true, ["painel", "sites", slug, "dominio"]) => Some(Rota::Dominio(slug)),
             (false, ["painel", "sites", slug, "dominio"]) => {
                 Some(Rota::GravarDominio(slug, dominio::Pedido::Apontar))
@@ -378,6 +380,7 @@ impl<'a> Rota<'a> {
                 | Rota::Convidar(_)
                 | Rota::EnviarMidia(_)
                 | Rota::ApagarMidia(..)
+                | Rota::CorrigirMidia(..)
                 | Rota::GravarNovo(_)
                 | Rota::Gravar(..)
                 | Rota::SalvarAutor(_)
@@ -457,6 +460,9 @@ async fn responder(
             biblioteca::arquivo(estado, &conta, slug, arquivo).await
         }
         Rota::ApagarMidia(slug, id) => biblioteca::apagar(estado, &conta, slug, id).await,
+        Rota::CorrigirMidia(slug, id) => {
+            biblioteca::corrigir(estado, &conta, slug, id, corpo).await
+        }
         Rota::Site(slug) => conteudo::inicio(estado, &conta, slug).await,
         Rota::NovoDocumento(slug, especie) => {
             conteudo::novo(estado, &conta, slug, especie, uri).await

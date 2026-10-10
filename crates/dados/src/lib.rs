@@ -43,9 +43,9 @@ pub use eventos::{
     Encerramento, EventoAEntregar, encerrar_evento, marcar_evento_entregue, reivindicar_eventos,
 };
 pub use midias::{
-    ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada, apagar_midia,
-    concluir_midia, falhar_midia, hash_de_conteudo, hidratar_conteudo, midia_para_conteudo,
-    midias_do_site, registrar_midia, reivindicar_midia,
+    DescricaoDaMidia, ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada,
+    apagar_midia, atualizar_midia, concluir_midia, falhar_midia, hash_de_conteudo,
+    hidratar_conteudo, midia_para_conteudo, midias_do_site, registrar_midia, reivindicar_midia,
 };
 pub use rotinas::{Agendado, limpar_historico, reivindicar_rotina};
 pub use sites::{

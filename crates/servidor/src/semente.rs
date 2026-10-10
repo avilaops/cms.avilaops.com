@@ -153,6 +153,7 @@ async fn guardar(
         alt: preparada.original.alt.clone(),
         legenda: preparada.original.legenda.clone(),
         credito: preparada.original.credito.clone(),
+        direitos: preparada.original.direitos.clone(),
         bytes: preparada.jpeg.len() as u64,
     };
     let id = cms_dados::registrar_midia(pool, site_id, equipe, nova, u64::MAX / 4)

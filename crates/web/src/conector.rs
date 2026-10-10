@@ -12,11 +12,11 @@ use base64::Engine;
 use chrono::Utc;
 use cms_dados::fluxo::{self, ErroDeFluxo};
 use cms_dados::{
-    Autorizacao, Conexao, DadosDoAutor, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeCatalogo,
-    ErroDeConector, Tokens,
+    Autorizacao, Conexao, DadosDoAutor, DescricaoDaMidia, ESCOPO_DE_PUBLICAR, ESCOPOS,
+    ErroDeCatalogo, ErroDeConector, ErroDeMidia, Tokens,
 };
 use cms_dominio::{Ator, Conta};
-use motor_web::tipos::Conteudo;
+use motor_web::tipos::{Conteudo, Direitos};
 use motor_web::validacao::Problema;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -422,6 +422,26 @@ const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
 const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). As datas são do servidor.";
 
+const LEGENDA: (&str, &str) = ("legenda", "A legenda, que aparece embaixo da imagem.");
+const CREDITO: (&str, &str) = ("credito", "Quem leva o crédito, como aparece em \"Foto:\".");
+const AUTORIA: (&str, &str) = ("autoria", "Quem fez a imagem.");
+const AVISO: (&str, &str) = (
+    "aviso",
+    "O aviso de direitos autorais, como © 2026 Nome da empresa.",
+);
+const LICENCA: (&str, &str) = (
+    "licenca",
+    "O endereço da licença de uso: https:// ou um caminho do site.",
+);
+const AQUISICAO: (&str, &str) = (
+    "aquisicao",
+    "O endereço onde se pede a licença: https:// ou um caminho do site.",
+);
+
+/// O texto que acompanha uma imagem: legenda, crédito e direitos. É o que a
+/// busca de imagens lê para o crédito e o selo de imagem licenciável.
+const TEXTOS_DA_IMAGEM: &[(&str, &str)] = &[LEGENDA, CREDITO, AUTORIA, AVISO, LICENCA, AQUISICAO];
+
 /// O que o dono define sobre o site. Os mesmos nomes saem em ver_site.
 const IDENTIDADE: &[(&str, &str)] = &[
     ("nome", "O nome do site."),
@@ -453,7 +473,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 18] = [
+const FERRAMENTAS: [Ferramenta; 19] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -551,7 +571,7 @@ const FERRAMENTAS: [Ferramenta; 18] = [
     Ferramenta {
         nome: "listar_midia",
         escopo: "midia:escrever",
-        descricao: "Lista as imagens da biblioteca do site, com o id para usar no conteúdo.",
+        descricao: "Lista as imagens da biblioteca do site, com o id para usar no conteúdo, a legenda, o crédito e os direitos de cada uma.",
         argumentos: &[SITE],
         com_conteudo: false,
         opcionais: &[],
@@ -570,7 +590,26 @@ const FERRAMENTAS: [Ferramenta; 18] = [
             ("base64", "O arquivo, em base64."),
         ],
         com_conteudo: false,
-        opcionais: &[],
+        opcionais: TEXTOS_DA_IMAGEM,
+    },
+    Ferramenta {
+        nome: "editar_midia",
+        escopo: "midia:escrever",
+        descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
+        argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
+        com_conteudo: false,
+        opcionais: &[
+            (
+                "alt",
+                "A descrição da imagem para quem não a enxerga. Não pode ficar vazia.",
+            ),
+            LEGENDA,
+            CREDITO,
+            AUTORIA,
+            AVISO,
+            LICENCA,
+            AQUISICAO,
+        ],
     },
     Ferramenta {
         nome: "listar_autores",
@@ -969,6 +1008,12 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                         "largura": midia.largura,
                         "altura": midia.altura,
                         "situacao": midia.situacao,
+                        "legenda": midia.legenda,
+                        "credito": midia.credito,
+                        "autoria": midia.autoria,
+                        "aviso": midia.aviso,
+                        "licenca": midia.licenca,
+                        "aquisicao": midia.aquisicao,
                     })
                 })
                 .collect();
@@ -978,15 +1023,52 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             let bytes = base64::engine::general_purpose::STANDARD
                 .decode(chamada.texto("base64")?)
                 .map_err(|_| recusa("O argumento \"base64\" não é base64 válido."))?;
+            let texto = |nome: &str| chamada.opcional(nome).map(str::to_string);
             let envio = biblioteca::Envio {
                 nome: chamada.texto("nome")?.to_string(),
                 bytes: bytes.into(),
                 alt: chamada.texto("alt")?.to_string(),
-                credito: String::new(),
+                legenda: texto("legenda").unwrap_or_default(),
+                credito: texto("credito").unwrap_or_default(),
+                direitos: Direitos {
+                    autoria: texto("autoria"),
+                    aviso: texto("aviso"),
+                    licenca: texto("licenca"),
+                    aquisicao: texto("aquisicao"),
+                },
             };
             match biblioteca::registrar(chamada.estado, &site, &ator, envio).await? {
                 Ok(id) => Ok(do_site(json!({ "id": id, "situacao": "pendente" }), None)),
                 Err(mensagem) => Err(recusa(mensagem)),
+            }
+        }
+        "editar_midia" => {
+            let nao_achada = || recusa("Imagem não encontrada na biblioteca do site.");
+            let id = Uuid::parse_str(chamada.texto("id")?).map_err(|_| nao_achada())?;
+            let atual = cms_dados::midias_do_site(pool, site.id)
+                .await?
+                .into_iter()
+                .find(|midia| midia.id == id)
+                .ok_or_else(nao_achada)?;
+            // O que não veio fica como está; vazio apaga.
+            let novo = |nome: &str, atual: Option<String>| {
+                chamada.opcional(nome).map(str::to_string).or(atual)
+            };
+            let descricao = DescricaoDaMidia {
+                alt: novo("alt", Some(atual.alt)).unwrap_or_default(),
+                legenda: novo("legenda", atual.legenda),
+                credito: novo("credito", atual.credito),
+                direitos: Direitos {
+                    autoria: novo("autoria", atual.autoria),
+                    aviso: novo("aviso", atual.aviso),
+                    licenca: novo("licenca", atual.licenca),
+                    aquisicao: novo("aquisicao", atual.aquisicao),
+                },
+            };
+            match cms_dados::atualizar_midia(pool, site.id, &ator, id, &descricao).await {
+                Ok(()) => Ok(do_site(json!({ "id": id }), None)),
+                Err(ErroDeMidia::Dados(erro)) => Err(Recusa::Interna(erro.into())),
+                Err(erro) => Err(recusa(erro.to_string())),
             }
         }
         "listar_autores" => {

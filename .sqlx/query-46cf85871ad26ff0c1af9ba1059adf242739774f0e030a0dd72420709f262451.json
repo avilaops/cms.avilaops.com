@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select m.id, m.nome, m.alt, m.largura, m.altura, m.situacao,\n               (select v.arquivo from variante v\n                where v.midia_id = m.id and v.formato = 'webp'\n                order by v.largura limit 1) as miniatura,\n               (select count(*) from uso_de_midia u where u.midia_id = m.id) as \"usos!\",\n               m.legenda, m.credito, m.autoria, m.aviso_de_direitos as aviso, m.licenca,\n               m.aquisicao_de_licenca as aquisicao\n        from midia m\n        where m.site_id = $1\n        order by m.criado_em desc, m.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "alt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "altura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "situacao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "miniatura",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "usos!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "legenda",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "credito",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "autoria",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "aviso",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "licenca",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "aquisicao",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "46cf85871ad26ff0c1af9ba1059adf242739774f0e030a0dd72420709f262451"
+}

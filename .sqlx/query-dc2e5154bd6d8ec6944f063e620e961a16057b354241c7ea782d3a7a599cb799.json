@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update midia\n        set alt = $2, legenda = $3, credito = $4, autoria = $5, aviso_de_direitos = $6,\n            licenca = $7, aquisicao_de_licenca = $8\n        where id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dc2e5154bd6d8ec6944f063e620e961a16057b354241c7ea782d3a7a599cb799"
+}

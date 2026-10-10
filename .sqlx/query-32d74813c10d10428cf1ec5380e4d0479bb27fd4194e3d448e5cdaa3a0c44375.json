@@ -1,0 +1,71 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select largura, altura, alt, legenda, credito, autoria, aviso_de_direitos, licenca,\n               aquisicao_de_licenca\n        from midia where id = $1 and site_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "altura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "alt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "legenda",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "credito",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "autoria",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "aviso_de_direitos",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "licenca",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "aquisicao_de_licenca",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "32d74813c10d10428cf1ec5380e4d0479bb27fd4194e3d448e5cdaa3a0c44375"
+}

@@ -280,7 +280,7 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `validar_documento` | `conteudo:ler` |
 | `enviar_para_revisao` | `conteudo:escrever` |
 | `publicar`, `despublicar` | `conteudo:publicar` |
-| `listar_midia`, `enviar_midia` | `midia:escrever` |
+| `listar_midia`, `enviar_midia`, `editar_midia` | `midia:escrever` |
 | `listar_autores`, `listar_categorias` | `conteudo:ler` |
 | `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
 | `editar_identidade` | `sites:editar` |
@@ -289,6 +289,11 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- `enviar_midia` e `editar_midia` recebem legenda, crédito e direitos da imagem
+  (autoria, aviso, licença e página de aquisição). É o que sai no `ImageObject`
+  de cada página, de onde a busca de imagens tira o crédito e o selo de imagem
+  licenciável. Sem crédito escrito, o crédito é o nome do site. Correção em
+  imagem que já está no ar entra na próxima publicação de cada conteúdo.
 
 - `validar_documento` devolve os problemas do motor, com código, campo e
   mensagem. É assim que o assistente corrige antes de pedir a publicação.

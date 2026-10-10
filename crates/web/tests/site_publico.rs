@@ -94,7 +94,7 @@ async fn home_sai_com_cabecalho_e_dados_estruturados_do_motor(pool: PgPool) {
     assert!(
         resposta
             .corpo
-            .contains(r#"<meta name="robots" content="index, follow">"#)
+            .contains(r#"<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">"#)
     );
     assert_eq!(resposta.cabecalho("x-robots-tag"), "");
     assert!(

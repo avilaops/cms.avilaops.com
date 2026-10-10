@@ -2,7 +2,7 @@
 //! documento e a mídia no formato que o motor espera.
 
 use cms_dominio::{Ator, Papel};
-use motor_web::tipos::{Bloco, Conteudo, Formato, Midia, Variante};
+use motor_web::tipos::{Bloco, Conteudo, Direitos, Formato, Midia, Variante};
 use motor_web::validacao::{Gravidade, Problema};
 use sha2::{Digest, Sha256};
 use sqlx::types::Json;
@@ -30,6 +30,10 @@ pub enum ErroDeMidia {
     SemPermissao,
     #[error("Imagem não encontrada.")]
     Inexistente,
+    #[error(
+        "O endereço da licença precisa começar com https:// ou ser um caminho do site, como /licenca."
+    )]
+    EnderecoInvalido,
 }
 
 impl From<sqlx::Error> for ErroDeMidia {
@@ -55,7 +59,29 @@ pub struct NovaMidia {
     pub alt: String,
     pub legenda: Option<String>,
     pub credito: Option<String>,
+    pub direitos: Direitos,
     pub bytes: u64,
+}
+
+/// Os direitos como vão para o banco: sem sobra de espaço, vazio vira
+/// ausente, e endereço que não é endereço é recusado.
+fn direitos_conferidos(direitos: &Direitos) -> Result<Direitos, ErroDeMidia> {
+    let endereco = |valor: &Option<String>| match texto_opcional(valor.clone()) {
+        Some(e)
+            if !(e.starts_with("https://") || e.starts_with('/'))
+                || e.starts_with("//")
+                || e.contains(char::is_whitespace) =>
+        {
+            Err(ErroDeMidia::EnderecoInvalido)
+        }
+        outro => Ok(outro),
+    };
+    Ok(Direitos {
+        autoria: texto_opcional(direitos.autoria.clone()),
+        aviso: texto_opcional(direitos.aviso.clone()),
+        licenca: endereco(&direitos.licenca)?,
+        aquisicao: endereco(&direitos.aquisicao)?,
+    })
 }
 
 fn inteiro(valor: u64) -> i64 {
@@ -81,6 +107,7 @@ pub async fn registrar_midia(
     if alt.is_empty() {
         return Err(ErroDeMidia::SemDescricao);
     }
+    let direitos = direitos_conferidos(&nova.direitos)?;
     let mut transacao = pool.begin().await?;
     let em_uso = sqlx::query_scalar!(
         r#"select coalesce(sum(bytes), 0)::bigint as "total!" from midia where site_id = $1"#,
@@ -93,8 +120,9 @@ pub async fn registrar_midia(
     }
     let gravada = sqlx::query_scalar!(
         r#"
-        insert into midia (site_id, nome, hash, largura, altura, alt, legenda, credito, bytes, enviado_por)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        insert into midia (site_id, nome, hash, largura, altura, alt, legenda, credito, bytes,
+                           enviado_por, autoria, aviso_de_direitos, licenca, aquisicao_de_licenca)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         returning id
         "#,
         site_id,
@@ -106,7 +134,11 @@ pub async fn registrar_midia(
         texto_opcional(nova.legenda),
         texto_opcional(nova.credito),
         inteiro(nova.bytes),
-        ator.conta
+        ator.conta,
+        direitos.autoria,
+        direitos.aviso,
+        direitos.licenca,
+        direitos.aquisicao
     )
     .fetch_one(&mut *transacao)
     .await;
@@ -134,6 +166,12 @@ pub struct MidiaDoSite {
     pub miniatura: Option<String>,
     /// Em quantos documentos a imagem aparece.
     pub usos: i64,
+    pub legenda: Option<String>,
+    pub credito: Option<String>,
+    pub autoria: Option<String>,
+    pub aviso: Option<String>,
+    pub licenca: Option<String>,
+    pub aquisicao: Option<String>,
 }
 
 /// A biblioteca do site, da imagem mais nova para a mais antiga.
@@ -145,7 +183,9 @@ pub async fn midias_do_site(pool: &PgPool, site_id: Uuid) -> Result<Vec<MidiaDoS
                (select v.arquivo from variante v
                 where v.midia_id = m.id and v.formato = 'webp'
                 order by v.largura limit 1) as miniatura,
-               (select count(*) from uso_de_midia u where u.midia_id = m.id) as "usos!"
+               (select count(*) from uso_de_midia u where u.midia_id = m.id) as "usos!",
+               m.legenda, m.credito, m.autoria, m.aviso_de_direitos as aviso, m.licenca,
+               m.aquisicao_de_licenca as aquisicao
         from midia m
         where m.site_id = $1
         order by m.criado_em desc, m.id
@@ -196,7 +236,11 @@ pub async fn midia_para_conteudo(
 ) -> Result<Option<Midia>, ErroDeDados> {
     let mut conexao = pool.acquire().await.map_err(ErroDeDados::Banco)?;
     let Some(linha) = sqlx::query!(
-        "select largura, altura, alt, legenda, credito from midia where id = $1 and site_id = $2",
+        r#"
+        select largura, altura, alt, legenda, credito, autoria, aviso_de_direitos, licenca,
+               aquisicao_de_licenca
+        from midia where id = $1 and site_id = $2
+        "#,
         midia_id,
         site_id
     )
@@ -213,7 +257,71 @@ pub async fn midia_para_conteudo(
         variantes: variantes_de(&mut conexao, midia_id).await?,
         legenda: linha.legenda,
         credito: linha.credito,
+        direitos: Direitos {
+            autoria: linha.autoria,
+            aviso: linha.aviso_de_direitos,
+            licenca: linha.licenca,
+            aquisicao: linha.aquisicao_de_licenca,
+        },
     }))
+}
+
+/// O que se corrige em uma imagem depois do envio.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DescricaoDaMidia {
+    pub alt: String,
+    pub legenda: Option<String>,
+    pub credito: Option<String>,
+    pub direitos: Direitos,
+}
+
+/// Regrava a descrição, o crédito e os direitos de uma imagem. Quem pode é
+/// quem pode apagar: quem enviou, um editor ou o dono. O que já está no ar
+/// muda na próxima publicação de cada conteúdo.
+pub async fn atualizar_midia(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    midia_id: Uuid,
+    descricao: &DescricaoDaMidia,
+) -> Result<(), ErroDeMidia> {
+    let alt = descricao.alt.trim();
+    if alt.is_empty() {
+        return Err(ErroDeMidia::SemDescricao);
+    }
+    let direitos = direitos_conferidos(&descricao.direitos)?;
+    let mut transacao = pool.begin().await?;
+    let enviado_por = sqlx::query_scalar!(
+        "select enviado_por from midia where id = $1 and site_id = $2 for update",
+        midia_id,
+        site_id
+    )
+    .fetch_optional(&mut *transacao)
+    .await?
+    .ok_or(ErroDeMidia::Inexistente)?;
+    if ator.papel == Papel::Autor && enviado_por != ator.conta {
+        return Err(ErroDeMidia::SemPermissao);
+    }
+    sqlx::query!(
+        r#"
+        update midia
+        set alt = $2, legenda = $3, credito = $4, autoria = $5, aviso_de_direitos = $6,
+            licenca = $7, aquisicao_de_licenca = $8
+        where id = $1
+        "#,
+        midia_id,
+        alt,
+        texto_opcional(descricao.legenda.clone()),
+        texto_opcional(descricao.credito.clone()),
+        direitos.autoria,
+        direitos.aviso,
+        direitos.licenca,
+        direitos.aquisicao
+    )
+    .execute(&mut *transacao)
+    .await?;
+    transacao.commit().await?;
+    Ok(())
 }
 
 /// Apaga a imagem e devolve os arquivos das variantes, para quem chama tirar
@@ -411,8 +519,8 @@ pub(crate) async fn problemas_de_midia(
     }])
 }
 
-/// Troca dimensões e variantes de cada imagem da biblioteca pelo que está
-/// gravado agora. O conteúdo pode ter sido salvo antes de as variantes
+/// Troca dimensões, variantes e direitos de cada imagem da biblioteca pelo que
+/// está gravado agora. O conteúdo pode ter sido salvo antes de as variantes
 /// existirem.
 pub(crate) async fn hidratar(
     conexao: &mut PgConnection,
@@ -421,7 +529,10 @@ pub(crate) async fn hidratar(
 ) -> Result<(), sqlx::Error> {
     for id in ids_da_biblioteca(conteudo) {
         let Some(dimensoes) = sqlx::query!(
-            "select largura, altura from midia where id = $1 and site_id = $2",
+            r#"
+            select largura, altura, autoria, aviso_de_direitos, licenca, aquisicao_de_licenca
+            from midia where id = $1 and site_id = $2
+            "#,
             id,
             site_id
         )
@@ -431,12 +542,19 @@ pub(crate) async fn hidratar(
             continue;
         };
         let variantes = variantes_de(conexao, id).await?;
+        let direitos = Direitos {
+            autoria: dimensoes.autoria,
+            aviso: dimensoes.aviso_de_direitos,
+            licenca: dimensoes.licenca,
+            aquisicao: dimensoes.aquisicao_de_licenca,
+        };
         let texto = id.to_string();
         para_cada_midia(conteudo, |midia| {
             if midia.id == texto {
                 midia.largura = u32::try_from(dimensoes.largura).unwrap_or(midia.largura);
                 midia.altura = u32::try_from(dimensoes.altura).unwrap_or(midia.altura);
                 midia.variantes = variantes.clone();
+                midia.direitos = direitos.clone();
             }
         });
     }

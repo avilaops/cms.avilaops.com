@@ -1149,6 +1149,32 @@ async fn post_sai_com_autor_categoria_e_capa_do_cadastro(pool: PgPool) {
         .expect("imagem pronta");
     let imagem = imagem.to_string();
 
+    // Crédito e direitos entram depois do envio, pela correção da imagem.
+    let correcao = |licenca: &str| {
+        formulario(&[
+            ("alt", "Fornada de pães saindo do forno"),
+            ("legenda", "A primeira fornada do dia."),
+            ("autoria", "Ana Souza"),
+            ("aviso", "© 2026 Padaria da Ana"),
+            ("licenca", licenca),
+            ("aquisicao", "/contato"),
+        ])
+    };
+    let recusada = painel
+        .postar("ana", &format!("{SITE}/midia/{imagem}"), &correcao("cc by"))
+        .await;
+    assert_eq!(recusada.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(recusada.corpo.contains("endereço da licença"));
+    let corrigida = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/midia/{imagem}"),
+            &correcao("https://creativecommons.org/licenses/by/4.0/"),
+        )
+        .await;
+    assert_eq!(corrigida.status, StatusCode::OK, "{}", corrigida.corpo);
+    assert!(corrigida.corpo.contains(r#"value="© 2026 Padaria da Ana""#));
+
     let autor = formulario(&[
         ("nome", "Ana Souza"),
         ("cargo", "Padeira"),
@@ -1207,6 +1233,19 @@ async fn post_sai_com_autor_categoria_e_capa_do_cadastro(pool: PgPool) {
     assert!(no_ar.corpo.contains("Ana Souza"));
     assert!(no_ar.corpo.contains("Curso de panificação artesanal"));
     assert!(no_ar.corpo.contains("/midia/fornada-0a1b2c3d-1400.webp"));
+    // O que a busca de imagens lê: a imagem como ImageObject, com crédito,
+    // autoria, direitos e licença.
+    for trecho in [
+        r#""@type":"ImageObject""#,
+        r#""creditText":"Padaria da Ana""#,
+        r#""creator":{"@type":"Person","name":"Ana Souza"}"#,
+        r#""copyrightNotice":"© 2026 Padaria da Ana""#,
+        r#""license":"https://creativecommons.org/licenses/by/4.0/""#,
+        r#"/contato""#,
+    ] {
+        assert!(no_ar.corpo.contains(trecho), "{trecho}");
+    }
+    assert!(no_ar.corpo.contains("A primeira fornada do dia."));
     assert!(
         pedir(&pool, &host("padaria"), "/blog")
             .await
@@ -1502,7 +1541,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        18
+        19
     );
 
     let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
@@ -1755,11 +1794,45 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
         .ferramenta(
             &token,
             "enviar_midia",
-            json!({ "site": "padaria", "nome": "ana.png", "alt": "Ana Souza na padaria", "base64": base64 }),
+            json!({
+                "site": "padaria",
+                "nome": "ana.png",
+                "alt": "Ana Souza na padaria",
+                "base64": base64,
+                "credito": "Padaria da Ana",
+                "autoria": "Caio Lima",
+                "licenca": "https://creativecommons.org/licenses/by/4.0/",
+            }),
         )
         .await;
     assert!(!erro, "{enviada}");
     let imagem = enviada["id"].as_str().expect("id").to_string();
+
+    // A correção muda só o que foi enviado, e endereço torto é recusado.
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "editar_midia",
+            json!({ "site": "padaria", "id": imagem, "aquisicao": "fale comigo" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("licença"));
+    let (erro, editada) = painel
+        .ferramenta(
+            &token,
+            "editar_midia",
+            json!({ "site": "padaria", "id": imagem, "aviso": "© 2026 Padaria da Ana", "credito": "" }),
+        )
+        .await;
+    assert!(!erro, "{editada}");
+    let (_, midias) = painel
+        .ferramenta(&token, "listar_midia", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(midias["midias"][0]["alt"], "Ana Souza na padaria");
+    assert_eq!(midias["midias"][0]["autoria"], "Caio Lima");
+    assert_eq!(midias["midias"][0]["aviso"], "© 2026 Padaria da Ana");
+    assert_eq!(midias["midias"][0]["credito"], Value::Null);
     let variante = cms_dados::VarianteGravada {
         formato: Formato::Webp,
         largura: 1400,
@@ -1893,6 +1966,14 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
     assert_eq!(dados["autor"]["foto"]["id"], imagem);
     assert_eq!(dados["categoria"]["nome"], "Receitas");
     assert_eq!(dados["capa"]["alt"], "Ana Souza na padaria");
+    assert_eq!(
+        dados["capa"]["direitos"],
+        json!({
+            "autoria": "Caio Lima",
+            "aviso": "© 2026 Padaria da Ana",
+            "licenca": "https://creativecommons.org/licenses/by/4.0/"
+        })
+    );
     assert_eq!(dados["corpo"][1]["midia"]["largura"], 1400);
 
     // Sem a permissão de identidade, a conexão não mexe nela.
