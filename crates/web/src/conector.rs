@@ -839,12 +839,14 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     fluxo::publicar(pool, site.id, &ator, id, Utc::now())
                         .await
                         .map_err(do_fluxo)?;
+                    chamada.estado.cache.invalidar_site(site.id);
                     json!({ "situacao": "publicado" })
                 }
                 "despublicar" => {
                     fluxo::despublicar(pool, site.id, &ator, id)
                         .await
                         .map_err(do_fluxo)?;
+                    chamada.estado.cache.invalidar_site(site.id);
                     json!({ "situacao": "despublicado" })
                 }
                 _ => return Err(recusa("Ferramenta desconhecida.")),

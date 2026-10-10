@@ -9,6 +9,7 @@ mod configuracao;
 mod eventos;
 mod imagens;
 mod migracao;
+mod rotinas;
 mod semente;
 
 use std::process::ExitCode;
@@ -124,7 +125,14 @@ async fn servir(ambiente: &Ambiente) -> Result<(), Erro> {
             None
         }
     };
+    let cache = cms_web::Cache::novo();
+    rotinas::agendar(
+        pool.clone(),
+        cache.clone(),
+        ambiente.web.ips_do_servidor.clone(),
+    );
     let estado = Estado {
+        cache,
         auth,
         pool,
         configuracao: Arc::new(ambiente.web.clone()),

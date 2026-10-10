@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select d.host, d.site_id from dominio d\n        join site s on s.id = d.site_id\n        where d.situacao = 'pendente' and s.situacao <> 'suspenso'\n        order by d.pedido_em\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "host",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "site_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "a91283554184ef49c76f9a5d0262e1d8ff616d0bb3f68f45c6cbb0acf65bfea4"
+}

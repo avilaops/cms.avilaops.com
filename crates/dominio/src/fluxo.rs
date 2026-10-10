@@ -48,6 +48,8 @@ pub enum Acao {
     Devolver,
     Publicar,
     Despublicar,
+    /// Marcar a publicação para depois. Quem pode publicar pode agendar.
+    Agendar,
 }
 
 impl Acao {
@@ -60,6 +62,7 @@ impl Acao {
             Acao::Devolver => "revisao.devolvida",
             Acao::Publicar => "conteudo.publicado",
             Acao::Despublicar => "conteudo.despublicado",
+            Acao::Agendar => "publicacao.agendada",
         }
     }
 }
@@ -76,7 +79,7 @@ pub fn pode(ator: &Ator, acao: Acao, criado_por: Option<&str>) -> bool {
             Acao::EditarRascunho | Acao::EnviarParaRevisao => {
                 criado_por == Some(ator.conta.as_str())
             }
-            Acao::Devolver | Acao::Publicar | Acao::Despublicar => false,
+            Acao::Devolver | Acao::Publicar | Acao::Despublicar | Acao::Agendar => false,
         },
     }
 }
@@ -170,13 +173,14 @@ mod testes {
     use chrono::TimeZone;
     use motor_web::demonstracao;
 
-    const TODAS: [Acao; 6] = [
+    const TODAS: [Acao; 7] = [
         Acao::CriarRascunho,
         Acao::EditarRascunho,
         Acao::EnviarParaRevisao,
         Acao::Devolver,
         Acao::Publicar,
         Acao::Despublicar,
+        Acao::Agendar,
     ];
 
     fn dia(dia: u32) -> DateTime<Utc> {
@@ -214,7 +218,12 @@ mod testes {
             assert!(!pode(&autor, acao, Some("outra-conta")), "{acao:?}");
             assert!(!pode(&autor, acao, None), "{acao:?}");
         }
-        for acao in [Acao::Devolver, Acao::Publicar, Acao::Despublicar] {
+        for acao in [
+            Acao::Devolver,
+            Acao::Publicar,
+            Acao::Despublicar,
+            Acao::Agendar,
+        ] {
             assert!(!pode(&autor, acao, Some("autor")), "{acao:?}");
         }
     }

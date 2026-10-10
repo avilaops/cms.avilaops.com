@@ -1,5 +1,6 @@
 //! Autores e categorias de um site, e a leitura de documentos para o painel.
 
+use chrono::{DateTime, Utc};
 use cms_dominio::{Ator, Papel};
 use motor_web::tipos::{Autor, Categoria, Conteudo, Midia};
 use motor_web::validacao::normalizar_slug;
@@ -280,6 +281,8 @@ pub struct DocumentoAberto {
     pub em_revisao: bool,
     pub caminho: Option<String>,
     pub criado_por: Option<String>,
+    /// A publicação marcada para depois, se houver.
+    pub agendado_para: Option<DateTime<Utc>>,
     pub conteudo: Conteudo,
 }
 
@@ -290,7 +293,7 @@ pub async fn abrir_documento(
 ) -> Result<Option<DocumentoAberto>, ErroDeDados> {
     let linha = sqlx::query!(
         r#"
-        select d.id, d.situacao, d.caminho, d.criado_por,
+        select d.id, d.situacao, d.caminho, d.criado_por, d.agendado_para,
                (d.versao_rascunho is not null) as "tem_rascunho!",
                (d.revisao_pedida_em is not null) as "em_revisao!",
                v.conteudo as "conteudo: Json<Conteudo>"
@@ -310,6 +313,7 @@ pub async fn abrir_documento(
         em_revisao: linha.em_revisao,
         caminho: linha.caminho,
         criado_por: linha.criado_por,
+        agendado_para: linha.agendado_para,
         conteudo: linha.conteudo.0,
     }))
 }

@@ -55,6 +55,9 @@ fn recado(uri: &Uri) -> (Option<String>, Option<String>) {
         Some("devolvido") => aviso("Devolvido a quem escreveu."),
         Some("publicado") => aviso("Publicado. Já está no ar."),
         Some("despublicado") => aviso("Tirado do ar."),
+        Some("agendado") => aviso("Publicação agendada."),
+        Some("desagendado") => aviso("Agendamento cancelado."),
+        Some("data") => erro("Informe uma data e hora no futuro para agendar."),
         Some("autor") => aviso("Autor salvo."),
         Some("categoria") => aviso("Categoria salva."),
         Some("recusado") => {
@@ -257,6 +260,8 @@ struct PaginaDoEditor {
     pode_devolver: bool,
     pode_publicar: bool,
     pode_despublicar: bool,
+    pode_agendar: bool,
+    agendado: bool,
 }
 
 /// Monta a tela do editor para um documento novo (`aberto` vazio) ou gravado.
@@ -328,7 +333,16 @@ async fn editor(
             (false, false) => "Nova página",
         },
         estado: match aberto {
-            Some(aberto) => estado_de(&aberto.situacao, aberto.tem_rascunho, aberto.em_revisao),
+            Some(aberto) => {
+                let base = estado_de(&aberto.situacao, aberto.tem_rascunho, aberto.em_revisao);
+                match aberto.agendado_para {
+                    Some(quando) => format!(
+                        "{base} · publicação agendada para {}",
+                        cms_dominio::datas::por_extenso(quando)
+                    ),
+                    None => base,
+                }
+            }
             None => "Ainda não salvo".to_string(),
         },
         erro,
@@ -364,6 +378,8 @@ async fn editor(
         pode_publicar: (tem_rascunho || situacao == "despublicado" || aberto.is_none())
             && permite(Permissao::Publicar),
         pode_despublicar: situacao == "publicado" && permite(Permissao::Despublicar),
+        pode_agendar: permite(Permissao::Agendar),
+        agendado: aberto.is_some_and(|aberto| aberto.agendado_para.is_some()),
         f: formulario,
     }
     .render()?;
@@ -502,16 +518,21 @@ async fn executar(
     let acao = formulario.aplicar_acao();
     let pool = &estado.pool;
 
-    // Devolver e tirar do ar agem sobre o que está gravado, sem salvar nada.
-    if let (Some(id), Acao::Devolver | Acao::Despublicar) = (documento_id, acao) {
-        let feito = if acao == Acao::Devolver {
-            fluxo::devolver(pool, site_id, ator, id)
+    // Devolver, tirar do ar e cancelar o agendamento agem sobre o que está
+    // gravado, sem salvar nada.
+    if let (Some(id), Acao::Devolver | Acao::Despublicar | Acao::CancelarAgendamento) =
+        (documento_id, acao)
+    {
+        let feito = match acao {
+            Acao::Devolver => fluxo::devolver(pool, site_id, ator, id)
                 .await
-                .map(|()| "devolvido")
-        } else {
-            fluxo::despublicar(pool, site_id, ator, id)
+                .map(|()| "devolvido"),
+            Acao::Despublicar => fluxo::despublicar(pool, site_id, ator, id)
                 .await
-                .map(|()| "despublicado")
+                .map(|()| "despublicado"),
+            _ => fluxo::cancelar_agendamento(pool, site_id, ator, id)
+                .await
+                .map(|()| "desagendado"),
         };
         return Ok(feito.map(|codigo| (id, codigo)));
     }
@@ -529,6 +550,16 @@ async fn executar(
         Acao::Publicar => fluxo::publicar(pool, site_id, ator, id, Utc::now())
             .await
             .map(|()| "publicado"),
+        Acao::Agendar => {
+            match crate::editor::ler_agendamento(&formulario.agendar_para)
+                .filter(|quando| *quando > Utc::now())
+            {
+                Some(quando) => fluxo::agendar(pool, site_id, ator, id, quando)
+                    .await
+                    .map(|()| "agendado"),
+                None => Ok("data"),
+            }
+        }
         _ => Ok("salvo"),
     };
     Ok(match seguinte {
@@ -565,7 +596,13 @@ pub async fn gravar(
         )
     };
     match executar(estado, site.id, &ator, documento_id, corpo).await? {
-        Ok((id, codigo)) => Ok(para(id, codigo)),
+        Ok((id, codigo)) => {
+            // O que mudou no ar não espera o cache vencer.
+            if matches!(codigo, "publicado" | "despublicado") {
+                estado.cache.invalidar_site(site.id);
+            }
+            Ok(para(id, codigo))
+        }
         Err(ErroDeFluxo::Dados(erro)) => Err(erro.into()),
         Err(ErroDeFluxo::NaoEncontrado) => Ok(nao_encontrado()),
         Err(erro) => {

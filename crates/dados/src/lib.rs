@@ -5,9 +5,11 @@ mod catalogo;
 mod conector;
 mod contas;
 mod documentos;
+mod dominios;
 mod eventos;
 pub mod fluxo;
 mod midias;
+mod rotinas;
 mod sites;
 
 use sqlx::PgPool;
@@ -32,6 +34,11 @@ pub use documentos::{
     Ausencia, ItemDeNavegacao, ausencia, documento_publicado, documentos_publicados, navegacao,
     publicar,
 };
+pub use dominios::{
+    DominioDoSite, DominioPendente, ErroDeDominio, confirmar_dominio,
+    definir_provisorio_definitivo, dominio_permitido, dominios_do_site, dominios_pendentes,
+    pedir_dominio, remover_dominio,
+};
 pub use eventos::{
     Encerramento, EventoAEntregar, encerrar_evento, marcar_evento_entregue, reivindicar_eventos,
 };
@@ -40,6 +47,7 @@ pub use midias::{
     concluir_midia, falhar_midia, hash_de_conteudo, hidratar_conteudo, midia_para_conteudo,
     midias_do_site, registrar_midia, reivindicar_midia,
 };
+pub use rotinas::{Agendado, limpar_historico, reivindicar_rotina};
 pub use sites::{
     SiteGravado, apagar_site, ativar_dominio, criar_site, mudar_situacao, site_por_dominio,
     site_por_slug,

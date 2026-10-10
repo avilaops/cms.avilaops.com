@@ -7,9 +7,10 @@ painel impede quem edita de estragar isso.
 
 ## Estado
 
-O motor está implementado e publicado como biblioteca. O CMS tem o site
-público e o fluxo de publicação implementados e testados, sem painel e sem
-login. Nenhum site está no ar.
+O motor está implementado e publicado como biblioteca. O CMS tem todas as
+fatias de código implementadas e testadas: site público, painel, mídia,
+conector e rotinas. Nenhum site está no ar: falta a primeira subida, que
+depende das pendências da spec.
 
 | Frente | Entrega | Situação |
 |---|---|---|
@@ -30,7 +31,7 @@ login. Nenhum site está no ar.
 | Mídia | Envio pelo painel com `alt` obrigatório, original em disco, rotina que gera AVIF e WebP, uso por documento, limite de espaço por site; imagem em uso não é apagada e sem variante não vai ao ar | Feita |
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
 | Conector | Servidor de autorização próprio (registro dinâmico, PKCE S256, tokens só como hash), ponto MCP com 15 ferramentas por escopo, tela de conexões com desconectar, registro de chamadas sem argumentos | Feita |
-| Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |
+| Domínio próprio, cache e rotinas | Pedido de domínio pelo Dono, conferência de DNS por rotina, resposta ao Caddy para TLS sob demanda, endereço provisório assumido como definitivo, cache de página em memória derrubado ao publicar, publicação agendada, limpeza de histórico, catálogo de rotinas com trava no banco | Feita |
 | Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |
 
 ## Como validar

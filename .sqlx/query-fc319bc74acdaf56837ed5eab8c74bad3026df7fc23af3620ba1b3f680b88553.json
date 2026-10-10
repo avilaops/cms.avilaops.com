@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update dominio set situacao = 'ativo', conferido_em = now()\n        where host = $1 and site_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fc319bc74acdaf56837ed5eab8c74bad3026df7fc23af3620ba1b3f680b88553"
+}

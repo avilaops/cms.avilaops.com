@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into dominio (host, site_id, pedido_por) values ($1, $2, $3)\n        on conflict (host) do update set pedido_por = excluded.pedido_por\n            where dominio.site_id = excluded.site_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2993391165cbfa46dd153ac69376babcf81ad5a218ee8eebeb67f897b1ae142a"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from chamada_mcp where criado_em < now() - interval '1 year'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "82a3fb334103a2f05b4946e47a523c5152e6d5052e2700345b180329ca4f16ae"
+}

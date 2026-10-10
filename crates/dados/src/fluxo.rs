@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use cms_dominio::eventos::{
     ConteudoDespublicado, ConteudoEnviadoParaRevisao, ConteudoPublicado, Evento,
 };
-use cms_dominio::fluxo::{self, Acao, Ator};
+use cms_dominio::fluxo::{self, Acao, Ator, Papel};
 use motor_web::tipos::{Conteudo, Documento};
 use motor_web::validacao::{Contexto, Problema, pode_publicar, validar};
 use sqlx::types::Json;
@@ -576,6 +576,8 @@ pub async fn publicar(
             versao_publicada = $4,
             versao_rascunho = null,
             revisao_pedida_em = null,
+            agendado_para = null,
+            agendado_por = null,
             publicado_em = $5,
             atualizado_em = $6
         where id = $1
@@ -601,6 +603,18 @@ pub async fn publicar(
     }
 
     atualizar_usos(&mut transacao, site_id, linha.id).await?;
+    // Com a página inicial no ar, o site sai da montagem.
+    if novo.caminho == "/" {
+        sqlx::query!(
+            r#"
+            update site set situacao = 'ativo', atualizado_em = now()
+            where id = $1 and situacao = 'em-montagem'
+            "#,
+            site_id
+        )
+        .execute(&mut *transacao)
+        .await?;
+    }
     let evento = Evento::ConteudoPublicado(ConteudoPublicado {
         documento_id: linha.id,
         especie: linha.especie.clone(),
@@ -657,4 +671,96 @@ pub async fn despublicar(
     .await?;
     transacao.commit().await?;
     Ok(())
+}
+
+/// Marca a publicação do rascunho para depois. A permissão e a validação
+/// valem agora; a validação roda de novo na hora marcada.
+pub async fn agendar(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    documento_id: Uuid,
+    quando: DateTime<Utc>,
+) -> Result<(), ErroDeFluxo> {
+    let mut transacao = pool.begin().await?;
+    let linha = travar(&mut transacao, site_id, documento_id).await?;
+    exigir(ator, Acao::Agendar, &linha)?;
+    let versao_id = linha.versao_rascunho.ok_or(ErroDeFluxo::SemRascunho)?;
+    let conteudo = conteudo_da_versao(&mut transacao, versao_id).await?;
+    let problemas = problemas_de(
+        &mut transacao,
+        site_id,
+        linha.id,
+        linha.slug_no_ar(),
+        &conteudo,
+    )
+    .await?;
+    exigir_sem_bloqueio(problemas)?;
+    sqlx::query!(
+        "update documento set agendado_para = $2, agendado_por = $3 where id = $1",
+        linha.id,
+        quando,
+        ator.conta
+    )
+    .execute(&mut *transacao)
+    .await?;
+    registrar(&mut transacao, site_id, linha.id, ator, Acao::Agendar).await?;
+    transacao.commit().await?;
+    Ok(())
+}
+
+/// Desmarca a publicação agendada. O rascunho continua como está.
+pub async fn cancelar_agendamento(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    documento_id: Uuid,
+) -> Result<(), ErroDeFluxo> {
+    let mut transacao = pool.begin().await?;
+    let linha = travar(&mut transacao, site_id, documento_id).await?;
+    exigir(ator, Acao::Agendar, &linha)?;
+    sqlx::query!(
+        "update documento set agendado_para = null, agendado_por = null where id = $1",
+        linha.id
+    )
+    .execute(&mut *transacao)
+    .await?;
+    transacao.commit().await?;
+    Ok(())
+}
+
+/// O resultado de uma rodada da rotina `publicacao.agendada`.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct RodadaDeAgendados {
+    /// Os sites em que algo foi ao ar: quem chama invalida o cache deles.
+    pub sites_publicados: Vec<Uuid>,
+    pub recusados: usize,
+}
+
+/// Publica o que estava agendado e já venceu, pelo mesmo caminho de qualquer
+/// publicação. O que o motor barrar na hora perde o agendamento e fica como
+/// rascunho, para alguém corrigir.
+pub async fn publicar_agendados(
+    pool: &PgPool,
+    agora: DateTime<Utc>,
+) -> Result<RodadaDeAgendados, ErroDeDados> {
+    let mut rodada = RodadaDeAgendados::default();
+    for agendado in crate::rotinas::agendados_vencidos(pool).await? {
+        // Quem agendou tinha permissão de publicar; a rotina age em nome dele.
+        let ator = Ator::do_site(agendado.agendado_por.as_str(), Papel::Editor);
+        match publicar(pool, agendado.site_id, &ator, agendado.documento_id, agora).await {
+            Ok(()) => rodada.sites_publicados.push(agendado.site_id),
+            Err(ErroDeFluxo::Dados(erro)) => return Err(erro),
+            Err(_) => {
+                sqlx::query!(
+                    "update documento set agendado_para = null, agendado_por = null where id = $1",
+                    agendado.documento_id
+                )
+                .execute(pool)
+                .await?;
+                rodada.recusados += 1;
+            }
+        }
+    }
+    Ok(rodada)
 }

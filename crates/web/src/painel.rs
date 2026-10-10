@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conector, conteudo, equipe};
+use crate::{biblioteca, conector, conteudo, dominio, equipe};
 
 const CAMINHO: &str = "/painel";
 
@@ -309,6 +309,8 @@ enum Rota<'a> {
     Decidir,
     Conector,
     RevogarConexao(&'a str),
+    Dominio(&'a str),
+    GravarDominio(&'a str, dominio::Pedido),
 }
 
 impl<'a> Rota<'a> {
@@ -332,6 +334,16 @@ impl<'a> Rota<'a> {
             }
             (false, ["painel", "sites", slug, "midia", id, "apagar"]) => {
                 Some(Rota::ApagarMidia(slug, id))
+            }
+            (true, ["painel", "sites", slug, "dominio"]) => Some(Rota::Dominio(slug)),
+            (false, ["painel", "sites", slug, "dominio"]) => {
+                Some(Rota::GravarDominio(slug, dominio::Pedido::Apontar))
+            }
+            (false, ["painel", "sites", slug, "dominio", "remover"]) => {
+                Some(Rota::GravarDominio(slug, dominio::Pedido::Remover))
+            }
+            (false, ["painel", "sites", slug, "dominio", "provisorio"]) => {
+                Some(Rota::GravarDominio(slug, dominio::Pedido::Provisorio))
             }
             (true, ["oauth", "authorize"]) => Some(Rota::Autorizar),
             (false, ["oauth", "authorize"]) => Some(Rota::Decidir),
@@ -366,6 +378,7 @@ impl<'a> Rota<'a> {
                 | Rota::SalvarCategoria(_)
                 | Rota::Decidir
                 | Rota::RevogarConexao(_)
+                | Rota::GravarDominio(..)
         )
     }
 }
@@ -459,6 +472,10 @@ async fn responder(
             conector::tela(estado, &conta, &origem).await
         }
         Rota::RevogarConexao(id) => conector::revogar(estado, &conta, id).await,
+        Rota::Dominio(slug) => dominio::abrir(estado, &conta, slug, uri).await,
+        Rota::GravarDominio(slug, pedido) => {
+            dominio::gravar(estado, &conta, slug, pedido, corpo).await
+        }
     }
 }
 

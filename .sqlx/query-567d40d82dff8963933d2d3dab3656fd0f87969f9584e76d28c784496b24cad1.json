@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update documento set agendado_para = null, agendado_por = null where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "567d40d82dff8963933d2d3dab3656fd0f87969f9584e76d28c784496b24cad1"
+}

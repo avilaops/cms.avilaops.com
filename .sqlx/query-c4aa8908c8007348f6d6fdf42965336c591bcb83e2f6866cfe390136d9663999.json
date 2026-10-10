@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select exists(\n            select 1 from documento\n            where site_id = $1 and caminho = '/' and situacao = 'publicado'\n        ) as \"existe!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "existe!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c4aa8908c8007348f6d6fdf42965336c591bcb83e2f6866cfe390136d9663999"
+}

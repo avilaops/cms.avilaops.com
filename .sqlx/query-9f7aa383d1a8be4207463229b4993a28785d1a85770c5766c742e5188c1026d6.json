@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id as documento_id, site_id, agendado_para as \"agendado_para!\",\n               coalesce(agendado_por, '') as \"agendado_por!\"\n        from documento\n        where agendado_para is not null and agendado_para <= now()\n        order by agendado_para\n        limit 50\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "documento_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "site_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "agendado_para!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "agendado_por!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "9f7aa383d1a8be4207463229b4993a28785d1a85770c5766c742e5188c1026d6"
+}

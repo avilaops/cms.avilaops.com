@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from historico where criado_em < now() - interval '1 year'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "e482c61f376d6bf1f59da19ecf23920e05e0485cdac58343cddccbc90345975a"
+}

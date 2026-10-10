@@ -133,6 +133,19 @@
 {%- if pode_despublicar %}
 <button class="secundario" name="acao" value="despublicar">Tirar do ar</button>
 {%- endif %}
+{%- if pode_agendar %}
+<fieldset>
+<legend>Publicar depois</legend>
+<label for="agendar_para">Data e hora (horário de Brasília)</label>
+<input id="agendar_para" name="agendar_para" type="datetime-local">
+<div class="mover">
+<button name="acao" value="agendar">Agendar</button>
+{%- if agendado %}
+<button name="acao" value="desagendar">Cancelar o agendamento</button>
+{%- endif %}
+</div>
+</fieldset>
+{%- endif %}
 </form>
 {%- if let Some(previa) = previa %}
 <p class="atalhos"><a href="{{ previa }}">Ver a prévia</a></p>

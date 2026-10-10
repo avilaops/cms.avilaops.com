@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            update site set situacao = 'ativo', atualizado_em = now()\n            where id = $1 and situacao = 'em-montagem'\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b9964c88bba78a14d8afe31271ed79e2ab42366bc4dfea88fb138dd1cf82af4c"
+}

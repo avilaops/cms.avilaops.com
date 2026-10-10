@@ -134,6 +134,7 @@ mod testes {
             host_do_painel: None,
             limites_de_criacao: Default::default(),
             limite_de_midia_por_site: 0,
+            ips_do_servidor: Vec::new(),
         }
     }
 

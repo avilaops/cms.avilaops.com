@@ -46,8 +46,10 @@ pub fn estado(pool: &PgPool, diretorio_de_midia: PathBuf) -> Estado {
             host_do_painel: Some(HOST_DO_PAINEL.into()),
             limites_de_criacao: Default::default(),
             limite_de_midia_por_site: 50 * 1024 * 1024,
+            ips_do_servidor: vec!["203.0.113.7".parse().expect("ip")],
         }),
         auth: None,
+        cache: cms_web::Cache::novo(),
     }
 }
 

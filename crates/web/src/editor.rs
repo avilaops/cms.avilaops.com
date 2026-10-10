@@ -48,6 +48,9 @@ pub enum Acao {
     Devolver,
     Publicar,
     Despublicar,
+    /// Marcar a publicação para a data do campo `agendar_para`.
+    Agendar,
+    CancelarAgendamento,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -66,6 +69,8 @@ pub struct Formulario {
     pub categoria: String,
     pub tags: String,
     pub novo_tipo: String,
+    /// Data e hora de Brasília, como o campo `datetime-local` manda.
+    pub agendar_para: String,
     pub blocos: Vec<BlocoDigitado>,
 }
 
@@ -121,6 +126,7 @@ impl Formulario {
             categoria: campo("categoria"),
             tags: campo("tags"),
             novo_tipo: campo("novo_tipo"),
+            agendar_para: campo("agendar_para"),
             blocos,
         }
     }
@@ -163,6 +169,8 @@ impl Formulario {
             ("devolver", _) => Acao::Devolver,
             ("publicar", _) => Acao::Publicar,
             ("despublicar", _) => Acao::Despublicar,
+            ("agendar", _) => Acao::Agendar,
+            ("desagendar", _) => Acao::CancelarAgendamento,
             _ => Acao::Salvar,
         }
     }
@@ -336,6 +344,13 @@ fn celulas(linha: &str) -> Vec<String> {
         .split('|')
         .map(|celula| celula.trim().to_string())
         .collect()
+}
+
+/// Lê a data do campo de agendamento, que vem no horário de Brasília (três
+/// horas atrás de Greenwich), e a devolve em UTC.
+pub fn ler_agendamento(digitado: &str) -> Option<DateTime<Utc>> {
+    let local = chrono::NaiveDateTime::parse_from_str(digitado.trim(), "%Y-%m-%dT%H:%M").ok()?;
+    Some((local + chrono::Duration::hours(3)).and_utc())
 }
 
 /// Do que foi digitado para o bloco do motor.
@@ -676,6 +691,18 @@ mod testes {
     }
 
     #[test]
+    fn agendamento_e_lido_no_horario_de_brasilia() {
+        use chrono::TimeZone;
+        assert_eq!(
+            ler_agendamento("2026-10-20T09:30"),
+            Utc.with_ymd_and_hms(2026, 10, 20, 12, 30, 0).single()
+        );
+        for invalido in ["", "amanhã", "2026-10-20", "2026-13-40T99:99"] {
+            assert_eq!(ler_agendamento(invalido), None, "{invalido}");
+        }
+    }
+
+    #[test]
     fn botoes_mexem_na_lista_de_blocos() {
         let mut formulario = Formulario::ler(pares(&[
             ("n", "3"),
@@ -724,6 +751,8 @@ mod testes {
             ("devolver", Acao::Devolver),
             ("publicar", Acao::Publicar),
             ("despublicar", Acao::Despublicar),
+            ("agendar", Acao::Agendar),
+            ("desagendar", Acao::CancelarAgendamento),
             ("salvar", Acao::Salvar),
             ("", Acao::Salvar),
         ] {

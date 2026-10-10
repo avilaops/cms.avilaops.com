@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select exists(\n            select 1 from dominio d join site s on s.id = d.site_id\n            where d.host = $1 and s.situacao <> 'suspenso'\n        ) or exists(\n            select 1 from site where slug = $2 and situacao <> 'suspenso'\n        ) as \"permitido!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "permitido!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "68ef357674efe0d75cf7a2136daf9c14e4346395106fe801e5f9dbe4404bdd7c"
+}

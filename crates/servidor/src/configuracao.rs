@@ -119,6 +119,17 @@ impl Ambiente {
             sites_por_conta: inteiro("LIMITE_DE_SITES_POR_CONTA", padrao.sites_por_conta)?,
             criacoes_por_dia: inteiro("LIMITE_DE_CRIACOES_POR_DIA", padrao.criacoes_por_dia)?,
         };
+        let ips_do_servidor = variavel("IPS_DO_SERVIDOR")
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|ip| !ip.is_empty())
+            .map(|ip| {
+                ip.parse().map_err(|_| {
+                    Erro::Configuracao(format!("IPS_DO_SERVIDOR tem um endereço inválido: {ip}"))
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             n8n,
             auth,
@@ -135,6 +146,7 @@ impl Ambiente {
                 host_do_painel,
                 limites_de_criacao,
                 limite_de_midia_por_site: megabytes("LIMITE_DE_MIDIA_MB_POR_SITE", 500)?,
+                ips_do_servidor,
             },
         })
     }

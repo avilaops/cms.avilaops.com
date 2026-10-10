@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update site set provisorio_definitivo = $2, atualizado_em = now() where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d7b2526b8ab0cb67b8687bbed42f8dc308d596425300c532c9b9193722ccd9b"
+}

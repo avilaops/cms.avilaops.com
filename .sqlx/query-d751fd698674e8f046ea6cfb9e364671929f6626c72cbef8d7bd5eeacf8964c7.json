@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update documento\n        set slug = $2,\n            caminho = $3,\n            situacao = 'publicado',\n            versao_publicada = $4,\n            versao_rascunho = null,\n            revisao_pedida_em = null,\n            agendado_para = null,\n            agendado_por = null,\n            publicado_em = $5,\n            atualizado_em = $6\n        where id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d751fd698674e8f046ea6cfb9e364671929f6626c72cbef8d7bd5eeacf8964c7"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from evento where situacao = 'encerrado' and encerrado_em < now() - interval '1 year'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "b5023987f5d8978bded02854ebfb56d5651c59bf44dee319fd9d421f39f65538"
+}

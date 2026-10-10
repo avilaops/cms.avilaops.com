@@ -1,0 +1,45 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Endereço de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Endereço do site</h1>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<h2>Endereço provisório</h2>
+<p><a href="{{ url_provisoria }}">{{ provisorio }}</a></p>
+<form method="post" action="/painel/sites/{{ slug }}/dominio/provisorio">
+{%- if definitivo %}
+<p class="dica">Você assumiu este endereço como o definitivo: o site aparece nos buscadores por ele.</p>
+<button class="secundario" name="definitivo" value="0">Voltar a tratar como provisório</button>
+{%- else %}
+<p class="dica">Sem domínio próprio, o site fica fora dos buscadores até você assumir este endereço como o definitivo.</p>
+<button class="secundario" name="definitivo" value="1">Usar este endereço como definitivo</button>
+{%- endif %}
+</form>
+<h2>Domínio próprio</h2>
+{%- if dominios.is_empty() %}
+<p>Nenhum domínio apontado.</p>
+{%- else %}
+<ul>
+{%- for dominio in dominios %}
+<li>
+<strong>{{ dominio.host }}</strong>
+<span class="etiquetas">{% if dominio.ativo %}No ar: é o endereço do site{% else %}Esperando o DNS{% endif %}</span>
+{%- if !dominio.ativo %}
+<span class="etiquetas">{{ instrucao }}</span>
+{%- endif %}
+<form class="discreto" method="post" action="/painel/sites/{{ slug }}/dominio/remover"><input type="hidden" name="host" value="{{ dominio.host }}"><button type="submit">Remover</button></form>
+</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+<form method="post" action="/painel/sites/{{ slug }}/dominio">
+<label for="host">Seu domínio</label>
+<input id="host" name="host" required maxlength="253" placeholder="padaria.com.br" autocapitalize="none" spellcheck="false" value="{{ digitado }}">
+<button type="submit">Apontar domínio</button>
+</form>
+{% endblock %}

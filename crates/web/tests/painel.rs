@@ -77,6 +77,8 @@ struct Painel {
     auth: ClienteAuth,
     /// Uma pasta de mídia só deste teste.
     diretorio: PathBuf,
+    /// O cache de página, o mesmo em todos os pedidos do teste.
+    cache: std::sync::Arc<cms_web::Cache>,
 }
 
 fn pasta_de_teste() -> PathBuf {
@@ -89,12 +91,14 @@ impl Painel {
             pool: pool.clone(),
             auth: subir_auth().await,
             diretorio: pasta_de_teste(),
+            cache: cms_web::Cache::novo(),
         }
     }
 
     async fn enviar(&self, pedido: axum::http::request::Builder, corpo: Body) -> Resposta {
         let mut estado = estado(&self.pool, self.diretorio.clone());
         estado.auth = Some(self.auth.clone());
+        estado.cache = self.cache.clone();
         responder(estado, pedido.body(corpo).expect("pedido válido")).await
     }
 
@@ -179,6 +183,7 @@ async fn so_entra_quem_o_auth_liberou(pool: PgPool) {
         pool: pool.clone(),
         auth: ClienteAuth::novo("http://127.0.0.1:9", "cms").expect("cliente"),
         diretorio: pasta_de_teste(),
+        cache: cms_web::Cache::novo(),
     };
     assert_eq!(
         fora_do_ar.abrir(Some("ana"), "/painel").await.status,
@@ -1723,4 +1728,311 @@ async fn assistente_com_permissao_envia_imagem_e_publica(pool: PgPool) {
         StatusCode::GONE
     );
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+impl Painel {
+    /// Um visitante abrindo o site, com o cache de página do teste.
+    async fn visitar(&self, host: &str, caminho: &str) -> Resposta {
+        let pedido = Request::builder().uri(caminho).header("host", host);
+        self.enviar(pedido, Body::empty()).await
+    }
+
+    /// Publica a página inicial do site pelo painel e devolve o endereço do
+    /// documento.
+    async fn publicar_home(&self, quem: &str, slug: &str, titulo: &str) -> String {
+        let home = formulario(&[
+            ("especie", "pagina"),
+            ("titulo", titulo),
+            ("slug", ""),
+            ("seo_titulo", "Padaria da Ana: pão fresco todo dia"),
+            (
+                "seo_descricao",
+                "Padaria de bairro com pão de fermentação natural, aberta desde 1998.",
+            ),
+            ("indexar", "1"),
+            ("n", "0"),
+            ("acao", "publicar"),
+        ]);
+        let publicado = self
+            .postar(quem, &format!("/painel/sites/{slug}/doc"), &home)
+            .await;
+        assert!(
+            publicado.cabecalho("location").ends_with("?r=publicado"),
+            "{}",
+            publicado.cabecalho("location")
+        );
+        documento_de(&publicado)
+    }
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn pagina_sai_do_cache_ate_alguem_publicar(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let documento = painel
+        .publicar_home("ana", "padaria", "Pão fresco todo dia")
+        .await;
+    let h = host("padaria");
+
+    let primeira = painel.visitar(&h, "/").await;
+    assert_eq!(primeira.status, StatusCode::OK);
+    assert_eq!(primeira.cabecalho("x-cache"), "miss");
+    let segunda = painel.visitar(&h, "/").await;
+    assert_eq!(segunda.cabecalho("x-cache"), "hit");
+    assert_eq!(segunda.corpo, primeira.corpo);
+    assert!(segunda.cabecalho("content-type").starts_with("text/html"));
+    // Página que não existe e arquivo de imagem não entram no cache.
+    painel.visitar(&h, "/nao-existe").await;
+    assert_eq!(
+        painel.visitar(&h, "/nao-existe").await.cabecalho("x-cache"),
+        ""
+    );
+
+    // Publicar derruba o cache do site na hora.
+    let novo = formulario(&[
+        ("especie", "pagina"),
+        ("titulo", "Pão quentinho de hora em hora"),
+        ("slug", ""),
+        ("seo_titulo", "Padaria da Ana: pão fresco todo dia"),
+        (
+            "seo_descricao",
+            "Padaria de bairro com pão de fermentação natural, aberta desde 1998.",
+        ),
+        ("indexar", "1"),
+        ("n", "0"),
+        ("acao", "publicar"),
+    ]);
+    painel.postar("ana", &documento, &novo).await;
+    let depois = painel.visitar(&h, "/").await;
+    assert_eq!(depois.cabecalho("x-cache"), "miss");
+    assert!(
+        depois
+            .corpo
+            .contains("<h1>Pão quentinho de hora em hora</h1>")
+    );
+
+    painel
+        .postar("ana", &documento, &formulario(&[("acao", "despublicar")]))
+        .await;
+    assert_eq!(painel.visitar(&h, "/").await.status, StatusCode::GONE);
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn dominio_proprio_e_pedido_pelo_dono_e_vira_o_endereco(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let id = site_id(&pool, "padaria").await;
+    const DOMINIO: &str = "/painel/sites/padaria/dominio";
+
+    // Sem a página inicial no ar, o site ainda não aceita domínio.
+    let cedo = painel.postar("ana", DOMINIO, "host=padaria.example").await;
+    assert_eq!(cedo.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(cedo.corpo.contains("Publique a página inicial"));
+    painel
+        .publicar_home("ana", "padaria", "Pão fresco todo dia")
+        .await;
+
+    for (host, trecho) in [
+        ("https://padaria.example", "Informe só o domínio"),
+        ("loja.sites.teste", "da própria plataforma"),
+        ("cms.teste", "da própria plataforma"),
+    ] {
+        let recusado = painel
+            .postar("ana", DOMINIO, &formulario(&[("host", host)]))
+            .await;
+        assert_eq!(recusado.status, StatusCode::UNPROCESSABLE_ENTITY, "{host}");
+        assert!(recusado.corpo.contains(trecho), "{host}");
+    }
+
+    let pedido = painel
+        .postar("ana", DOMINIO, "host=WWW.Padaria.example")
+        .await;
+    assert!(pedido.cabecalho("location").ends_with("/dominio?r=pedido"));
+    let tela = painel.abrir(Some("ana"), DOMINIO).await;
+    assert!(tela.corpo.contains("padaria.example"));
+    assert!(tela.corpo.contains("Esperando o DNS"));
+    assert!(tela.corpo.contains("registro A apontando para 203.0.113.7"));
+
+    // Pendente, o domínio ainda não serve o site, mas já pode ter certificado.
+    assert_eq!(
+        painel.visitar("padaria.example", "/").await.status,
+        StatusCode::NOT_FOUND
+    );
+    let caddy = |dominio: &'static str| {
+        let painel = &painel;
+        async move {
+            painel
+                .visitar(
+                    "qualquer.host",
+                    &format!("/api/dominio-permitido?domain={dominio}"),
+                )
+                .await
+                .status
+        }
+    };
+    assert_eq!(caddy("padaria.example").await, StatusCode::OK);
+    assert_eq!(caddy("padaria.sites.teste").await, StatusCode::OK);
+    assert_eq!(caddy("cms.teste").await, StatusCode::OK);
+    assert_eq!(caddy("golpe.example").await, StatusCode::NOT_FOUND);
+
+    // Outro site não toma o domínio.
+    painel
+        .criar_site("caio", "oficina", "Oficina do Caio")
+        .await;
+    painel
+        .publicar_home("caio", "oficina", "Oficina do Caio")
+        .await;
+    let tomado = painel
+        .postar(
+            "caio",
+            "/painel/sites/oficina/dominio",
+            "host=padaria.example",
+        )
+        .await;
+    assert_eq!(tomado.status, StatusCode::CONFLICT);
+
+    // Só o Dono mexe no endereço.
+    assert_eq!(
+        painel.abrir(Some("caio"), DOMINIO).await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // A rotina conferiu o DNS: o domínio vira o endereço, e o provisório
+    // passa a redirecionar para ele.
+    let pendente = cms_dados::dominios_pendentes(&pool)
+        .await
+        .expect("pendentes")
+        .into_iter()
+        .find(|pendente| pendente.site_id == id)
+        .expect("domínio pendente");
+    cms_dados::confirmar_dominio(&pool, &pendente)
+        .await
+        .expect("domínio confirmado");
+    painel.cache.invalidar_site(id);
+    let proprio = painel.visitar("padaria.example", "/").await;
+    assert_eq!(proprio.status, StatusCode::OK);
+    assert_eq!(proprio.cabecalho("x-robots-tag"), "");
+    let provisorio = painel.visitar(&host("padaria"), "/").await;
+    assert_eq!(provisorio.status, StatusCode::MOVED_PERMANENTLY);
+    assert_eq!(provisorio.cabecalho("location"), "https://padaria.example/");
+
+    let removido = painel
+        .postar("ana", &format!("{DOMINIO}/remover"), "host=padaria.example")
+        .await;
+    assert!(
+        removido
+            .cabecalho("location")
+            .ends_with("/dominio?r=removido")
+    );
+    // Sem domínio e sem assumir o provisório, o site volta a ficar fora da busca.
+    assert_eq!(
+        painel
+            .visitar(&host("padaria"), "/")
+            .await
+            .cabecalho("x-robots-tag"),
+        "noindex"
+    );
+    let assumido = painel
+        .postar("ana", &format!("{DOMINIO}/provisorio"), "definitivo=1")
+        .await;
+    assert!(
+        assumido
+            .cabecalho("location")
+            .ends_with("/dominio?r=provisorio")
+    );
+    assert_eq!(
+        painel
+            .visitar(&host("padaria"), "/")
+            .await
+            .cabecalho("x-robots-tag"),
+        ""
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn publicacao_agendada_vai_ao_ar_na_hora_marcada(pool: PgPool) {
+    use cms_dados::fluxo;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let id = site_id(&pool, "padaria").await;
+    let corpo = |extras: &[(&str, &str)]| {
+        let mut campos = vec![("b0_texto", "Abrimos às seis.")];
+        campos.extend_from_slice(extras);
+        pagina_com(&campos)
+    };
+    let salvo = painel
+        .postar(
+            "ana",
+            "/painel/sites/padaria/doc",
+            &corpo(&[("acao", "salvar")]),
+        )
+        .await;
+    let documento = documento_de(&salvo);
+
+    // Data que já passou, ou que não é data, não agenda.
+    for data in ["2020-01-01T10:00", "amanhã cedo"] {
+        let recusado = painel
+            .postar(
+                "ana",
+                &documento,
+                &corpo(&[("agendar_para", data), ("acao", "agendar")]),
+            )
+            .await;
+        assert!(
+            recusado.cabecalho("location").ends_with("?r=data"),
+            "{data}"
+        );
+    }
+    let agendado = painel
+        .postar(
+            "ana",
+            &documento,
+            &corpo(&[("agendar_para", "2099-12-31T09:00"), ("acao", "agendar")]),
+        )
+        .await;
+    assert!(agendado.cabecalho("location").ends_with("?r=agendado"));
+    let editor = painel.abrir(Some("ana"), &documento).await;
+    assert!(
+        editor
+            .corpo
+            .contains("publicação agendada para 31 de dezembro de 2099")
+    );
+    assert!(editor.corpo.contains(r#"value="desagendar""#));
+
+    // Antes da hora, a rotina não publica nada.
+    let rodada = fluxo::publicar_agendados(&pool, chrono::Utc::now())
+        .await
+        .expect("rodada");
+    assert!(rodada.sites_publicados.is_empty());
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/sobre").await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // Chegou a hora.
+    sqlx::query("update documento set agendado_para = now() - interval '1 minute'")
+        .execute(&pool)
+        .await
+        .expect("relógio adiantado");
+    let rodada = fluxo::publicar_agendados(&pool, chrono::Utc::now())
+        .await
+        .expect("rodada");
+    assert_eq!(rodada.sites_publicados, vec![id]);
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/sobre").await.status,
+        StatusCode::OK
+    );
+    // Publicado, o agendamento some, e a rotina não insiste.
+    assert!(
+        !painel
+            .abrir(Some("ana"), &documento)
+            .await
+            .corpo
+            .contains("publicação agendada")
+    );
+    let rodada = fluxo::publicar_agendados(&pool, chrono::Utc::now())
+        .await
+        .expect("rodada");
+    assert_eq!(rodada, fluxo::RodadaDeAgendados::default());
 }

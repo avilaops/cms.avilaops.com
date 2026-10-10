@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update rotina set ultima_execucao = now()\n        where nome = $1 and ultima_execucao <= now() - make_interval(secs => $2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "937c8c3a175284d7add5742d51bfa9670fc2a022f14969fa04d6be902ddc9864"
+}

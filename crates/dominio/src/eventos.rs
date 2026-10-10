@@ -59,6 +59,13 @@ pub struct ConviteCriado {
     pub expira_em: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DominioAtivado {
+    /// O domínio próprio que passou a ser o endereço do site.
+    pub dominio: String,
+}
+
 /// Um fato. Serializa só os dados; o tipo vai em campo próprio do corpo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
@@ -68,6 +75,7 @@ pub enum Evento {
     ConteudoEnviadoParaRevisao(ConteudoEnviadoParaRevisao),
     SiteCriado(SiteCriado),
     ConviteCriado(ConviteCriado),
+    DominioAtivado(DominioAtivado),
 }
 
 impl Evento {
@@ -79,6 +87,7 @@ impl Evento {
             Evento::ConteudoEnviadoParaRevisao(_) => "conteudo.enviado_para_revisao",
             Evento::SiteCriado(_) => "site.criado",
             Evento::ConviteCriado(_) => "convite.criado",
+            Evento::DominioAtivado(_) => "dominio.ativado",
         }
     }
 }
@@ -231,6 +240,15 @@ mod testes {
                 "expiraEm": "2026-10-11T12:00:00Z"
             })
         );
+    }
+
+    #[test]
+    fn dominio_ativado_bate_com_a_referencia() {
+        let evento = Evento::DominioAtivado(DominioAtivado {
+            dominio: "padaria.example".into(),
+        });
+        assert_eq!(evento.tipo(), "dominio.ativado");
+        assert_eq!(dados(&evento), json!({ "dominio": "padaria.example" }));
     }
 
     #[test]

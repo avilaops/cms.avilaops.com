@@ -1,6 +1,7 @@
 //! O site público: do host ao que está publicado.
 
 use askama::Template;
+use axum::http::header::COOKIE;
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{DateTime, Utc};
@@ -22,6 +23,27 @@ use crate::visao::{Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBl
 
 const CAMINHO_DO_BLOG: &str = "/blog";
 
+/// O site que respondeu um pedido. Vai junto da resposta para o cache saber
+/// de quem é a página.
+#[derive(Debug, Clone, Copy)]
+struct SiteDoPedido(uuid::Uuid);
+
+/// A chave do cache para um pedido, se ele pode ser servido do cache: só
+/// leitura, sem sessão do painel, e nunca arquivo de imagem.
+fn chave_de_cache(metodo: &Method, cabecalhos: &HeaderMap, uri: &Uri) -> Option<String> {
+    let com_sessao = cabecalhos
+        .get_all(COOKIE)
+        .iter()
+        .filter_map(|valor| valor.to_str().ok())
+        .any(|valor| valor.contains("avila_sso="));
+    if metodo != Method::GET || com_sessao || uri.path().starts_with("/midia/") {
+        return None;
+    }
+    let host = host_do_pedido(cabecalhos)?;
+    let caminho = uri.path_and_query().map_or("/", |valor| valor.as_str());
+    Some(format!("{}{caminho}", host.com_porta))
+}
+
 pub async fn atender(
     estado: &Estado,
     metodo: &Method,
@@ -31,12 +53,33 @@ pub async fn atender(
     if metodo != Method::GET && metodo != Method::HEAD {
         return simples(StatusCode::METHOD_NOT_ALLOWED, "Método não permitido.");
     }
-    match responder(estado, cabecalhos, uri).await {
+    let chave = chave_de_cache(metodo, cabecalhos, uri);
+    if let Some(guardada) = chave
+        .as_deref()
+        .and_then(|chave| estado.cache.buscar(chave))
+    {
+        return guardada;
+    }
+    let resposta = match responder(estado, cabecalhos, uri).await {
         Ok(resposta) => resposta,
         Err(erro) => {
             tracing::error!(%erro, caminho = uri.path(), "falha ao atender o pedido");
-            simples(StatusCode::INTERNAL_SERVER_ERROR, "Erro interno.")
+            return simples(StatusCode::INTERNAL_SERVER_ERROR, "Erro interno.");
         }
+    };
+    let site = resposta.extensions().get::<SiteDoPedido>().copied();
+    match (chave, site) {
+        (Some(chave), Some(SiteDoPedido(site_id))) if resposta.status() == StatusCode::OK => {
+            let (partes, corpo) = resposta.into_parts();
+            match axum::body::to_bytes(corpo, usize::MAX).await {
+                Ok(bytes) => estado.cache.guardar(chave, site_id, partes.headers, bytes),
+                Err(erro) => {
+                    tracing::error!(%erro, "corpo da página não pôde ser lido");
+                    simples(StatusCode::INTERNAL_SERVER_ERROR, "Erro interno.")
+                }
+            }
+        }
+        _ => resposta,
     }
 }
 
@@ -116,7 +159,7 @@ async fn responder(
     };
 
     let caminho = uri.path();
-    match caminho {
+    let mut resposta = match caminho {
         "/robots.txt" => Ok(robots(&pedido)),
         "/llms.txt" | "/llms-full.txt" => descoberta_para_ia(estado, &pedido, caminho).await,
         CAMINHO_DO_BLOG => blog(estado, &pedido).await,
@@ -136,7 +179,11 @@ async fn responder(
             }
             None => documento(estado, &pedido, caminho).await,
         },
-    }
+    }?;
+    resposta
+        .extensions_mut()
+        .insert(SiteDoPedido(pedido.gravado.id));
+    Ok(resposta)
 }
 
 /// `/<chave>.txt`, com a chave no conteúdo: a prova que o IndexNow pede.
