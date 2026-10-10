@@ -100,7 +100,17 @@ impl Datas {
     }
 }
 
+pub fn caminho_da_categoria(slug: &str) -> String {
+    format!("/blog/categoria/{slug}")
+}
+
+pub fn caminho_do_autor(slug: &str) -> String {
+    format!("/autor/{slug}")
+}
+
 pub struct CaixaDoAutor {
+    /// A página com os posts de quem escreveu.
+    pub url: String,
     pub nome: String,
     pub cargo: String,
     pub bio: String,
@@ -110,8 +120,9 @@ pub struct CaixaDoAutor {
 }
 
 impl CaixaDoAutor {
-    fn nova(autor: &Autor) -> Self {
+    pub fn nova(autor: &Autor) -> Self {
         Self {
+            url: caminho_do_autor(&autor.slug),
             nome: autor.nome.clone(),
             cargo: autor.cargo.clone(),
             bio: autor.bio.clone(),
@@ -135,6 +146,8 @@ pub struct PaginaDeDocumento {
     pub trilha: Vec<ItemTrilha>,
     pub titulo: String,
     pub datas: Option<Datas>,
+    /// A categoria do post, com o endereço da listagem dela.
+    pub categoria: Option<Link>,
     pub capa: String,
     pub corpo: String,
     pub autor: Option<CaixaDoAutor>,
@@ -151,6 +164,11 @@ impl PaginaDeDocumento {
             trilha: documento.trilha().to_vec(),
             titulo: documento.titulo().to_string(),
             datas: post.map(Datas::do_post),
+            categoria: post.map(|post| Link {
+                rotulo: post.categoria.nome.clone(),
+                url: caminho_da_categoria(&post.categoria.slug),
+                atual: false,
+            }),
             // A capa é a única imagem com prioridade de carregamento.
             capa: documento
                 .capa()
@@ -188,7 +206,11 @@ impl Cartao {
 #[template(path = "blog.html")]
 pub struct PaginaDoBlog {
     pub moldura: Moldura,
+    /// Vazia no blog; nas listagens abaixo dele, o caminho até aqui.
+    pub trilha: Vec<ItemTrilha>,
     pub titulo: String,
+    /// Só na página de quem escreveu.
+    pub autor: Option<CaixaDoAutor>,
     pub cartoes: Vec<Cartao>,
 }
 

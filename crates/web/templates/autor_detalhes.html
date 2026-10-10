@@ -1,0 +1,12 @@
+<p>{{ autor.cargo }}</p>
+<p>{{ autor.bio }}</p>
+{%- if !autor.credenciais.is_empty() || !autor.perfis.is_empty() %}
+<ul>
+{%- for credencial in autor.credenciais %}
+<li>{{ credencial }}</li>
+{%- endfor %}
+{%- for perfil in autor.perfis %}
+<li><a href="{{ perfil }}" rel="me noopener">{{ perfil }}</a></li>
+{%- endfor %}
+</ul>
+{%- endif %}

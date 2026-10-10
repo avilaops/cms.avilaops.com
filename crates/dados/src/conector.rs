@@ -14,13 +14,17 @@ use crate::midias::hash_de_conteudo;
 
 /// Os escopos que uma conexão pode ter. O de publicar vem desmarcado na tela
 /// de autorização: o assistente escreve, e uma pessoa publica.
-pub const ESCOPOS: [(&str, &str); 6] = [
+pub const ESCOPOS: [(&str, &str); 7] = [
     ("sites:ler", "Ver os seus sites"),
     ("sites:criar", "Criar sites em seu nome"),
+    (
+        "sites:editar",
+        "Mudar a identidade dos sites: nome, descrição, logo e organização",
+    ),
     ("conteudo:ler", "Ler páginas, posts, autores e categorias"),
     (
         "conteudo:escrever",
-        "Escrever rascunhos e enviar para revisão",
+        "Escrever rascunhos, enviar para revisão e cadastrar autores e categorias",
     ),
     ("conteudo:publicar", "Publicar e tirar do ar"),
     ("midia:escrever", "Ver e enviar imagens"),

@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block conteudo %}
+{%- include "trilha.html" %}
 <h1>{{ titulo }}</h1>
+{%- if let Some(autor) = autor %}
+<div class="autor sobre">
+{{ autor.foto|safe }}
+<div>
+{%- include "autor_detalhes.html" %}
+</div>
+</div>
+{%- endif %}
 {%- for cartao in cartoes %}
 <article class="cartao">
 <h2><a href="{{ cartao.url }}">{{ cartao.titulo }}</a></h2>

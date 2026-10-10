@@ -8,9 +8,9 @@
 {%- endif %}
 <form method="post" action="/painel/sites/{{ slug }}/identidade">
 <label for="nome">Nome do site</label>
-<input id="nome" name="nome" required maxlength="80" value="{{ p.nome }}">
+<input id="nome" name="nome" required maxlength="80" value="{{ d.nome }}">
 <label for="descricao">O que é o negócio, em uma ou duas frases</label>
-<textarea id="descricao" name="descricao" maxlength="400">{{ p.descricao }}</textarea>
+<textarea id="descricao" name="descricao" maxlength="400">{{ d.descricao }}</textarea>
 <label for="logo">Logo</label>
 <select id="logo" name="logo">
 <option value="">Sem logo</option>
@@ -21,24 +21,24 @@
 <fieldset>
 <legend>Quem está por trás do site</legend>
 <label for="razao_social">Razão social</label>
-<input id="razao_social" name="razao_social" maxlength="120" value="{{ razao_social }}">
+<input id="razao_social" name="razao_social" maxlength="120" value="{{ d.razao_social }}">
 <label for="telefone">Telefone</label>
-<input id="telefone" name="telefone" maxlength="30" inputmode="tel" value="{{ telefone }}">
+<input id="telefone" name="telefone" maxlength="30" inputmode="tel" value="{{ d.telefone }}">
 <label for="email">E-mail de contato</label>
-<input id="email" name="email" type="email" maxlength="254" value="{{ email }}">
+<input id="email" name="email" type="email" maxlength="254" value="{{ d.email }}">
 <label for="logradouro">Endereço</label>
-<input id="logradouro" name="logradouro" maxlength="160" value="{{ logradouro }}">
+<input id="logradouro" name="logradouro" maxlength="160" value="{{ d.logradouro }}">
 <label for="cidade">Cidade</label>
-<input id="cidade" name="cidade" maxlength="80" value="{{ cidade }}">
+<input id="cidade" name="cidade" maxlength="80" value="{{ d.cidade }}">
 <label for="uf">UF</label>
-<input id="uf" name="uf" maxlength="2" value="{{ uf }}">
+<input id="uf" name="uf" maxlength="2" value="{{ d.uf }}">
 <label for="cep">CEP</label>
-<input id="cep" name="cep" maxlength="9" inputmode="numeric" value="{{ cep }}">
+<input id="cep" name="cep" maxlength="9" inputmode="numeric" value="{{ d.cep }}">
 <label for="perfis">Redes sociais (endereços https), uma por linha</label>
-<textarea id="perfis" name="perfis">{{ perfis }}</textarea>
+<textarea id="perfis" name="perfis">{{ d.perfis }}</textarea>
 </fieldset>
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
-<textarea id="diretrizes" name="diretrizes">{{ diretrizes }}</textarea>
+<textarea id="diretrizes" name="diretrizes">{{ d.diretrizes }}</textarea>
 <button type="submit">Salvar identidade</button>
 </form>
 {% endblock %}

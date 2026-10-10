@@ -1502,7 +1502,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        15
+        18
     );
 
     let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
@@ -1727,6 +1727,185 @@ async fn assistente_com_permissao_envia_imagem_e_publica(pool: PgPool) {
         pedir(&pool, &host("padaria"), "/").await.status,
         StatusCode::GONE
     );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool: PgPool) {
+    use base64::Engine;
+    use motor_web::tipos::Formato;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "sites:ler",
+                "sites:editar",
+                "conteudo:ler",
+                "conteudo:escrever",
+                "midia:escrever",
+            ],
+        )
+        .await;
+
+    let base64 = base64::engine::general_purpose::STANDARD.encode(png(1400, 800, 51));
+    let (erro, enviada) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({ "site": "padaria", "nome": "ana.png", "alt": "Ana Souza na padaria", "base64": base64 }),
+        )
+        .await;
+    assert!(!erro, "{enviada}");
+    let imagem = enviada["id"].as_str().expect("id").to_string();
+    let variante = cms_dados::VarianteGravada {
+        formato: Formato::Webp,
+        largura: 1400,
+        arquivo: "ana-0a1b2c3d-1400.webp".into(),
+        bytes: 999,
+    };
+    let imagem_id = Uuid::parse_str(&imagem).expect("uuid");
+    cms_dados::concluir_midia(&pool, imagem_id, 1400, 800, &[variante])
+        .await
+        .expect("imagem pronta");
+
+    // Autor e categoria nascem pelo conector, com o endereço tirado do nome.
+    let (erro, autor) = painel
+        .ferramenta(
+            &token,
+            "salvar_autor",
+            json!({
+                "site": "padaria",
+                "nome": "Ana Souza",
+                "cargo": "Padeira",
+                "bio": "Faz pão de fermentação natural desde 1998.",
+                "foto": imagem,
+                "credenciais": "Curso de panificação artesanal\nVinte anos de balcão",
+            }),
+        )
+        .await;
+    assert!(!erro, "{autor}");
+    assert_eq!(autor["slug"], "ana-souza");
+    let (erro, categoria) = painel
+        .ferramenta(
+            &token,
+            "salvar_categoria",
+            json!({ "site": "padaria", "nome": "Receitas" }),
+        )
+        .await;
+    assert!(!erro, "{categoria}");
+    assert_eq!(categoria["slug"], "receitas");
+    let (_, autores) = painel
+        .ferramenta(&token, "listar_autores", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(autores["autores"][0]["foto"], imagem);
+    assert_eq!(
+        autores["autores"][0]["credenciais"],
+        json!(["Curso de panificação artesanal", "Vinte anos de balcão"])
+    );
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "salvar_autor",
+            json!({ "site": "padaria", "nome": "Outro", "foto": Uuid::new_v4() }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("biblioteca"));
+
+    // A identidade muda só no que foi enviado.
+    let (erro, editada) = painel
+        .ferramenta(
+            &token,
+            "editar_identidade",
+            json!({
+                "site": "padaria",
+                "descricao": "Padaria de bairro com fermentação natural.",
+                "telefone": "(11) 4000-0000",
+                "logo": imagem,
+            }),
+        )
+        .await;
+    assert!(!erro, "{editada}");
+    let (_, site) = painel
+        .ferramenta(&token, "ver_site", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(site["identidade"]["nome"], "Padaria da Ana");
+    assert_eq!(site["identidade"]["telefone"], "(11) 4000-0000");
+    assert_eq!(site["identidade"]["logo"], imagem);
+    let (erro, sem_nome) = painel
+        .ferramenta(
+            &token,
+            "editar_identidade",
+            json!({ "site": "padaria", "nome": " " }),
+        )
+        .await;
+    assert!(erro, "{sem_nome}");
+
+    // No post, autor, categoria e imagens vão só pela referência.
+    let post = |autor: &str| {
+        json!({
+            "especie": "post",
+            "dados": {
+                "tipo": "guia-tecnico",
+                "slug": "pao-de-fermentacao-natural",
+                "titulo": "Como fazer pão de fermentação natural",
+                "resumo": "O passo a passo do fermento ao forno.",
+                "capa": imagem,
+                "corpo": [
+                    { "tipo": "paragrafo", "trechos": [{ "texto": "Comece pelo fermento." }] },
+                    { "tipo": "imagem", "midia": imagem }
+                ],
+                "autor": autor,
+                "categoria": "receitas",
+                "seo": {
+                    "titulo": "Pão de fermentação natural: passo a passo",
+                    "descricao": "Aprenda a fazer pão de fermentação natural em casa, do fermento ao forno, com a Padaria da Ana.",
+                    "indexar": true
+                }
+            }
+        })
+    };
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": post("ninguem") }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("salvar_autor"));
+    let (erro, criado) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": post("ana-souza") }),
+        )
+        .await;
+    assert!(!erro, "{criado}");
+    assert_eq!(criado["problemas"], json!([]), "{criado}");
+    let alvo = json!({ "site": "padaria", "documento": criado["documento"] });
+    let (_, visto) = painel.ferramenta(&token, "ver_documento", alvo).await;
+    let dados = &visto["conteudo"]["dados"];
+    assert_eq!(dados["autor"]["nome"], "Ana Souza");
+    assert_eq!(dados["autor"]["foto"]["id"], imagem);
+    assert_eq!(dados["categoria"]["nome"], "Receitas");
+    assert_eq!(dados["capa"]["alt"], "Ana Souza na padaria");
+    assert_eq!(dados["corpo"][1]["midia"]["largura"], 1400);
+
+    // Sem a permissão de identidade, a conexão não mexe nela.
+    let (_, outro, _) = painel.conectar("ana", &["sites:ler"]).await;
+    let (erro, recusa) = painel
+        .ferramenta(
+            &outro,
+            "editar_identidade",
+            json!({ "site": "padaria", "nome": "Outro nome" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("sites:editar"));
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
 

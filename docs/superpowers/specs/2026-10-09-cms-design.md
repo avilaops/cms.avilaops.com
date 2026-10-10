@@ -282,6 +282,13 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `publicar`, `despublicar` | `conteudo:publicar` |
 | `listar_midia`, `enviar_midia` | `midia:escrever` |
 | `listar_autores`, `listar_categorias` | `conteudo:ler` |
+| `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
+| `editar_identidade` | `sites:editar` |
+
+- Em `criar_rascunho` e `editar_rascunho`, autor e categoria podem ir só com o
+  slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
+  troca a referência pelo cadastro do site antes de validar.
+- `editar_identidade` muda só o que foi enviado e exige papel de dono.
 
 - `validar_documento` devolve os problemas do motor, com código, campo e
   mensagem. É assim que o assistente corrige antes de pedir a publicação.

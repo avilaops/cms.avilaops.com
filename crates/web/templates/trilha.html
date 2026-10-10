@@ -1,0 +1,9 @@
+{%- if !trilha.is_empty() %}
+<nav class="trilha" aria-label="Você está em">
+<ol>
+{%- for item in trilha %}
+<li>{% if loop.last %}<span aria-current="page">{{ item.nome }}</span>{% else %}<a href="{{ item.url }}">{{ item.nome }}</a>{% endif %}</li>
+{%- endfor %}
+</ol>
+</nav>
+{%- endif %}

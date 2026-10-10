@@ -4,6 +4,8 @@ use askama::Template;
 use axum::http::header::COOKIE;
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
+use std::collections::BTreeMap;
+
 use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::origem_do_site;
@@ -14,12 +16,16 @@ use motor_web::descoberta::{
     gerar_sitemaps,
 };
 use motor_web::seo::montar_cabecalho;
-use motor_web::tipos::{Conteudo, Documento, ItemTrilha, Pagina, Seo, Site};
+use motor_web::tipos::{Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site};
+use motor_web::validacao::normalizar_slug;
 
 use crate::Estado;
 use crate::midia;
 use crate::resposta::{ErroWeb, html, redirecionar, simples, texto};
-use crate::visao::{Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog};
+use crate::visao::{
+    CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog,
+    caminho_da_categoria, caminho_do_autor,
+};
 
 const CAMINHO_DO_BLOG: &str = "/blog";
 
@@ -162,7 +168,6 @@ async fn responder(
     let mut resposta = match caminho {
         "/robots.txt" => Ok(robots(&pedido)),
         "/llms.txt" | "/llms-full.txt" => descoberta_para_ia(estado, &pedido, caminho).await,
-        CAMINHO_DO_BLOG => blog(estado, &pedido).await,
         _ if eh_arquivo_do_indexnow(caminho, configuracao.chave_do_indexnow.as_deref()) => {
             Ok(texto(
                 StatusCode::OK,
@@ -177,7 +182,10 @@ async fn responder(
             Some(arquivo) => {
                 midia::servir(&configuracao.diretorio_de_midia, pedido.gravado.id, arquivo).await
             }
-            None => documento(estado, &pedido, caminho).await,
+            None => match Recorte::do_caminho(caminho) {
+                Some(recorte) => listagem(estado, &pedido, recorte).await,
+                None => documento(estado, &pedido, caminho).await,
+            },
         },
     }?;
     resposta
@@ -204,21 +212,49 @@ fn robots(pedido: &Pedido) -> Response {
     texto(StatusCode::OK, "text/plain; charset=utf-8", corpo)
 }
 
-/// A listagem do blog entra no sitemap como uma página de listagem.
-fn listagens(documentos: &[Documento]) -> Vec<PaginaDeCategoria> {
-    let mais_recente = documentos
+/// Os posts no ar, do mais recente para trás; empate fica em ordem de caminho.
+fn posts_em_ordem(documentos: &[Documento]) -> Vec<(&str, &Post)> {
+    let mut posts: Vec<_> = documentos
         .iter()
-        .filter(|documento| matches!(documento.conteudo, Conteudo::Post(_)))
-        .map(Documento::atualizado_em)
-        .max();
-    mais_recente
-        .map(|atualizado_em| PaginaDeCategoria {
-            caminho: CAMINHO_DO_BLOG.into(),
-            nome: "Blog".into(),
-            atualizado_em,
+        .filter_map(|documento| match &documento.conteudo {
+            Conteudo::Post(post) => Some((documento.caminho.as_str(), post)),
+            _ => None,
         })
-        .into_iter()
-        .collect()
+        .collect();
+    posts.sort_by(|a, b| {
+        b.1.publicado_em
+            .cmp(&a.1.publicado_em)
+            .then_with(|| a.0.cmp(b.0))
+    });
+    posts
+}
+
+/// O blog, cada categoria e cada autor entram no sitemap como páginas de
+/// listagem, com a data do post mexido por último em cada uma.
+fn listagens(documentos: &[Documento]) -> Vec<PaginaDeCategoria> {
+    let mut paginas: BTreeMap<String, PaginaDeCategoria> = BTreeMap::new();
+    for (_, post) in posts_em_ordem(documentos) {
+        let de_listagem = [
+            (CAMINHO_DO_BLOG.to_string(), "Blog"),
+            (
+                caminho_da_categoria(&post.categoria.slug),
+                &*post.categoria.nome,
+            ),
+            (caminho_do_autor(&post.autor.slug), &*post.autor.nome),
+        ];
+        for (caminho, nome) in de_listagem {
+            // O nome é o do post mais recente: é o primeiro a chegar.
+            let pagina = paginas
+                .entry(caminho.clone())
+                .or_insert_with(|| PaginaDeCategoria {
+                    caminho,
+                    nome: nome.to_string(),
+                    atualizado_em: post.atualizado_em,
+                });
+            pagina.atualizado_em = pagina.atualizado_em.max(post.atualizado_em);
+        }
+    }
+    paginas.into_values().collect()
 }
 
 async fn sitemap(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Response, ErroWeb> {
@@ -335,11 +371,21 @@ fn pagina_avulsa(
     descricao: String,
     indexar: bool,
     datas: (DateTime<Utc>, DateTime<Utc>),
+    acima: Option<ItemTrilha>,
 ) -> Documento {
+    let inicio = ItemTrilha {
+        nome: "Início".into(),
+        url: "/".into(),
+    };
+    let aqui = ItemTrilha {
+        nome: titulo.to_string(),
+        url: caminho.to_string(),
+    };
     Documento {
         caminho: caminho.to_string(),
         conteudo: Conteudo::Pagina(Pagina {
-            slug: caminho.trim_matches('/').to_string(),
+            // O endereço é o caminho; o slug só precisa passar pela validação.
+            slug: normalizar_slug(caminho),
             titulo: titulo.to_string(),
             corpo: Vec::new(),
             capa: None,
@@ -351,60 +397,119 @@ fn pagina_avulsa(
                 indexar: indexar && pedido.indexavel,
                 imagem_social: None,
             },
-            trilha: vec![
-                ItemTrilha {
-                    nome: "Início".into(),
-                    url: "/".into(),
-                },
-                ItemTrilha {
-                    nome: titulo.to_string(),
-                    url: caminho.to_string(),
-                },
-            ],
+            trilha: [Some(inicio), acima, Some(aqui)]
+                .into_iter()
+                .flatten()
+                .collect(),
         }),
     }
 }
 
-async fn blog(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
-    let documentos = cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
-    let mut posts: Vec<_> = documentos
-        .iter()
-        .filter_map(|documento| match &documento.conteudo {
-            Conteudo::Post(post) => Some((documento.caminho.as_str(), post)),
-            _ => None,
-        })
-        .collect();
-    // Mais recente primeiro; empate fica em ordem de caminho.
-    posts.sort_by(|a, b| {
-        b.1.publicado_em
-            .cmp(&a.1.publicado_em)
-            .then_with(|| a.0.cmp(b.0))
-    });
+/// Uma listagem de posts: o blog inteiro, uma categoria ou quem escreveu.
+enum Recorte<'a> {
+    Blog,
+    Categoria(&'a str),
+    Autor(&'a str),
+}
 
-    let (Some(primeiro), Some(ultimo)) = (
+impl<'a> Recorte<'a> {
+    fn do_caminho(caminho: &'a str) -> Option<Self> {
+        if caminho == CAMINHO_DO_BLOG {
+            return Some(Self::Blog);
+        }
+        let (slug, recorte): (_, fn(&'a str) -> Self) =
+            match caminho.strip_prefix("/blog/categoria/") {
+                Some(slug) => (slug, Self::Categoria),
+                None => (caminho.strip_prefix("/autor/")?, Self::Autor),
+            };
+        // Com barra no fim, quem responde é o redirecionamento dos documentos.
+        (!slug.is_empty() && !slug.contains('/')).then(|| recorte(slug))
+    }
+
+    fn inclui(&self, post: &Post) -> bool {
+        match self {
+            Self::Blog => true,
+            Self::Categoria(slug) => post.categoria.slug == *slug,
+            Self::Autor(slug) => post.autor.slug == *slug,
+        }
+    }
+}
+
+/// O nome da categoria e os dados de quem escreveu são os do post mais
+/// recente: o que foi ao ar por último é o que vale.
+async fn listagem(
+    estado: &Estado,
+    pedido: &Pedido,
+    recorte: Recorte<'_>,
+) -> Result<Response, ErroWeb> {
+    let documentos = cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
+    let posts: Vec<_> = posts_em_ordem(&documentos)
+        .into_iter()
+        .filter(|(_, post)| recorte.inclui(post))
+        .collect();
+    let (Some((_, recente)), Some(primeiro), Some(ultimo)) = (
+        posts.first(),
         posts.iter().map(|(_, post)| post.publicado_em).min(),
         posts.iter().map(|(_, post)| post.atualizado_em).max(),
     ) else {
         return nao_encontrado(estado, pedido).await;
     };
 
-    let listagem = pagina_avulsa(
+    let site = &pedido.site.nome;
+    let blog = ItemTrilha {
+        nome: "Blog".into(),
+        url: CAMINHO_DO_BLOG.into(),
+    };
+    let (caminho, titulo, descricao, acima, autor) = match recorte {
+        Recorte::Blog => (
+            CAMINHO_DO_BLOG.to_string(),
+            "Blog",
+            format!("Artigos e guias de {site}."),
+            None,
+            None,
+        ),
+        Recorte::Categoria(slug) => (
+            caminho_da_categoria(slug),
+            &*recente.categoria.nome,
+            format!(
+                "Artigos e guias de {site} sobre {}.",
+                recente.categoria.nome
+            ),
+            Some(blog),
+            None,
+        ),
+        Recorte::Autor(slug) => (
+            caminho_do_autor(slug),
+            &*recente.autor.nome,
+            format!("Quem é {} e o que escreveu em {site}.", recente.autor.nome),
+            Some(blog),
+            Some(CaixaDoAutor::nova(&recente.autor)),
+        ),
+    };
+    let documento = pagina_avulsa(
         pedido,
-        CAMINHO_DO_BLOG,
-        "Blog",
-        format!("Artigos e guias de {}.", pedido.site.nome),
+        &caminho,
+        titulo,
+        descricao,
         true,
         (primeiro, ultimo),
+        acima,
     );
-    let moldura = moldura(estado, pedido, &listagem).await?;
-    let cartoes = posts
-        .iter()
-        .map(|(caminho, post)| Cartao::do_post(caminho, post))
-        .collect();
+    let moldura = moldura(estado, pedido, &documento).await?;
     let pagina = PaginaDoBlog {
         moldura,
-        titulo: "Blog".into(),
-        cartoes,
+        // O blog é a raiz da própria trilha: só as páginas abaixo dele mostram.
+        trilha: if caminho == CAMINHO_DO_BLOG {
+            Vec::new()
+        } else {
+            documento.trilha().to_vec()
+        },
+        titulo: titulo.to_string(),
+        autor,
+        cartoes: posts
+            .iter()
+            .map(|(caminho, post)| Cartao::do_post(caminho, post))
+            .collect(),
     }
     .render()?;
     Ok(html(StatusCode::OK, pagina, pedido.indexavel))
@@ -452,6 +557,7 @@ async fn avisar(estado: &Estado, pedido: &Pedido, aviso: Aviso) -> Result<Respon
         aviso.descricao.into(),
         false,
         (agora, agora),
+        None,
     );
     let moldura = moldura(estado, pedido, &documento).await?;
     let pagina = PaginaDeAviso {

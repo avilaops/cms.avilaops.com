@@ -11,7 +11,10 @@ use axum::response::{IntoResponse, Response};
 use base64::Engine;
 use chrono::Utc;
 use cms_dados::fluxo::{self, ErroDeFluxo};
-use cms_dados::{Autorizacao, Conexao, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeConector, Tokens};
+use cms_dados::{
+    Autorizacao, Conexao, DadosDoAutor, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeCatalogo,
+    ErroDeConector, Tokens,
+};
 use cms_dominio::{Ator, Conta};
 use motor_web::tipos::Conteudo;
 use motor_web::validacao::Problema;
@@ -19,6 +22,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::identidade::{self, DadosDaIdentidade};
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Estado, biblioteca};
 
@@ -410,26 +414,61 @@ struct Ferramenta {
     argumentos: &'static [(&'static str, &'static str)],
     /// A ferramenta recebe também `conteudo`, um objeto.
     com_conteudo: bool,
+    /// Os argumentos que podem faltar, também texto.
+    opcionais: &'static [(&'static str, &'static str)],
 }
 
 const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (slug).");
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
-const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagens entram pelo id da biblioteca (listar_midia). As datas são do servidor.";
+const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). As datas são do servidor.";
 
-const FERRAMENTAS: [Ferramenta; 15] = [
+/// O que o dono define sobre o site. Os mesmos nomes saem em ver_site.
+const IDENTIDADE: &[(&str, &str)] = &[
+    ("nome", "O nome do site."),
+    ("descricao", "O que é o negócio, em uma ou duas frases."),
+    (
+        "logo",
+        "O id da imagem na biblioteca (listar_midia). Vazio tira a logo.",
+    ),
+    (
+        "razaoSocial",
+        "A razão social de quem está por trás do site.",
+    ),
+    ("telefone", "O telefone de contato."),
+    ("email", "O e-mail de contato."),
+    (
+        "logradouro",
+        "Rua e número. O endereço só vale com logradouro, cidade, uf e cep.",
+    ),
+    ("cidade", "A cidade."),
+    ("uf", "A sigla do estado."),
+    ("cep", "O CEP."),
+    (
+        "perfis",
+        "Os perfis do negócio em outras redes, um endereço https por linha.",
+    ),
+    (
+        "diretrizes",
+        "Orientações para assistentes de IA sobre o site, uma por linha.",
+    ),
+];
+
+const FERRAMENTAS: [Ferramenta; 18] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
         descricao: "Lista os sites de que a conta participa, com o papel em cada um.",
         argumentos: &[],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "ver_site",
         escopo: "sites:ler",
-        descricao: "Mostra o nome, o endereço e a situação de um site.",
+        descricao: "Mostra a situação de um site, o papel da conta nele e a identidade: nome, descrição, logo e organização.",
         argumentos: &[SITE],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "criar_site",
@@ -443,6 +482,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
             ("nome", "O nome do site."),
         ],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_documentos",
@@ -450,6 +490,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Lista as páginas e os posts de um site, com a situação de cada um.",
         argumentos: &[SITE],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "ver_documento",
@@ -457,6 +498,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Devolve o conteúdo de um documento: o rascunho, ou o que está no ar quando não há rascunho.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "criar_rascunho",
@@ -464,6 +506,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Cria uma página ou um post como rascunho. Nunca é barrado: devolve o identificador e os problemas que impediriam publicar.",
         argumentos: &[SITE],
         com_conteudo: true,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "editar_rascunho",
@@ -471,6 +514,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Regrava o rascunho de um documento. Devolve os problemas que impediriam publicar.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: true,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "validar_documento",
@@ -478,6 +522,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Devolve os problemas do rascunho, com código, campo e mensagem. Use para corrigir antes de pedir revisão.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "enviar_para_revisao",
@@ -485,6 +530,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Pede a revisão do rascunho a um editor. É recusado se houver problema que bloqueia.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "publicar",
@@ -492,6 +538,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Põe o rascunho no ar. Exige papel de editor ou dono no site.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "despublicar",
@@ -499,6 +546,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Tira o documento do ar. O endereço passa a responder 410.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_midia",
@@ -506,6 +554,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Lista as imagens da biblioteca do site, com o id para usar no conteúdo.",
         argumentos: &[SITE],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "enviar_midia",
@@ -521,6 +570,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
             ("base64", "O arquivo, em base64."),
         ],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_autores",
@@ -528,6 +578,7 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Lista os autores cadastrados no site.",
         argumentos: &[SITE],
         com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_categorias",
@@ -535,6 +586,43 @@ const FERRAMENTAS: [Ferramenta; 15] = [
         descricao: "Lista as categorias do blog do site.",
         argumentos: &[SITE],
         com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "salvar_autor",
+        escopo: "conteudo:escrever",
+        descricao: "Cadastra um autor, ou regrava o que já existe com o mesmo nome. Post só vai ao ar com autor que tem foto e bio. Exige papel de editor ou dono.",
+        argumentos: &[SITE, ("nome", "O nome de quem assina.")],
+        com_conteudo: false,
+        opcionais: &[
+            ("cargo", "O cargo ou a ocupação."),
+            ("bio", "Quem é a pessoa, em poucas frases."),
+            ("foto", "O id da foto na biblioteca (listar_midia)."),
+            (
+                "perfis",
+                "Os perfis da pessoa, um endereço https por linha.",
+            ),
+            (
+                "credenciais",
+                "Formação, registro ou experiência, uma por linha.",
+            ),
+        ],
+    },
+    Ferramenta {
+        nome: "salvar_categoria",
+        escopo: "conteudo:escrever",
+        descricao: "Cadastra uma categoria do blog, ou regrava o nome da que tem o mesmo endereço. Exige papel de editor ou dono.",
+        argumentos: &[SITE, ("nome", "O nome da categoria.")],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "editar_identidade",
+        escopo: "sites:editar",
+        descricao: "Muda a identidade do site. Só o que for enviado muda; o resto fica como está. Exige papel de dono.",
+        argumentos: &[SITE],
+        com_conteudo: false,
+        opcionais: IDENTIDADE,
     },
 ];
 
@@ -547,6 +635,12 @@ fn descrever(ferramenta: &Ferramenta) -> Value {
             json!({ "type": "string", "description": descricao }),
         );
         obrigatorios.push(nome);
+    }
+    for (nome, descricao) in ferramenta.opcionais {
+        propriedades.insert(
+            (*nome).to_string(),
+            json!({ "type": "string", "description": descricao }),
+        );
     }
     if ferramenta.com_conteudo {
         propriedades.insert(
@@ -625,6 +719,11 @@ impl Chamada<'_> {
             .ok_or_else(|| recusa(format!("Falta o argumento \"{nome}\".")))
     }
 
+    /// Um argumento que pode faltar. Vazio é diferente de ausente: vazio apaga.
+    fn opcional(&self, nome: &str) -> Option<&str> {
+        self.argumentos.get(nome).and_then(Value::as_str)
+    }
+
     /// O site pedido e o ator da conta nele. Site de que a conta não
     /// participa é tratado como site que não existe.
     async fn site(&self) -> Result<(cms_dados::SiteGravado, Ator), Recusa> {
@@ -644,9 +743,65 @@ impl Chamada<'_> {
             .map_err(|_| recusa("O argumento \"documento\" não é um identificador válido."))
     }
 
+    /// Uma imagem citada só pelo id vira a imagem da biblioteca.
+    async fn imagem(&self, site_id: Uuid, valor: &mut Value) -> Result<(), Recusa> {
+        let Some(id) = valor.as_str() else {
+            return Ok(());
+        };
+        let nao_achada = || recusa(format!("Imagem \"{id}\" não está na biblioteca do site."));
+        let midia_id = Uuid::parse_str(id.trim()).map_err(|_| nao_achada())?;
+        let midia = cms_dados::midia_para_conteudo(&self.estado.pool, site_id, midia_id)
+            .await?
+            .ok_or_else(nao_achada)?;
+        *valor = json!(midia);
+        Ok(())
+    }
+
+    /// O que veio só como referência (slug de autor ou de categoria, id de
+    /// imagem) é trocado pelo cadastro do site.
+    async fn resolver_referencias(
+        &self,
+        site_id: Uuid,
+        dados: &mut serde_json::Map<String, Value>,
+    ) -> Result<(), Recusa> {
+        let pool = &self.estado.pool;
+        if let Some(slug) = dados.get("autor").and_then(Value::as_str) {
+            let autor = cms_dados::autor_para_conteudo(pool, site_id, slug.trim())
+                .await?
+                .ok_or_else(|| {
+                    recusa(format!(
+                        "Autor \"{slug}\" não está cadastrado. Use salvar_autor."
+                    ))
+                })?;
+            dados.insert("autor".into(), json!(autor));
+        }
+        if let Some(slug) = dados.get("categoria").and_then(Value::as_str) {
+            let categoria = cms_dados::categorias_do_site(pool, site_id)
+                .await?
+                .into_iter()
+                .find(|categoria| categoria.slug == slug.trim())
+                .ok_or_else(|| {
+                    recusa(format!(
+                        "Categoria \"{slug}\" não está cadastrada. Use salvar_categoria."
+                    ))
+                })?;
+            dados.insert("categoria".into(), json!(categoria));
+        }
+        if let Some(capa) = dados.get_mut("capa") {
+            self.imagem(site_id, capa).await?;
+        }
+        let blocos = dados.get_mut("corpo").and_then(Value::as_array_mut);
+        for bloco in blocos.into_iter().flatten() {
+            if let Some(midia) = bloco.get_mut("midia") {
+                self.imagem(site_id, midia).await?;
+            }
+        }
+        Ok(())
+    }
+
     /// Lê `conteudo` no contrato do motor. As datas são do servidor: se não
     /// vierem, entram provisórias, e a publicação grava as de verdade.
-    fn conteudo(&self) -> Result<Conteudo, Recusa> {
+    async fn conteudo(&self, site_id: Uuid) -> Result<Conteudo, Recusa> {
         let mut valor = self
             .argumentos
             .get("conteudo")
@@ -657,6 +812,7 @@ impl Chamada<'_> {
             for campo in ["publicadoEm", "atualizadoEm"] {
                 dados.entry(campo).or_insert_with(|| agora.clone());
             }
+            self.resolver_referencias(site_id, dados).await?;
         }
         let conteudo: Conteudo = serde_json::from_value(valor)
             .map_err(|erro| recusa(format!("O conteúdo não segue o contrato: {erro}")))?;
@@ -666,6 +822,22 @@ impl Chamada<'_> {
             ));
         }
         Ok(conteudo)
+    }
+}
+
+/// A identidade com os nomes que `editar_identidade` recebe.
+fn identidade_em_json(dados: &mut DadosDaIdentidade) -> Value {
+    IDENTIDADE
+        .iter()
+        .filter_map(|(nome, _)| Some(((*nome).to_string(), json!(dados.campo(nome)?))))
+        .collect::<serde_json::Map<_, _>>()
+        .into()
+}
+
+fn do_catalogo(erro: ErroDeCatalogo) -> Recusa {
+    match erro {
+        ErroDeCatalogo::Dados(erro) => Recusa::Interna(erro.into()),
+        outro => recusa(outro.to_string()),
     }
 }
 
@@ -718,14 +890,56 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
         "ver_site" => Ok(do_site(
             json!({
                 "site": site.slug,
-                "nome": site.perfil.nome,
-                "descricao": site.perfil.descricao,
                 "situacao": site.situacao.como_texto(),
                 "papel": ator.papel.como_texto(),
                 "dominioProprio": site.dominio_ativo,
+                "identidade": identidade_em_json(&mut DadosDaIdentidade::do_perfil(&site.perfil)),
             }),
             None,
         )),
+        "editar_identidade" => {
+            let mut dados = DadosDaIdentidade::do_perfil(&site.perfil);
+            for (nome, _) in IDENTIDADE {
+                if let (Some(valor), Some(campo)) = (chamada.opcional(nome), dados.campo(nome)) {
+                    *campo = valor.to_string();
+                }
+            }
+            match identidade::aplicar(chamada.estado, &site, &ator, &dados).await? {
+                Ok(()) => Ok(do_site(
+                    json!({ "identidade": identidade_em_json(&mut dados) }),
+                    None,
+                )),
+                Err(motivo) => Err(recusa(motivo)),
+            }
+        }
+        "salvar_autor" => {
+            let foto_id =
+                match chamada.opcional("foto").map(str::trim) {
+                    None | Some("") => None,
+                    Some(id) => Some(Uuid::parse_str(id).map_err(|_| {
+                        recusa("O argumento \"foto\" não é um identificador válido.")
+                    })?),
+                };
+            let texto = |nome: &str| chamada.opcional(nome).unwrap_or_default().to_string();
+            let dados = DadosDoAutor {
+                nome: chamada.texto("nome")?.to_string(),
+                cargo: texto("cargo"),
+                bio: texto("bio"),
+                foto_id,
+                perfis: texto("perfis"),
+                credenciais: texto("credenciais"),
+            };
+            let slug = cms_dados::salvar_autor(pool, site.id, &ator, &dados)
+                .await
+                .map_err(do_catalogo)?;
+            Ok(do_site(json!({ "slug": slug }), None))
+        }
+        "salvar_categoria" => {
+            let slug = cms_dados::salvar_categoria(pool, site.id, &ator, chamada.texto("nome")?)
+                .await
+                .map_err(do_catalogo)?;
+            Ok(do_site(json!({ "slug": slug }), None))
+        }
         "listar_documentos" => {
             let documentos: Vec<Value> = cms_dados::documentos_do_site(pool, site.id)
                 .await?
@@ -779,9 +993,17 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             let autores: Vec<Value> = cms_dados::autores_do_site(pool, site.id)
                 .await?
                 .into_iter()
-                .map(
-                    |autor| json!({ "slug": autor.slug, "nome": autor.nome, "cargo": autor.cargo }),
-                )
+                .map(|autor| {
+                    json!({
+                        "slug": autor.slug,
+                        "nome": autor.nome,
+                        "cargo": autor.cargo,
+                        "bio": autor.bio,
+                        "foto": autor.foto_id,
+                        "perfis": autor.perfis,
+                        "credenciais": autor.credenciais,
+                    })
+                })
                 .collect();
             Ok(do_site(json!({ "autores": autores }), None))
         }
@@ -795,7 +1017,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             } else {
                 None
             };
-            let mut conteudo = chamada.conteudo()?;
+            let mut conteudo = chamada.conteudo(site.id).await?;
             // O que o assistente escreveu sobre a imagem não vale: dimensões e
             // variantes são as da biblioteca.
             cms_dados::hidratar_conteudo(pool, site.id, &mut conteudo).await?;

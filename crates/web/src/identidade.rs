@@ -4,8 +4,9 @@
 use askama::Template;
 use axum::http::{StatusCode, Uri};
 use axum::response::Response;
+use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
-use cms_dominio::{Conta, PerfilDoSite, datas};
+use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -14,15 +15,15 @@ use crate::Estado;
 use crate::acesso::{Acesso, ao_site};
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 
-#[derive(Template)]
-#[template(path = "identidade.html")]
-struct PaginaDeIdentidade {
-    site: String,
-    slug: String,
-    salvo: bool,
-    p: PerfilDoSite,
-    /// Identificador, descrição e se é a logo atual.
-    logos: Vec<(String, String, bool)>,
+/// A identidade como é digitada, no formulário do painel e nos argumentos do
+/// conector. Listas vêm com um item por linha.
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub(crate) struct DadosDaIdentidade {
+    nome: String,
+    descricao: String,
+    /// O identificador da imagem na biblioteca; vazio é sem logo.
+    logo: String,
     razao_social: String,
     telefone: String,
     email: String,
@@ -34,12 +35,67 @@ struct PaginaDeIdentidade {
     diretrizes: String,
 }
 
+impl DadosDaIdentidade {
+    /// O que está gravado: para mostrar na tela e para completar o que o
+    /// conector não mandou.
+    pub(crate) fn do_perfil(perfil: &PerfilDoSite) -> Self {
+        let organizacao = perfil.organizacao.clone();
+        let endereco = organizacao.endereco.unwrap_or(Endereco {
+            logradouro: String::new(),
+            cidade: String::new(),
+            uf: String::new(),
+            cep: String::new(),
+        });
+        Self {
+            nome: perfil.nome.clone(),
+            descricao: perfil.descricao.clone(),
+            logo: perfil.logo.id.clone(),
+            razao_social: organizacao.razao_social.unwrap_or_default(),
+            telefone: organizacao.telefone.unwrap_or_default(),
+            email: organizacao.email.unwrap_or_default(),
+            logradouro: endereco.logradouro,
+            cidade: endereco.cidade,
+            uf: endereco.uf,
+            cep: endereco.cep,
+            perfis: organizacao.perfis.join("\n"),
+            diretrizes: perfil.diretrizes_ia.join("\n"),
+        }
+    }
+
+    /// Um campo pelo nome que o conector usa, para ler ou trocar só ele.
+    pub(crate) fn campo(&mut self, nome: &str) -> Option<&mut String> {
+        Some(match nome {
+            "nome" => &mut self.nome,
+            "descricao" => &mut self.descricao,
+            "logo" => &mut self.logo,
+            "razaoSocial" => &mut self.razao_social,
+            "telefone" => &mut self.telefone,
+            "email" => &mut self.email,
+            "logradouro" => &mut self.logradouro,
+            "cidade" => &mut self.cidade,
+            "uf" => &mut self.uf,
+            "cep" => &mut self.cep,
+            "perfis" => &mut self.perfis,
+            "diretrizes" => &mut self.diretrizes,
+            _ => return None,
+        })
+    }
+}
+
+#[derive(Template)]
+#[template(path = "identidade.html")]
+struct PaginaDeIdentidade {
+    site: String,
+    slug: String,
+    salvo: bool,
+    d: DadosDaIdentidade,
+    /// Identificador, descrição e se é a logo atual.
+    logos: Vec<(String, String, bool)>,
+}
+
 async fn do_dono(estado: &Estado, conta: &Conta, slug: &str) -> Result<Acesso, ErroWeb> {
     Ok(match ao_site(estado, conta, slug).await? {
-        Ok((_, ator)) if !pode_administrar(&ator) => Err(simples(
-            StatusCode::FORBIDDEN,
-            "Só o dono do site mexe na identidade.",
-        )),
+        Ok((_, ator)) if !pode_administrar(&ator) => Err(simples(StatusCode::FORBIDDEN, SO_O_DONO)),
         acesso => acesso,
     })
 }
@@ -54,16 +110,9 @@ pub async fn abrir(
         Ok(acesso) => acesso,
         Err(resposta) => return Ok(resposta),
     };
-    let perfil = site.perfil;
-    let organizacao = perfil.organizacao.clone();
-    let endereco = organizacao.endereco.unwrap_or(Endereco {
-        logradouro: String::new(),
-        cidade: String::new(),
-        uf: String::new(),
-        cep: String::new(),
-    });
+    let dados = DadosDaIdentidade::do_perfil(&site.perfil);
     let corpo = PaginaDeIdentidade {
-        site: perfil.nome.clone(),
+        site: site.perfil.nome,
         slug: site.slug,
         salvo: uri
             .query()
@@ -74,41 +123,17 @@ pub async fn abrir(
             .filter(|midia| midia.situacao != "falhou")
             .map(|midia| {
                 let id = midia.id.to_string();
-                let atual = id == perfil.logo.id;
+                let atual = id == dados.logo;
                 (id, midia.alt, atual)
             })
             .collect(),
-        razao_social: organizacao.razao_social.unwrap_or_default(),
-        telefone: organizacao.telefone.unwrap_or_default(),
-        email: organizacao.email.unwrap_or_default(),
-        logradouro: endereco.logradouro,
-        cidade: endereco.cidade,
-        uf: endereco.uf,
-        cep: endereco.cep,
-        perfis: organizacao.perfis.join("\n"),
-        diretrizes: perfil.diretrizes_ia.join("\n"),
-        p: perfil,
+        d: dados,
     }
     .render()?;
     Ok(html_privado(StatusCode::OK, corpo))
 }
 
-#[derive(Deserialize, Default)]
-#[serde(default)]
-struct Formulario {
-    nome: String,
-    descricao: String,
-    logo: String,
-    razao_social: String,
-    telefone: String,
-    email: String,
-    logradouro: String,
-    cidade: String,
-    uf: String,
-    cep: String,
-    perfis: String,
-    diretrizes: String,
-}
+const SO_O_DONO: &str = "Só o dono do site mexe na identidade.";
 
 fn opcional(texto: &str) -> Option<String> {
     Some(texto.trim().to_string()).filter(|texto| !texto.is_empty())
@@ -123,35 +148,28 @@ fn linhas(texto: &str) -> Vec<String> {
         .collect()
 }
 
-pub async fn gravar(
+/// Grava a identidade digitada. A recusa é uma frase para quem pediu.
+pub(crate) async fn aplicar(
     estado: &Estado,
-    conta: &Conta,
-    slug: &str,
-    corpo: &[u8],
-) -> Result<Response, ErroWeb> {
-    let (site, ator) = match do_dono(estado, conta, slug).await? {
-        Ok(acesso) => acesso,
-        Err(resposta) => return Ok(resposta),
-    };
-    let formulario = serde_urlencoded::from_bytes::<Formulario>(corpo).unwrap_or_default();
-    let nome = formulario.nome.trim();
+    site: &SiteGravado,
+    ator: &Ator,
+    dados: &DadosDaIdentidade,
+) -> Result<Result<(), &'static str>, ErroWeb> {
+    let nome = dados.nome.trim();
     if nome.is_empty() {
-        return Ok(simples(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "Dê um nome ao site.",
-        ));
+        return Ok(Err("Dê um nome ao site."));
     }
     // A logo é da biblioteca do site; qualquer outra coisa fica sem logo.
-    let logo = match Uuid::parse_str(&formulario.logo) {
+    let logo = match Uuid::parse_str(dados.logo.trim()) {
         Ok(id) => cms_dados::midia_para_conteudo(&estado.pool, site.id, id).await?,
         Err(_) => None,
     };
     // Endereço só entra inteiro: pela metade, o dado estruturado sairia errado.
     let endereco = match (
-        opcional(&formulario.logradouro),
-        opcional(&formulario.cidade),
-        opcional(&formulario.uf),
-        opcional(&formulario.cep),
+        opcional(&dados.logradouro),
+        opcional(&dados.cidade),
+        opcional(&dados.uf),
+        opcional(&dados.cep),
     ) {
         (Some(logradouro), Some(cidade), Some(uf), Some(cep)) => Some(Endereco {
             logradouro,
@@ -163,28 +181,47 @@ pub async fn gravar(
     };
     let perfil = PerfilDoSite {
         nome: nome.to_string(),
-        descricao: formulario.descricao.trim().to_string(),
+        descricao: dados.descricao.trim().to_string(),
         logo: logo.unwrap_or_else(cms_dados::midia_vazia),
         organizacao: Organizacao {
-            razao_social: opcional(&formulario.razao_social),
-            telefone: opcional(&formulario.telefone),
-            email: opcional(&formulario.email),
+            razao_social: opcional(&dados.razao_social),
+            telefone: opcional(&dados.telefone),
+            email: opcional(&dados.email),
             endereco,
-            perfis: linhas(&formulario.perfis)
+            perfis: linhas(&dados.perfis)
                 .into_iter()
                 .filter(|perfil| perfil.starts_with("https://"))
                 .collect(),
         },
-        diretrizes_ia: linhas(&formulario.diretrizes),
-        ..site.perfil
+        diretrizes_ia: linhas(&dados.diretrizes),
+        ..site.perfil.clone()
     };
-    cms_dados::atualizar_perfil(&estado.pool, site.id, &ator, &perfil).await?;
+    if !cms_dados::atualizar_perfil(&estado.pool, site.id, ator, &perfil).await? {
+        return Ok(Err(SO_O_DONO));
+    }
     // O nome e o rodapé aparecem em todas as páginas do site.
     estado.cache.invalidar_site(site.id);
-    Ok(redirecionar(
-        StatusCode::SEE_OTHER,
-        &format!("/painel/sites/{}/identidade?r=salvo", site.slug),
-    ))
+    Ok(Ok(()))
+}
+
+pub async fn gravar(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    corpo: &[u8],
+) -> Result<Response, ErroWeb> {
+    let (site, ator) = match do_dono(estado, conta, slug).await? {
+        Ok(acesso) => acesso,
+        Err(resposta) => return Ok(resposta),
+    };
+    let dados = serde_urlencoded::from_bytes::<DadosDaIdentidade>(corpo).unwrap_or_default();
+    Ok(match aplicar(estado, &site, &ator, &dados).await? {
+        Ok(()) => redirecionar(
+            StatusCode::SEE_OTHER,
+            &format!("/painel/sites/{}/identidade?r=salvo", site.slug),
+        ),
+        Err(motivo) => simples(StatusCode::UNPROCESSABLE_ENTITY, motivo),
+    })
 }
 
 #[derive(Template)]

@@ -305,11 +305,14 @@ async fn sitemaps_robots_e_llms_saem_do_motor(pool: PgPool) {
             .contains(&format!("<loc>https://{h}{POST}</loc>"))
     );
     let listagens = pedir(&pool, &h, "/sitemap-categorias.xml").await;
-    assert!(
-        listagens
-            .corpo
-            .contains(&format!("<loc>https://{h}/blog</loc>"))
-    );
+    for caminho in ["/blog", "/blog/categoria/guias", "/autor/helena-prado"] {
+        assert!(
+            listagens
+                .corpo
+                .contains(&format!("<loc>https://{h}{caminho}</loc>")),
+            "{caminho}"
+        );
+    }
     assert_eq!(
         pedir(&pool, &h, "/sitemap-inexistente.xml").await.status,
         StatusCode::NOT_FOUND
@@ -521,4 +524,51 @@ async fn cada_site_serve_a_chave_do_indexnow(pool: PgPool) {
         .status,
         StatusCode::NOT_FOUND
     );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn categoria_e_autor_tem_pagina_com_os_posts_deles(pool: PgPool) {
+    semear(&pool, "oficina", Situacao::Ativo, true).await;
+    let h = host("oficina");
+
+    let todos = pedir(&pool, &h, "/blog")
+        .await
+        .corpo
+        .matches("class=\"cartao\"")
+        .count();
+    let categoria = pedir(&pool, &h, "/blog/categoria/guias").await;
+    assert_eq!(categoria.status, StatusCode::OK);
+    assert!(categoria.corpo.contains("<h1>Guias</h1>"));
+    let da_categoria = categoria.corpo.matches("class=\"cartao\"").count();
+    assert!(
+        da_categoria > 0 && da_categoria < todos,
+        "{da_categoria} de {todos}"
+    );
+    assert!(categoria.corpo.contains(&format!(
+        "<link rel=\"canonical\" href=\"https://{h}/blog/categoria/guias\">"
+    )));
+    // A trilha leva de volta ao blog.
+    assert!(categoria.corpo.contains("<a href=\"/blog\">Blog</a>"));
+
+    let autor = pedir(&pool, &h, "/autor/helena-prado").await;
+    assert_eq!(autor.status, StatusCode::OK);
+    assert!(autor.corpo.contains("<h1>Helena Prado</h1>"));
+    assert!(autor.corpo.contains("class=\"autor sobre\""));
+    assert!(autor.corpo.contains("class=\"cartao\""));
+
+    // O post aponta para as duas.
+    let post = pedir(&pool, &h, POST).await;
+    assert!(post.corpo.contains("href=\"/blog/categoria/"));
+    assert!(post.corpo.contains("href=\"/autor/"));
+
+    // Sem post no ar, não há página; e a barra no fim não cria outra.
+    for caminho in ["/blog/categoria/inexistente", "/autor/ninguem"] {
+        assert_eq!(
+            pedir(&pool, &h, caminho).await.status,
+            StatusCode::NOT_FOUND
+        );
+    }
+    let com_barra = pedir(&pool, &h, "/autor/helena-prado/").await;
+    assert_eq!(com_barra.status, StatusCode::PERMANENT_REDIRECT);
+    assert_eq!(com_barra.cabecalho("location"), "/autor/helena-prado");
 }
