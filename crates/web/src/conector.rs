@@ -24,7 +24,7 @@ use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::identidade::{self, DadosDaIdentidade};
-use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
+use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
 use crate::{Estado, biblioteca};
 
 const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
@@ -204,6 +204,7 @@ pub async fn tela_de_autorizacao(
         Err(resposta) => return Ok(resposta),
     };
     let pedidos: Vec<&str> = pedido.scope.split_whitespace().collect();
+    let retorno = pedido.redirect_uri.clone();
     let corpo = PaginaDeAutorizacao {
         cliente,
         quem: conta.email.clone(),
@@ -220,7 +221,8 @@ pub async fn tela_de_autorizacao(
         pedido,
     }
     .render()?;
-    Ok(html_privado(StatusCode::OK, corpo))
+    // Autorizar ou recusar termina em um redirecionamento para o assistente.
+    Ok(html_privado_com_retorno(StatusCode::OK, corpo, &retorno))
 }
 
 /// Acrescenta parâmetros a um endereço de retorno já registrado.

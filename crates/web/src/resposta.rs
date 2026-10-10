@@ -86,6 +86,43 @@ pub fn redirecionar(status: StatusCode, destino: &str) -> Response {
     }
 }
 
+/// A origem (`esquema://host[:porta]`) de um endereço, se ela só tem o que
+/// cabe em uma política de conteúdo.
+fn origem_de(endereco: &str) -> Option<&str> {
+    let depois_do_esquema = endereco.find("://")? + 3;
+    let fim = endereco[depois_do_esquema..]
+        .find(['/', '?', '#'])
+        .map_or(endereco.len(), |i| depois_do_esquema + i);
+    let origem = &endereco[..fim];
+    let limpa = fim > depois_do_esquema
+        && origem
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | ':' | '/' | '[' | ']'));
+    limpa.then_some(origem)
+}
+
+/// Tela do painel cujo formulário termina em um redirecionamento para outro
+/// site: o consentimento do conector, que devolve a pessoa ao assistente. O
+/// navegador aplica `form-action` também ao redirecionamento que vem depois
+/// do envio, então a origem do destino precisa estar na política, e só ela.
+pub fn html_privado_com_retorno(status: StatusCode, corpo: String, retorno: &str) -> Response {
+    let mut resposta = html_privado(status, corpo);
+    let politica = origem_de(retorno)
+        .map(|origem| {
+            POLITICA_DE_CONTEUDO.replace(
+                "form-action 'self'",
+                &format!("form-action 'self' {origem}"),
+            )
+        })
+        .and_then(|politica| HeaderValue::from_str(&politica).ok());
+    if let Some(politica) = politica {
+        resposta
+            .headers_mut()
+            .insert("content-security-policy", politica);
+    }
+    resposta
+}
+
 /// Tela do painel: é de uma pessoa só. Ninguém no caminho guarda, e buscador
 /// nenhum indexa.
 pub fn html_privado(status: StatusCode, corpo: String) -> Response {
@@ -94,4 +131,46 @@ pub fn html_privado(status: StatusCode, corpo: String) -> Response {
         .headers_mut()
         .insert(CACHE_CONTROL, HeaderValue::from_static("private, no-store"));
     resposta
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[test]
+    fn origem_sai_sem_caminho_e_recusa_o_que_nao_cabe_na_politica() {
+        assert_eq!(
+            origem_de("https://claude.ai/api/mcp/auth_callback"),
+            Some("https://claude.ai")
+        );
+        assert_eq!(
+            origem_de("http://localhost:51234/callback?x=1"),
+            Some("http://localhost:51234")
+        );
+        assert_eq!(origem_de("https://a.example;script-src *"), None);
+        assert_eq!(origem_de("https:///caminho"), None);
+        assert_eq!(origem_de("sem-esquema"), None);
+    }
+
+    #[test]
+    fn consentimento_libera_o_envio_so_para_a_origem_do_retorno() {
+        let resposta = html_privado_com_retorno(
+            StatusCode::OK,
+            String::new(),
+            "https://claude.ai/api/mcp/auth_callback",
+        );
+        let politica = resposta.headers()["content-security-policy"]
+            .to_str()
+            .expect("texto");
+        assert!(politica.contains("form-action 'self' https://claude.ai;"));
+        assert!(politica.contains("script-src 'none'"));
+        // As outras telas continuam só com o próprio painel.
+        let comum = html_privado(StatusCode::OK, String::new());
+        assert!(
+            comum.headers()["content-security-policy"]
+                .to_str()
+                .expect("texto")
+                .contains("form-action 'self';")
+        );
+    }
 }

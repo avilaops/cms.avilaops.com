@@ -1454,6 +1454,14 @@ async fn assistente_so_se_conecta_com_registro_consentimento_e_pkce(pool: PgPool
     assert_eq!(tela.status, StatusCode::OK);
     assert!(tela.corpo.contains("Assistente de teste"));
     assert!(tela.corpo.contains(r#"value="conteudo:escrever" checked"#));
+    // O envio termina em um redirecionamento para o assistente: a política
+    // da tela libera a origem dele, senão o navegador barra a volta.
+    assert!(
+        tela.cabecalho("content-security-policy")
+            .contains("form-action 'self' https://assistente.example;"),
+        "{}",
+        tela.cabecalho("content-security-policy")
+    );
     // Publicar nunca vem marcado.
     assert!(tela.corpo.contains(r#"value="conteudo:publicar">"#));
 
