@@ -9,13 +9,13 @@ use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::path::Path;
 
-use chrono::Utc;
-use cms_dominio::{PerfilDoSite, Situacao};
+use chrono::{DateTime, Utc};
+use cms_dados::fluxo::{self, ErroDeFluxo};
+use cms_dominio::{Ator, PerfilDoSite, Situacao};
 use image::{DynamicImage, ImageFormat, Rgb, RgbImage};
 use motor_web::demonstracao;
 use motor_web::imagem::{VarianteGerada, processar_imagem};
 use motor_web::tipos::{Bloco, Conteudo, Documento, Midia, Variante};
-use motor_web::validacao::{Contexto, pode_publicar, validar};
 use sqlx::PgPool;
 
 use crate::Erro;
@@ -139,34 +139,29 @@ fn preparar() -> Result<(PerfilDoSite, Vec<Documento>, Vec<VarianteGerada>), Err
     Ok((perfil, documentos, acervo.arquivos))
 }
 
-/// A mesma trava de qualquer publicação: o que o motor barra não vai ao ar.
-fn conferir(documentos: &[Documento]) -> Result<(), Erro> {
-    for (i, documento) in documentos.iter().enumerate() {
-        let outros = || {
-            documentos
-                .iter()
-                .enumerate()
-                .filter(move |(j, _)| *j != i)
-                .map(|(_, d)| d)
-        };
-        let titulos: Vec<String> = outros().map(|d| d.seo().titulo.clone()).collect();
-        let descricoes: Vec<String> = outros().map(|d| d.seo().descricao.clone()).collect();
-        let contexto = Contexto {
-            titulos_em_uso: &titulos,
-            descricoes_em_uso: &descricoes,
-            ..Contexto::vazio()
-        };
-        let problemas = validar(documento, &contexto);
-        if !pode_publicar(&problemas) {
-            let codigos: Vec<&str> = problemas.iter().map(|p| p.codigo).collect();
-            return Err(Erro::Semente(format!(
-                "{} não pode ser publicado: {}",
-                documento.caminho,
-                codigos.join(", ")
-            )));
-        }
+/// A data em que o exemplo diz que o documento foi ao ar.
+fn data_de_publicacao(documento: &Documento) -> DateTime<Utc> {
+    match &documento.conteudo {
+        Conteudo::Pagina(pagina) => pagina.publicado_em,
+        Conteudo::Post(post) => post.publicado_em,
+        Conteudo::Produto(produto) => produto.atualizado_em,
     }
-    Ok(())
+}
+
+/// O que o fluxo barrou, com os códigos do motor quando for o caso.
+fn recusa(documento: &Documento, erro: &ErroDeFluxo) -> Erro {
+    let motivo = match erro {
+        ErroDeFluxo::Recusado(problemas) => problemas
+            .iter()
+            .map(|problema| problema.codigo)
+            .collect::<Vec<_>>()
+            .join(", "),
+        outro => outro.to_string(),
+    };
+    Erro::Semente(format!(
+        "{} não pode ser publicado: {motivo}",
+        documento.caminho
+    ))
 }
 
 pub async fn semear_demonstracao(pool: &PgPool, diretorio_de_midia: &Path) -> Result<Resumo, Erro> {
@@ -176,8 +171,6 @@ pub async fn semear_demonstracao(pool: &PgPool, diretorio_de_midia: &Path) -> Re
             .map_err(|erro| {
                 Erro::Semente(format!("o preparo das imagens foi interrompido: {erro}"))
             })??;
-    conferir(&documentos)?;
-
     // Recriar o site troca o identificador dele; as imagens antigas saem junto.
     if let Some(anterior) = cms_dados::site_por_slug(pool, SLUG).await? {
         match tokio::fs::remove_dir_all(diretorio_de_midia.join(anterior.id.to_string())).await {
@@ -196,13 +189,75 @@ pub async fn semear_demonstracao(pool: &PgPool, diretorio_de_midia: &Path) -> Re
         tokio::fs::write(pasta.join(&arquivo.arquivo), &arquivo.bytes).await?;
     }
 
-    let agora = Utc::now();
+    // Pelo mesmo caminho do painel: rascunho, validação do motor e publicação.
+    // Cada documento vai ao ar na data em que o exemplo diz que foi publicado,
+    // para o blog de demonstração não nascer com tudo no mesmo dia.
+    let equipe = Ator::da_equipe("semente");
     for documento in &documentos {
-        cms_dados::publicar(pool, site_id, documento, agora).await?;
+        let salvo = fluxo::salvar_rascunho(pool, site_id, &equipe, None, &documento.conteudo)
+            .await
+            .map_err(|erro| recusa(documento, &erro))?;
+        fluxo::publicar(
+            pool,
+            site_id,
+            &equipe,
+            salvo.documento_id,
+            data_de_publicacao(documento),
+        )
+        .await
+        .map_err(|erro| recusa(documento, &erro))?;
     }
     Ok(Resumo {
         slug: SLUG,
         documentos: documentos.len(),
         arquivos: arquivos.len(),
     })
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+    async fn a_demonstracao_vai_ao_ar_pelo_fluxo_de_publicacao(pool: PgPool) {
+        let diretorio = std::env::temp_dir().join(format!("cms-semente-{}", uuid::Uuid::new_v4()));
+        let resumo = semear_demonstracao(&pool, &diretorio)
+            .await
+            .expect("demonstração semeada");
+        assert_eq!(resumo.documentos, 9);
+        assert!(resumo.arquivos > 0);
+
+        // Tudo no ar, e cada publicação passou pelo histórico e virou evento.
+        let (no_ar, publicacoes, eventos): (i64, i64, i64) = sqlx::query_as(
+            r#"
+            select (select count(*) from documento where situacao = 'publicado'),
+                   (select count(*) from historico where acao = 'conteudo.publicado' and equipe),
+                   (select count(*) from evento where tipo = 'conteudo.publicado')
+            "#,
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("contagens");
+        assert_eq!((no_ar, publicacoes, eventos), (9, 9, 9));
+
+        // A data de publicação é a do exemplo, gravada pelo servidor.
+        let publicado_em: DateTime<Utc> = sqlx::query_scalar(
+            "select publicado_em from documento where caminho = '/blog/como-escolher-a-madeira-da-mesa'",
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("post do exemplo");
+        assert_eq!(publicado_em.date_naive().to_string(), "2026-08-12");
+
+        // Semear de novo recria o site, sem sobrar nada do anterior.
+        semear_demonstracao(&pool, &diretorio)
+            .await
+            .expect("demonstração recriada");
+        let sites: i64 = sqlx::query_scalar("select count(*) from site")
+            .fetch_one(&pool)
+            .await
+            .expect("contagem");
+        assert_eq!(sites, 1);
+        std::fs::remove_dir_all(&diretorio).expect("pasta removida");
+    }
 }
