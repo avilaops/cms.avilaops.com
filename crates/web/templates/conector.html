@@ -1,0 +1,24 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Conector para assistentes{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel">‹ Meus sites</a>
+<h1>Conector para assistentes de IA</h1>
+<p>Cole este endereço no seu assistente e autorize na tela que ele abrir.</p>
+<label for="endereco">Endereço do conector</label>
+<input id="endereco" readonly value="{{ endereco }}">
+<h2>Conexões em vigor</h2>
+{%- if conexoes.is_empty() %}
+<p>Nenhum assistente conectado.</p>
+{%- else %}
+<ul>
+{%- for conexao in conexoes %}
+<li>
+<strong>{{ conexao.cliente }}</strong>
+<span class="etiquetas">desde {{ conexao.desde }} · {{ conexao.chamadas }} chamadas</span>
+<span class="etiquetas">Pode: {{ conexao.pode }}</span>
+<form class="discreto" method="post" action="/painel/conector/{{ conexao.id }}/revogar"><button type="submit">Desconectar</button></form>
+</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{% endblock %}

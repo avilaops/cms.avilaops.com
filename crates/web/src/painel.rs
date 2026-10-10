@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conteudo, equipe};
+use crate::{biblioteca, conector, conteudo, equipe};
 
 const CAMINHO: &str = "/painel";
 
@@ -138,8 +138,14 @@ async fn entrar(
                     "Não foi possível confirmar o seu login. Feche esta aba e entre de novo.",
                 )));
             }
+            // O pedido volta inteiro: a tela de autorização do conector vive
+            // nos parâmetros da consulta.
+            let consulta = uri
+                .query()
+                .map(|consulta| format!("{consulta}&"))
+                .unwrap_or_default();
             let retorno = format!(
-                "{}{}?volta=1",
+                "{}{}?{consulta}volta=1",
                 origem_do_painel(&estado.configuracao, host),
                 uri.path()
             );
@@ -299,6 +305,10 @@ enum Rota<'a> {
     Catalogo(&'a str),
     SalvarAutor(&'a str),
     SalvarCategoria(&'a str),
+    Autorizar,
+    Decidir,
+    Conector,
+    RevogarConexao(&'a str),
 }
 
 impl<'a> Rota<'a> {
@@ -323,6 +333,10 @@ impl<'a> Rota<'a> {
             (false, ["painel", "sites", slug, "midia", id, "apagar"]) => {
                 Some(Rota::ApagarMidia(slug, id))
             }
+            (true, ["oauth", "authorize"]) => Some(Rota::Autorizar),
+            (false, ["oauth", "authorize"]) => Some(Rota::Decidir),
+            (true, ["painel", "conector"]) => Some(Rota::Conector),
+            (false, ["painel", "conector", id, "revogar"]) => Some(Rota::RevogarConexao(id)),
             (true, ["painel", "sites", slug]) => Some(Rota::Site(slug)),
             (true, ["painel", "sites", slug, "novo", especie]) => {
                 Some(Rota::NovoDocumento(slug, especie))
@@ -350,6 +364,8 @@ impl<'a> Rota<'a> {
                 | Rota::Gravar(..)
                 | Rota::SalvarAutor(_)
                 | Rota::SalvarCategoria(_)
+                | Rota::Decidir
+                | Rota::RevogarConexao(_)
         )
     }
 }
@@ -363,6 +379,24 @@ async fn responder(
     corpo: &Bytes,
 ) -> Result<Response, ErroWeb> {
     let caminho = uri.path();
+    // O que o assistente chama sem sessão de navegador: quem se identifica
+    // ali é o cliente registrado e o token, não o cookie do Auth.
+    let origem = origem_do_painel(&estado.configuracao, host);
+    let leitura = metodo == Method::GET;
+    match caminho {
+        "/.well-known/oauth-authorization-server" if leitura => {
+            return Ok(conector::metadados(&origem));
+        }
+        "/.well-known/oauth-protected-resource" if leitura => {
+            return Ok(conector::recurso_protegido(&origem));
+        }
+        "/oauth/register" if metodo == Method::POST => {
+            return conector::registrar(estado, corpo).await;
+        }
+        "/oauth/token" if metodo == Method::POST => return conector::token(estado, corpo).await,
+        "/mcp" => return conector::mcp(estado, &origem, metodo, cabecalhos, corpo).await,
+        _ => {}
+    }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
@@ -418,6 +452,13 @@ async fn responder(
         Rota::SalvarCategoria(slug) => {
             conteudo::salvar_no_catalogo(estado, &conta, slug, false, corpo).await
         }
+        Rota::Autorizar => conector::tela_de_autorizacao(estado, &conta, uri).await,
+        Rota::Decidir => conector::autorizar(estado, &conta, corpo).await,
+        Rota::Conector => {
+            let origem = origem_do_painel(&estado.configuracao, host);
+            conector::tela(estado, &conta, &origem).await
+        }
+        Rota::RevogarConexao(id) => conector::revogar(estado, &conta, id).await,
     }
 }
 

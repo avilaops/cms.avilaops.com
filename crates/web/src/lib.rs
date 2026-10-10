@@ -3,6 +3,7 @@
 mod acesso;
 mod admin;
 mod biblioteca;
+mod conector;
 mod conteudo;
 mod editor;
 mod equipe;

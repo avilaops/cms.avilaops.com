@@ -398,6 +398,7 @@ dependencies = [
 name = "cms-dados"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "cms-dominio",
  "motor-web",
@@ -457,6 +458,7 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "cms-dados",
  "cms-dominio",

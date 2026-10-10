@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select c.id, k.nome as cliente, c.escopos, c.criado_em,\n               (select count(*) from chamada_mcp m where m.conexao_id = c.id) as \"chamadas!\"\n        from conexao_mcp c\n        join cliente_mcp k on k.id = c.cliente_id\n        where c.conta_sub = $1 and c.revogada_em is null and c.renovacao_expira_em > now()\n        order by c.criado_em desc\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "cliente",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "escopos",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
+        "name": "criado_em",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "chamadas!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "41db2412ad4ea79e337ba380b0bf7d95fa5315696ddc766856d949575c79cce1"
+}

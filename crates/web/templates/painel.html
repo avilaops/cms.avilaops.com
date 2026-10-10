@@ -1,6 +1,7 @@
 {% extends "painel_base.html" %}
 {% block titulo %}Meus sites{% endblock %}
 {% block conteudo %}
+<a class="acao" href="/painel/conector">Assistentes de IA</a>
 <h1>Meus sites</h1>
 <p class="quem">{{ quem }}</p>
 {%- if let Some(erro) = erro %}

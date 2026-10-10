@@ -29,7 +29,7 @@ login. Nenhum site está no ar.
 | Painel | Página do site com a lista de páginas e posts, editor de blocos sem JavaScript, prévia pelo template do site, ações de revisão e publicação por papel, cadastro de autores e categorias | Feita; faltam as telas de aparência, menu e histórico |
 | Mídia | Envio pelo painel com `alt` obrigatório, original em disco, rotina que gera AVIF e WebP, uso por documento, limite de espaço por site; imagem em uso não é apagada e sem variante não vai ao ar | Feita |
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo e convite; o workflow está criado no n8n e ainda não publicado, à espera das duas credenciais próprias |
-| Conector | Autorização e ferramentas para assistentes de IA | A fazer |
+| Conector | Servidor de autorização próprio (registro dinâmico, PKCE S256, tokens só como hash), ponto MCP com 15 ferramentas por escopo, tela de conexões com desconectar, registro de chamadas sem argumentos | Feita |
 | Domínio próprio, cache e rotinas | Conferência de DNS, TLS sob demanda, cache por host, agendamento | A fazer |
 | Primeira subida | Container no servidor de aplicações e site de demonstração no ar | A fazer; depende das pendências da spec do CMS |
 

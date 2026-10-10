@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update conexao_mcp\n        set acesso_hash = $3, acesso_expira_em = now() + make_interval(secs => $4),\n            renovacao_hash = $5, renovacao_expira_em = now() + interval '30 days'\n        where renovacao_hash = $1 and cliente_id = $2 and revogada_em is null\n          and renovacao_expira_em > now()\n        returning escopos\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "escopos",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Float8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1325fe37e9c3028ce29be43be2cb49da5aa265829463de465f0d0cb600ffe9d1"
+}

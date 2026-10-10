@@ -25,6 +25,7 @@ motor-web = { git = "https://github.com/avilaops/motor-web", rev = "c21c3e90b2bb
 
 askama = "0.16"
 axum = "0.8"
+base64 = "0.22"
 # Sem OpenSSL na imagem: TLS pelo rustls.
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 chrono = { version = "0.4", default-features = false, features = ["serde", "std", "clock"] }

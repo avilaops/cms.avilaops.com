@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, conta_sub, conta_email, conta_nome, conta_equipe, escopos\n        from conexao_mcp\n        where acesso_hash = $1 and revogada_em is null and acesso_expira_em > now()\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "conta_sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "conta_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "conta_nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "conta_equipe",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "escopos",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "012d81a273b7e95714b9d96331234213d6bcd2962f879dd6b3d5d65d5ae6a6d2"
+}

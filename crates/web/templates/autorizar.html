@@ -1,0 +1,21 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Autorizar {{ cliente }}{% endblock %}
+{% block conteudo %}
+<h1>Autorizar assistente</h1>
+<p class="quem">{{ quem }}</p>
+<p><strong>{{ cliente }}</strong> quer acessar o CMS em seu nome. Ele só alcança os sites de que você participa, com o papel que você tem em cada um.</p>
+<form method="post" action="/oauth/authorize">
+<input type="hidden" name="response_type" value="{{ pedido.response_type }}">
+<input type="hidden" name="client_id" value="{{ pedido.client_id }}">
+<input type="hidden" name="redirect_uri" value="{{ pedido.redirect_uri }}">
+<input type="hidden" name="code_challenge" value="{{ pedido.code_challenge }}">
+<input type="hidden" name="code_challenge_method" value="{{ pedido.code_challenge_method }}">
+<input type="hidden" name="state" value="{{ pedido.state }}">
+{%- for escopo in escopos %}
+<label class="marcar"><input type="checkbox" name="escopo" value="{{ escopo.valor }}"{% if escopo.marcado %} checked{% endif %}> {{ escopo.rotulo }}</label>
+{%- endfor %}
+<p class="dica">Publicar vem desmarcado: o assistente escreve e envia para revisão, e uma pessoa publica.</p>
+<button name="decisao" value="autorizar">Autorizar</button>
+<button class="secundario" name="decisao" value="recusar">Recusar</button>
+</form>
+{% endblock %}

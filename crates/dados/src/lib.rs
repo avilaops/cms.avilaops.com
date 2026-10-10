@@ -2,6 +2,7 @@
 //! consultas são conferidas na compilação.
 
 mod catalogo;
+mod conector;
 mod contas;
 mod documentos;
 mod eventos;
@@ -17,6 +18,11 @@ pub use catalogo::{
     autor_para_conteudo, autores_do_site, categorias_do_site, documentos_do_site, midia_vazia,
     salvar_autor, salvar_categoria,
 };
+pub use conector::{
+    Autorizacao, ClienteMcp, Conexao, ConexaoDaConta, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeConector,
+    Tokens, cliente_mcp, conexao_por_token, conexoes_da_conta, criar_codigo, registrar_chamada,
+    registrar_cliente, renovar_tokens, revogar_conexao, trocar_codigo,
+};
 pub use contas::{
     ConviteCriado, ConvitePendente, ErroDeConta, Membro, SiteDaConta, aceitar_convite,
     convites_pendentes, criar_convite, criar_site_para, equipe_do_site, papel_no_site,
@@ -31,8 +37,8 @@ pub use eventos::{
 };
 pub use midias::{
     ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada, apagar_midia,
-    concluir_midia, falhar_midia, hash_de_conteudo, midia_para_conteudo, midias_do_site,
-    registrar_midia, reivindicar_midia,
+    concluir_midia, falhar_midia, hash_de_conteudo, hidratar_conteudo, midia_para_conteudo,
+    midias_do_site, registrar_midia, reivindicar_midia,
 };
 pub use sites::{
     SiteGravado, apagar_site, ativar_dominio, criar_site, mudar_situacao, site_por_dominio,

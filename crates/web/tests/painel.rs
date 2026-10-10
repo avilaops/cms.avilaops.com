@@ -1233,3 +1233,494 @@ async fn post_sai_com_autor_categoria_e_capa_do_cadastro(pool: PgPool) {
     assert_eq!(recusada.status, StatusCode::CONFLICT);
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
+
+const RETORNO: &str = "https://assistente.example/callback";
+// O par de exemplo da RFC 7636.
+const VERIFICADOR: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+const DESAFIO: &str = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
+
+impl Painel {
+    /// Um pedido do assistente: sem cookie, com corpo e, se houver, token.
+    async fn do_assistente(
+        &self,
+        caminho: &str,
+        tipo: &str,
+        token: Option<&str>,
+        corpo: String,
+    ) -> Resposta {
+        let mut pedido = Request::builder()
+            .method("POST")
+            .uri(caminho)
+            .header("host", HOST_DO_PAINEL)
+            .header("content-type", tipo);
+        if let Some(token) = token {
+            pedido = pedido.header("authorization", format!("Bearer {token}"));
+        }
+        self.enviar(pedido, Body::from(corpo)).await
+    }
+
+    async fn registrar_assistente(&self) -> String {
+        let resposta = self
+            .do_assistente(
+                "/oauth/register",
+                "application/json",
+                None,
+                json!({ "client_name": "Assistente de teste", "redirect_uris": [RETORNO] })
+                    .to_string(),
+            )
+            .await;
+        assert_eq!(resposta.status, StatusCode::CREATED, "{}", resposta.corpo);
+        let corpo: Value = serde_json::from_str(&resposta.corpo).expect("json");
+        corpo["client_id"].as_str().expect("client_id").to_string()
+    }
+
+    /// A pessoa autoriza na tela, com os escopos marcados. Devolve o código.
+    async fn autorizar(&self, quem: &str, cliente: &str, escopos: &[&str]) -> String {
+        let mut campos = vec![
+            ("response_type", "code"),
+            ("client_id", cliente),
+            ("redirect_uri", RETORNO),
+            ("code_challenge", DESAFIO),
+            ("code_challenge_method", "S256"),
+            ("state", "xyz"),
+            ("decisao", "autorizar"),
+        ];
+        campos.extend(escopos.iter().map(|escopo| ("escopo", *escopo)));
+        let resposta = self
+            .postar(quem, "/oauth/authorize", &formulario(&campos))
+            .await;
+        assert_eq!(resposta.status, StatusCode::SEE_OTHER, "{}", resposta.corpo);
+        let destino = resposta.cabecalho("location");
+        assert!(
+            destino.starts_with(&format!("{RETORNO}?code=")),
+            "{destino}"
+        );
+        assert!(destino.ends_with("&state=xyz"), "{destino}");
+        destino
+            .trim_start_matches(&format!("{RETORNO}?code="))
+            .trim_end_matches("&state=xyz")
+            .to_string()
+    }
+
+    async fn trocar(&self, campos: &[(&str, &str)]) -> (StatusCode, Value) {
+        let resposta = self
+            .do_assistente(
+                "/oauth/token",
+                "application/x-www-form-urlencoded",
+                None,
+                formulario(campos),
+            )
+            .await;
+        (
+            resposta.status,
+            serde_json::from_str(&resposta.corpo).expect("json"),
+        )
+    }
+
+    /// Conecta um assistente à conta e devolve (cliente, acesso, renovação).
+    async fn conectar(&self, quem: &str, escopos: &[&str]) -> (String, String, String) {
+        let cliente = self.registrar_assistente().await;
+        let codigo = self.autorizar(quem, &cliente, escopos).await;
+        let (status, tokens) = self
+            .trocar(&[
+                ("grant_type", "authorization_code"),
+                ("code", &codigo),
+                ("code_verifier", VERIFICADOR),
+                ("client_id", &cliente),
+                ("redirect_uri", RETORNO),
+            ])
+            .await;
+        assert_eq!(status, StatusCode::OK, "{tokens}");
+        let texto = |campo: &str| tokens[campo].as_str().expect("token").to_string();
+        (cliente, texto("access_token"), texto("refresh_token"))
+    }
+
+    async fn rpc(&self, token: &str, metodo: &str, parametros: Value) -> Value {
+        let resposta = self
+            .do_assistente(
+                "/mcp",
+                "application/json",
+                Some(token),
+                json!({ "jsonrpc": "2.0", "id": 1, "method": metodo, "params": parametros })
+                    .to_string(),
+            )
+            .await;
+        assert_eq!(resposta.status, StatusCode::OK, "{}", resposta.corpo);
+        serde_json::from_str(&resposta.corpo).expect("json")
+    }
+
+    /// Chama uma ferramenta. Devolve se deu erro e o que ela respondeu.
+    async fn ferramenta(&self, token: &str, nome: &str, argumentos: Value) -> (bool, Value) {
+        let resposta = self
+            .rpc(
+                token,
+                "tools/call",
+                json!({ "name": nome, "arguments": argumentos }),
+            )
+            .await;
+        let resultado = &resposta["result"];
+        let texto = resultado["content"][0]["text"].as_str().expect("texto");
+        (
+            resultado["isError"].as_bool().expect("isError"),
+            serde_json::from_str(texto).unwrap_or_else(|_| json!(texto)),
+        )
+    }
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_so_se_conecta_com_registro_consentimento_e_pkce(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+
+    let metadados = painel
+        .abrir(None, "/.well-known/oauth-authorization-server")
+        .await;
+    assert_eq!(metadados.status, StatusCode::OK);
+    let metadados: Value = serde_json::from_str(&metadados.corpo).expect("json");
+    assert_eq!(
+        metadados["authorization_endpoint"],
+        "https://cms.teste/oauth/authorize"
+    );
+    assert_eq!(
+        metadados["code_challenge_methods_supported"],
+        json!(["S256"])
+    );
+
+    // Retorno em http fora da máquina de quem usa não é registrado.
+    let ruim = painel
+        .do_assistente(
+            "/oauth/register",
+            "application/json",
+            None,
+            json!({ "redirect_uris": ["http://golpe.example/cb"] }).to_string(),
+        )
+        .await;
+    assert_eq!(ruim.status, StatusCode::BAD_REQUEST);
+
+    let cliente = painel.registrar_assistente().await;
+    let pedido = format!(
+        "/oauth/authorize?response_type=code&client_id={cliente}&redirect_uri={}&code_challenge={DESAFIO}&code_challenge_method=S256&state=xyz",
+        "https%3A%2F%2Fassistente.example%2Fcallback"
+    );
+    // Sem sessão, a pessoa entra e volta para o mesmo pedido.
+    let sem_sessao = painel.abrir(None, &pedido).await;
+    assert_eq!(sem_sessao.status, StatusCode::FOUND);
+    assert!(sem_sessao.cabecalho("location").contains("code_challenge"));
+
+    let tela = painel.abrir(Some("ana"), &pedido).await;
+    assert_eq!(tela.status, StatusCode::OK);
+    assert!(tela.corpo.contains("Assistente de teste"));
+    assert!(tela.corpo.contains(r#"value="conteudo:escrever" checked"#));
+    // Publicar nunca vem marcado.
+    assert!(tela.corpo.contains(r#"value="conteudo:publicar">"#));
+
+    // Cliente desconhecido, retorno não registrado e PKCE fraco param na tela.
+    for errado in [
+        pedido.replace(&cliente, &Uuid::new_v4().to_string()),
+        pedido.replace("assistente.example", "outro.example"),
+        pedido.replace("S256", "plain"),
+    ] {
+        assert_eq!(
+            painel.abrir(Some("ana"), &errado).await.status,
+            StatusCode::BAD_REQUEST
+        );
+    }
+
+    // Recusar volta ao cliente com a recusa, sem código.
+    let recusado = painel
+        .postar(
+            "ana",
+            "/oauth/authorize",
+            &formulario(&[
+                ("response_type", "code"),
+                ("client_id", &cliente),
+                ("redirect_uri", RETORNO),
+                ("code_challenge", DESAFIO),
+                ("code_challenge_method", "S256"),
+                ("state", "xyz"),
+                ("decisao", "recusar"),
+            ]),
+        )
+        .await;
+    assert!(
+        recusado
+            .cabecalho("location")
+            .contains("error=access_denied")
+    );
+
+    // Verificador errado gasta o código: nem o certo o troca depois.
+    let codigo = painel.autorizar("ana", &cliente, &["sites:ler"]).await;
+    let troca = |verificador: &'static str| {
+        let (codigo, cliente) = (codigo.clone(), cliente.clone());
+        let painel = &painel;
+        async move {
+            painel
+                .trocar(&[
+                    ("grant_type", "authorization_code"),
+                    ("code", &codigo),
+                    ("code_verifier", verificador),
+                    ("client_id", &cliente),
+                    ("redirect_uri", RETORNO),
+                ])
+                .await
+        }
+    };
+    let (status, corpo) = troca("verificador-errado-verificador-errado-12345").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(corpo["error"], "invalid_grant");
+    assert_eq!(troca(VERIFICADOR).await.0, StatusCode::BAD_REQUEST);
+
+    // Sem token, o ponto MCP diz onde pedir acesso.
+    let sem_token = painel
+        .do_assistente("/mcp", "application/json", None, "{}".to_string())
+        .await;
+    assert_eq!(sem_token.status, StatusCode::UNAUTHORIZED);
+    assert!(
+        sem_token
+            .cabecalho("www-authenticate")
+            .contains("https://cms.teste/.well-known/oauth-protected-resource")
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    painel
+        .criar_site("caio", "oficina", "Oficina do Caio")
+        .await;
+    let (cliente, token, renovacao) = painel
+        .conectar("ana", &["sites:ler", "conteudo:ler", "conteudo:escrever"])
+        .await;
+
+    let inicio = painel.rpc(&token, "initialize", json!({})).await;
+    assert_eq!(inicio["result"]["serverInfo"]["name"], "cms-avila-ops");
+    let lista = painel.rpc(&token, "tools/list", json!({})).await;
+    assert_eq!(
+        lista["result"]["tools"].as_array().expect("lista").len(),
+        15
+    );
+
+    let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
+    assert!(!erro);
+    assert_eq!(
+        sites["sites"],
+        json!([{ "site": "padaria", "nome": "Padaria da Ana", "situacao": "em-montagem", "papel": "dono" }])
+    );
+
+    // O site de outra conta não existe para esta conexão.
+    let (erro, resposta) = painel
+        .ferramenta(&token, "listar_documentos", json!({ "site": "oficina" }))
+        .await;
+    assert!(erro);
+    assert!(resposta.as_str().expect("frase").contains("não encontrado"));
+
+    // Um rascunho incompleto é salvo, e os problemas voltam com código e campo.
+    let conteudo = |descricao: &str| {
+        json!({
+            "especie": "pagina",
+            "dados": {
+                "slug": "contato",
+                "titulo": "Contato",
+                "corpo": [{ "tipo": "paragrafo", "trechos": [{ "texto": "Fale com a gente." }] }],
+                "seo": { "titulo": "Contato da Padaria da Ana", "descricao": descricao, "indexar": true }
+            }
+        })
+    };
+    let (erro, criado) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": conteudo("") }),
+        )
+        .await;
+    assert!(!erro, "{criado}");
+    let documento = criado["documento"].as_str().expect("documento").to_string();
+    assert!(
+        criado["problemas"]
+            .as_array()
+            .expect("problemas")
+            .iter()
+            .any(|p| p["codigo"] == "seo.descricao.vazia" && p["campo"] == "seo.descricao")
+    );
+    let alvo = json!({ "site": "padaria", "documento": documento });
+    let (erro, recusa) = painel
+        .ferramenta(&token, "enviar_para_revisao", alvo.clone())
+        .await;
+    assert!(erro);
+    assert!(
+        recusa
+            .as_str()
+            .expect("frase")
+            .contains("seo.descricao.vazia")
+    );
+
+    // Corrige, confere e envia para revisão.
+    let corrigido = conteudo("Telefone, endereço e horário de atendimento da Padaria da Ana.");
+    let (erro, _) = painel
+        .ferramenta(
+            &token,
+            "editar_rascunho",
+            json!({ "site": "padaria", "documento": documento, "conteudo": corrigido }),
+        )
+        .await;
+    assert!(!erro);
+    let (_, validado) = painel
+        .ferramenta(&token, "validar_documento", alvo.clone())
+        .await;
+    assert!(
+        validado["problemas"]
+            .as_array()
+            .expect("problemas")
+            .iter()
+            .all(|p| p["gravidade"] != "bloqueia")
+    );
+    let (erro, enviado) = painel
+        .ferramenta(&token, "enviar_para_revisao", alvo.clone())
+        .await;
+    assert!(!erro, "{enviado}");
+
+    // A conexão não tem o escopo de publicar nem o de imagens: quem publica é gente.
+    for ferramenta in ["publicar", "listar_midia"] {
+        let (erro, resposta) = painel.ferramenta(&token, ferramenta, alvo.clone()).await;
+        assert!(erro, "{ferramenta}");
+        assert!(
+            resposta
+                .as_str()
+                .expect("frase")
+                .contains("não tem a permissão")
+        );
+    }
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/contato").await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // O registro guarda a ferramenta e os identificadores, e se deu certo.
+    let chamadas: Vec<(String, bool, bool)> = sqlx::query_as(
+        "select ferramenta, deu_certo, documento_id is not null from chamada_mcp order by id",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("chamadas");
+    assert_eq!(chamadas.len(), 9, "{chamadas:?}");
+    assert_eq!(chamadas[2], ("criar_rascunho".to_string(), true, true));
+    assert_eq!(chamadas[7], ("publicar".to_string(), false, false));
+
+    // Renovar troca o par: o token antigo deixa de valer.
+    let (status, novos) = painel
+        .trocar(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &renovacao),
+            ("client_id", &cliente),
+        ])
+        .await;
+    assert_eq!(status, StatusCode::OK, "{novos}");
+    let novo = novos["access_token"].as_str().expect("token").to_string();
+    let antigo = painel
+        .do_assistente("/mcp", "application/json", Some(&token), "{}".to_string())
+        .await;
+    assert_eq!(antigo.status, StatusCode::UNAUTHORIZED);
+    assert!(!painel.ferramenta(&novo, "listar_sites", json!({})).await.0);
+
+    // A pessoa vê a conexão no painel e a corta.
+    let tela = painel.abrir(Some("ana"), "/painel/conector").await;
+    assert!(tela.corpo.contains("Assistente de teste"));
+    assert!(tela.corpo.contains("https://cms.teste/mcp"));
+    let conexao: Uuid = sqlx::query_scalar("select id from conexao_mcp")
+        .fetch_one(&pool)
+        .await
+        .expect("conexão");
+    // Outra conta não desconecta o assistente de ninguém.
+    painel
+        .postar("caio", &format!("/painel/conector/{conexao}/revogar"), "")
+        .await;
+    assert!(!painel.ferramenta(&novo, "listar_sites", json!({})).await.0);
+    painel
+        .postar("ana", &format!("/painel/conector/{conexao}/revogar"), "")
+        .await;
+    let cortado = painel
+        .do_assistente("/mcp", "application/json", Some(&novo), "{}".to_string())
+        .await;
+    assert_eq!(cortado.status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_com_permissao_envia_imagem_e_publica(pool: PgPool) {
+    use base64::Engine;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "conteudo:ler",
+                "conteudo:escrever",
+                "conteudo:publicar",
+                "midia:escrever",
+            ],
+        )
+        .await;
+
+    let base64 = base64::engine::general_purpose::STANDARD.encode(png(1400, 800, 33));
+    let (erro, sem_alt) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({ "site": "padaria", "nome": "fachada.png", "alt": " ", "base64": base64 }),
+        )
+        .await;
+    assert!(erro, "{sem_alt}");
+    let (erro, enviada) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({ "site": "padaria", "nome": "fachada.png", "alt": "Fachada da padaria", "base64": base64 }),
+        )
+        .await;
+    assert!(!erro, "{enviada}");
+    let (_, midias) = painel
+        .ferramenta(&token, "listar_midia", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(midias["midias"][0]["alt"], "Fachada da padaria");
+
+    let pagina = json!({
+        "especie": "pagina",
+        "dados": {
+            "slug": "",
+            "titulo": "Pão fresco todo dia",
+            "corpo": [{ "tipo": "titulo", "nivel": 2, "texto": "Onde estamos" }],
+            "seo": {
+                "titulo": "Padaria da Ana: pão fresco todo dia",
+                "descricao": "Padaria de bairro com pão de fermentação natural, aberta desde 1998.",
+                "indexar": true
+            }
+        }
+    });
+    let (_, criado) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": pagina }),
+        )
+        .await;
+    let alvo = json!({ "site": "padaria", "documento": criado["documento"] });
+    let (erro, publicado) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
+    assert!(!erro, "{publicado}");
+    let home = pedir(&pool, &host("padaria"), "/").await;
+    assert_eq!(home.status, StatusCode::OK);
+    assert!(home.corpo.contains("<h1>Pão fresco todo dia</h1>"));
+
+    let (_, visto) = painel
+        .ferramenta(&token, "ver_documento", alvo.clone())
+        .await;
+    assert_eq!(visto["situacao"], "publicado");
+    assert_eq!(visto["conteudo"]["dados"]["titulo"], "Pão fresco todo dia");
+    let (erro, _) = painel.ferramenta(&token, "despublicar", alvo).await;
+    assert!(!erro);
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/").await.status,
+        StatusCode::GONE
+    );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}

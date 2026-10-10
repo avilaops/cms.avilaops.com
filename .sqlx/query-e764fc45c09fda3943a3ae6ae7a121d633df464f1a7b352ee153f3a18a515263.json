@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update codigo_mcp set usado_em = now()\n        where hash = $1 and usado_em is null and expira_em > now()\n        returning cliente_id, conta_sub, conta_email, conta_nome, conta_equipe, escopos,\n                  redirect_uri, desafio\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "cliente_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "conta_sub",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "conta_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "conta_nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "conta_equipe",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "escopos",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "redirect_uri",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "desafio",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e764fc45c09fda3943a3ae6ae7a121d633df464f1a7b352ee153f3a18a515263"
+}

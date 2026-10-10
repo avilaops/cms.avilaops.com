@@ -120,12 +120,13 @@ pub async fn arquivo(
     }
 }
 
+/// Uma imagem que chegou, pelo painel ou pelo conector.
 #[derive(Default)]
-struct Envio {
-    nome: String,
-    bytes: Bytes,
-    alt: String,
-    credito: String,
+pub struct Envio {
+    pub nome: String,
+    pub bytes: Bytes,
+    pub alt: String,
+    pub credito: String,
 }
 
 /// Lê o formulário de envio. `None` para o que não é um formulário válido.
@@ -169,6 +170,59 @@ pub fn caminho_do_original(diretorio: &std::path::Path, site_id: Uuid, midia_id:
         .join(midia_id.to_string())
 }
 
+/// Confere, registra e grava o original de uma imagem. A recusa volta como
+/// a frase que a pessoa (ou o assistente) lê.
+pub async fn registrar(
+    estado: &Estado,
+    site: &SiteGravado,
+    ator: &Ator,
+    envio: Envio,
+) -> Result<Result<Uuid, String>, ErroWeb> {
+    if let Some(problema) = validar_upload(&envio.nome, &envio.bytes).into_iter().next() {
+        return Ok(Err(problema.mensagem));
+    }
+    let Some((largura, altura)) = dimensoes(&envio.bytes) else {
+        return Ok(Err(
+            "Não foi possível abrir esta imagem. O arquivo pode estar corrompido: envie outro."
+                .to_string(),
+        ));
+    };
+    let nova = NovaMidia {
+        nome: envio.nome,
+        hash: cms_dados::hash_de_conteudo(&envio.bytes),
+        largura,
+        altura,
+        alt: envio.alt,
+        legenda: None,
+        credito: Some(envio.credito),
+        bytes: envio.bytes.len() as u64,
+    };
+    let limite = estado.configuracao.limite_de_midia_por_site;
+    let midia_id = match cms_dados::registrar_midia(&estado.pool, site.id, ator, nova, limite).await
+    {
+        Ok(id) => id,
+        Err(ErroDeMidia::Dados(erro)) => return Err(erro.into()),
+        Err(erro) => return Ok(Err(erro.to_string())),
+    };
+
+    let destino = caminho_do_original(&estado.configuracao.diretorio_de_midia, site.id, midia_id);
+    let gravado = async {
+        if let Some(pasta) = destino.parent() {
+            tokio::fs::create_dir_all(pasta).await?;
+        }
+        tokio::fs::write(&destino, &envio.bytes).await
+    }
+    .await;
+    if let Err(erro) = gravado {
+        // Sem o original, a linha só deixaria uma imagem que nunca fica pronta.
+        if let Err(falha) = cms_dados::apagar_midia(&estado.pool, site.id, ator, midia_id).await {
+            tracing::error!(%falha, midia = %midia_id, "imagem sem original ficou registrada");
+        }
+        return Err(erro.into());
+    }
+    Ok(Ok(midia_id))
+}
+
 pub async fn enviar(
     estado: &Estado,
     conta: &Conta,
@@ -183,68 +237,25 @@ pub async fn enviar(
     let Some(envio) = ler_envio(cabecalhos, corpo.clone()).await else {
         return Ok(simples(StatusCode::BAD_REQUEST, "Formulário inválido."));
     };
-    let recusar = |mensagem: String, alt: String| Recado {
-        erro: Some(mensagem),
-        alt,
-        ..Recado::default()
+    let alt = envio.alt.clone();
+    let (status, recado) = match registrar(estado, &site, &ator, envio).await? {
+        Ok(_) => (
+            StatusCode::OK,
+            Recado {
+                aviso: Some("Imagem enviada. Ela fica pronta em instantes.".to_string()),
+                ..Recado::default()
+            },
+        ),
+        Err(mensagem) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Recado {
+                erro: Some(mensagem),
+                alt,
+                ..Recado::default()
+            },
+        ),
     };
-    const RECUSADO: StatusCode = StatusCode::UNPROCESSABLE_ENTITY;
-
-    if let Some(problema) = validar_upload(&envio.nome, &envio.bytes).into_iter().next() {
-        let recado = recusar(problema.mensagem, envio.alt);
-        return pagina(estado, &site, &ator, RECUSADO, recado).await;
-    }
-    let Some((largura, altura)) = dimensoes(&envio.bytes) else {
-        let recado = recusar(
-            "Não foi possível abrir esta imagem. O arquivo pode estar corrompido: envie outro."
-                .to_string(),
-            envio.alt,
-        );
-        return pagina(estado, &site, &ator, RECUSADO, recado).await;
-    };
-
-    let nova = NovaMidia {
-        nome: envio.nome,
-        hash: cms_dados::hash_de_conteudo(&envio.bytes),
-        largura,
-        altura,
-        alt: envio.alt.clone(),
-        legenda: None,
-        credito: Some(envio.credito),
-        bytes: envio.bytes.len() as u64,
-    };
-    let limite = estado.configuracao.limite_de_midia_por_site;
-    let midia_id =
-        match cms_dados::registrar_midia(&estado.pool, site.id, &ator, nova, limite).await {
-            Ok(id) => id,
-            Err(ErroDeMidia::Dados(erro)) => return Err(erro.into()),
-            Err(erro) => {
-                let recado = recusar(erro.to_string(), envio.alt);
-                return pagina(estado, &site, &ator, RECUSADO, recado).await;
-            }
-        };
-
-    let destino = caminho_do_original(&estado.configuracao.diretorio_de_midia, site.id, midia_id);
-    let gravado = async {
-        if let Some(pasta) = destino.parent() {
-            tokio::fs::create_dir_all(pasta).await?;
-        }
-        tokio::fs::write(&destino, &envio.bytes).await
-    }
-    .await;
-    if let Err(erro) = gravado {
-        // Sem o original, a linha só deixaria uma imagem que nunca fica pronta.
-        if let Err(falha) = cms_dados::apagar_midia(&estado.pool, site.id, &ator, midia_id).await {
-            tracing::error!(%falha, midia = %midia_id, "imagem sem original ficou registrada");
-        }
-        return Err(erro.into());
-    }
-
-    let recado = Recado {
-        aviso: Some("Imagem enviada. Ela fica pronta em instantes.".to_string()),
-        ..Recado::default()
-    };
-    pagina(estado, &site, &ator, StatusCode::OK, recado).await
+    pagina(estado, &site, &ator, status, recado).await
 }
 
 pub async fn apagar(

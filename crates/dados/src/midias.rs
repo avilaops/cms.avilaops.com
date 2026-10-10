@@ -443,6 +443,18 @@ pub(crate) async fn hidratar(
     Ok(())
 }
 
+/// O mesmo que a publicação faz, para quem recebe conteúdo de fora: o que o
+/// conector manda sobre uma imagem não vale, vale a biblioteca.
+pub async fn hidratar_conteudo(
+    pool: &PgPool,
+    site_id: Uuid,
+    conteudo: &mut Conteudo,
+) -> Result<(), ErroDeDados> {
+    let mut conexao = pool.acquire().await?;
+    hidratar(&mut conexao, site_id, conteudo).await?;
+    Ok(())
+}
+
 /// Regrava de onde as imagens são usadas: o rascunho e o que está no ar.
 pub(crate) async fn atualizar_usos(
     conexao: &mut PgConnection,
