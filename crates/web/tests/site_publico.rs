@@ -78,6 +78,8 @@ async fn home_sai_com_cabecalho_e_dados_estruturados_do_motor(pool: PgPool) {
 
     assert_eq!(resposta.status, StatusCode::OK);
     assert!(resposta.cabecalho("content-type").starts_with("text/html"));
+    // O navegador não pede um favicon que o site não tem.
+    assert!(resposta.corpo.contains(r#"<link rel="icon" href="data:,">"#));
     assert_eq!(resposta.corpo.matches("<h1").count(), 1);
     assert!(
         resposta

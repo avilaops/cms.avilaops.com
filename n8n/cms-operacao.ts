@@ -79,7 +79,7 @@ const normalizarEvento = node({
             id: 'avisar-buscadores',
             name: 'avisarBuscadores',
             value: expr(
-              '{{ ["conteudo.publicado", "conteudo.despublicado"].includes($json.body.tipo) && $json.body.site.naBusca === true && !!$json.body.site.indexnowChave }}',
+              '{{ ["conteudo.publicado", "conteudo.despublicado", "dominio.ativado"].includes($json.body.tipo) && $json.body.site.naBusca === true && !!$json.body.site.indexnowChave }}',
             ),
             type: 'boolean',
           },
@@ -87,7 +87,7 @@ const normalizarEvento = node({
             id: 'urls',
             name: 'urls',
             value: expr(
-              '{{ [$json.body.dados?.caminho, $json.body.dados?.caminhoAnterior].filter(Boolean).map((caminho) => $json.body.site.origem + caminho) }}',
+              '{{ [$json.body.tipo === "dominio.ativado" ? "/" : $json.body.dados?.caminho, $json.body.dados?.caminhoAnterior].filter(Boolean).map((caminho) => $json.body.site.origem + caminho) }}',
             ),
             type: 'array',
           },
@@ -422,7 +422,7 @@ const notaDoContrato = sticky(
   '## CMS - Operação\n' +
     'Recebe os eventos do CMS (`POST /webhook/cms-eventos`, com `authorization`), responde na hora e trabalha depois.\n\n' +
     '- O mesmo fato chega com o mesmo `id`: o repetido é descartado.\n' +
-    '- `conteudo.publicado` e `conteudo.despublicado` avisam o IndexNow, se o site está na busca e tem chave.\n' +
+    '- `conteudo.publicado`, `conteudo.despublicado` e `dominio.ativado` avisam o IndexNow, se o site está na busca e tem chave.\n' +
     '- `convite.criado` manda o link por e-mail; `site.criado` abre uma tarefa para a equipe.\n' +
     '- Todo evento é encerrado no CMS com o resultado de verdade.\n\n' +
     'O código deste workflow fica em `n8n/cms-operacao.ts` no repositório do CMS. Editou aqui, exporte de volta.',
