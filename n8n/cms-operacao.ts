@@ -174,6 +174,20 @@ const escolherPeloTipo = switchCase({
               combinator: 'and',
             },
           },
+          {
+            outputKey: 'mensagem',
+            conditions: {
+              options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' },
+              conditions: [
+                {
+                  leftValue: expr('{{ $json.tipo }}'),
+                  operator: { type: 'string', operation: 'equals' },
+                  rightValue: 'mensagem.recebida',
+                },
+              ],
+              combinator: 'and',
+            },
+          },
         ],
       },
       options: { fallbackOutput: 'extra', renameFallbackOutput: 'conteúdo' },
@@ -284,6 +298,105 @@ const resultadoDoSiteNovo = node({
     },
   },
   output: [{ resultado: { equipe: { avisada: true, tarefa: 'https://app.todoist.com/app/task/123', erro: null } } }],
+});
+
+const temParaQuemAvisar = ifElse({
+  version: 2.2,
+  config: {
+    name: 'Tem para quem avisar?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' },
+        conditions: [
+          {
+            leftValue: expr('{{ $json.dados.avisarPara ?? "" }}'),
+            operator: { type: 'string', operation: 'notEmpty', singleValue: true },
+          },
+        ],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const enviarMensagem = node({
+  type: 'n8n-nodes-base.emailSend',
+  version: 2.1,
+  config: {
+    name: 'Enviar mensagem ao contato do site',
+    onError: 'continueRegularOutput',
+    parameters: {
+      operation: 'send',
+      fromEmail: expr(
+        '"{{ $json.siteNome.replace(/["<>\\r\\n]/g, "") }}" <noreply@avilaops.com>',
+      ),
+      toEmail: expr('{{ $json.dados.avisarPara }}'),
+      subject: expr('Nova mensagem pelo site {{ $json.siteNome.replace(/[\\r\\n]/g, " ") }}'),
+      emailFormat: 'text',
+      text: expr(
+        'Chegou uma mensagem pelo formulário de {{ $json.origem }}{{ $json.dados.caminho }}\n\n' +
+          '{{ ($json.dados.campos ?? []).map((campo) => campo.rotulo + ": " + campo.valor).join("\\n") }}\n\n' +
+          'Este endereço não recebe resposta: responda direto para o contato informado acima. A mensagem também fica guardada no painel do CMS, em Mensagens.',
+      ),
+      options: { appendAttribution: false },
+    },
+    credentials: {
+      smtp: { id: 'SpNoReplySmtp0001', name: 'SMTP mail.avilaops.com (noreply@avilaops.com)' },
+    },
+  },
+  output: [{ accepted: ['contato@oficina.example'], rejected: [], messageId: '<id@mail.avilaops.com>' }],
+});
+
+const resultadoDaMensagem = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Resultado da mensagem',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'resultado-mensagem',
+            name: 'resultado',
+            value: expr(
+              '{{ { mensagem: { avisada: !$json.error, erro: $json.error?.message ?? null } } }}',
+            ),
+            type: 'object',
+          },
+        ],
+      },
+      options: {},
+    },
+  },
+  output: [{ resultado: { mensagem: { avisada: true, erro: null } } }],
+});
+
+const resultadoSemDestinatario = node({
+  type: 'n8n-nodes-base.set',
+  version: 3.4,
+  config: {
+    name: 'Resultado sem destinatário',
+    parameters: {
+      mode: 'manual',
+      includeOtherFields: false,
+      assignments: {
+        assignments: [
+          {
+            id: 'resultado-sem-destinatario',
+            name: 'resultado',
+            value: expr(
+              '{{ { mensagem: { avisada: false, motivo: "o site não tem e-mail de contato; a mensagem está só no painel" } } }}',
+            ),
+            type: 'object',
+          },
+        ],
+      },
+      options: {},
+    },
+  },
+  output: [{ resultado: { mensagem: { avisada: false, motivo: 'sem e-mail de contato' } } }],
 });
 
 const deveAvisarBuscadores = ifElse({
@@ -424,6 +537,7 @@ const notaDoContrato = sticky(
     '- O mesmo fato chega com o mesmo `id`: o repetido é descartado.\n' +
     '- `conteudo.publicado`, `conteudo.despublicado` e `dominio.ativado` avisam o IndexNow, se o site está na busca e tem chave.\n' +
     '- `convite.criado` manda o link por e-mail; `site.criado` abre uma tarefa para a equipe.\n' +
+    '- `mensagem.recebida` manda o que o visitante preencheu para o e-mail de contato do site.\n' +
     '- Todo evento é encerrado no CMS com o resultado de verdade.\n\n' +
     'O código deste workflow fica em `n8n/cms-operacao.ts` no repositório do CMS. Editou aqui, exporte de volta.',
   [normalizarEvento, descartarRepetido],
@@ -440,6 +554,12 @@ export default workflow('cms-operacao', 'CMS - Operação')
       .onCase(1, avisarEquipe.to(resultadoDoSiteNovo.to(encerrarEvento)))
       .onCase(
         2,
+        temParaQuemAvisar
+          .onTrue(enviarMensagem.to(resultadoDaMensagem.to(encerrarEvento)))
+          .onFalse(resultadoSemDestinatario.to(encerrarEvento)),
+      )
+      .onCase(
+        3,
         deveAvisarBuscadores
           .onTrue(avisarIndexNow.to(resultadoDoAviso.to(encerrarEvento)))
           .onFalse(resultadoSemAviso.to(encerrarEvento)),
@@ -457,4 +577,7 @@ export default workflow('cms-operacao', 'CMS - Operação')
   })
   .group('Site novo', [avisarEquipe, resultadoDoSiteNovo], {
     description: 'Abre uma tarefa no Todoist: a criação de site é aberta e alguém precisa olhar.',
+  })
+  .group('Mensagem', [enviarMensagem, resultadoDaMensagem], {
+    description: 'Manda a mensagem do formulário para o e-mail de contato do site e guarda se saiu.',
   });
