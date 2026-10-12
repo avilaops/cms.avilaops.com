@@ -1716,6 +1716,38 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
             .contains(&json!("formulario"))
     );
     assert_eq!(esquema("criar_rascunhos")["conteudos"]["maxItems"], 25);
+    // Todo objeto que declara campos diz que aceita os outros: sem isso o n8n
+    // joga fora os campos de cada bloco do corpo, que só declara `tipo`.
+    fn fechados(valor: &Value, caminho: &str, achados: &mut Vec<String>) {
+        match valor {
+            Value::Object(campos) => {
+                if campos.get("properties").is_some_and(Value::is_object)
+                    && campos.get("additionalProperties") != Some(&json!(true))
+                {
+                    achados.push(caminho.to_string());
+                }
+                for (nome, filho) in campos {
+                    fechados(filho, &format!("{caminho}/{nome}"), achados);
+                }
+            }
+            Value::Array(itens) => {
+                for filho in itens {
+                    fechados(filho, caminho, achados);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut achados = Vec::new();
+    for ferramenta in lista["result"]["tools"].as_array().expect("lista") {
+        let nome = ferramenta["name"].as_str().expect("nome");
+        fechados(&ferramenta["inputSchema"], nome, &mut achados);
+    }
+    assert_eq!(achados, Vec::<String>::new());
+    assert_eq!(
+        conteudo["properties"]["dados"]["properties"]["corpo"]["items"]["additionalProperties"],
+        json!(true)
+    );
     // Cada ferramenta diz se só lê e se desfaz algo, para o assistente saber
     // quando confirmar com a pessoa.
     let dica = |nome: &str, qual: &str| {

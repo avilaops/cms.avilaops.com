@@ -1073,8 +1073,37 @@ fn descrever(ferramenta: &Ferramenta) -> Value {
             "readOnlyHint": so_le,
             "destructiveHint": DESFAZEM.contains(&ferramenta.nome),
         },
-        "inputSchema": { "type": "object", "properties": propriedades, "required": obrigatorios },
+        "inputSchema": objetos_abertos(json!({ "type": "object", "properties": propriedades, "required": obrigatorios })),
     })
+}
+
+/// Diz por extenso, em cada objeto do esquema que declara campos, que os
+/// campos não declarados também valem (`additionalProperties: true`).
+///
+/// No JSON Schema isso já é o padrão, mas há cliente que não o segue: o n8n
+/// (por onde passa o MCP da empresa) converte o esquema e, sem a linha, joga
+/// fora o que não foi declarado. Era o que apagava os campos de cada bloco do
+/// `corpo`, que só declara `tipo`: o conteúdo chegava aqui sem `nivel`,
+/// `texto` e o resto.
+fn objetos_abertos(mut esquema: Value) -> Value {
+    fn abrir(valor: &mut Value) {
+        match valor {
+            Value::Object(campos) => {
+                for filho in campos.values_mut() {
+                    abrir(filho);
+                }
+                if campos.get("properties").is_some_and(Value::is_object)
+                    && !campos.contains_key("additionalProperties")
+                {
+                    campos.insert("additionalProperties".to_string(), Value::Bool(true));
+                }
+            }
+            Value::Array(itens) => itens.iter_mut().for_each(abrir),
+            _ => {}
+        }
+    }
+    abrir(&mut esquema);
+    esquema
 }
 
 /// O que uma ferramenta devolve: o resultado, e os identificadores que vão
