@@ -29,6 +29,9 @@ pub struct Moldura {
     pub rodape: Vec<String>,
     /// O estilo das seções, que vem do motor para ser igual em todo site.
     pub estilo_das_secoes: &'static str,
+    /// O estilo do tema do site, por cima do estilo de base. Vazio no
+    /// clássico.
+    pub estilo_do_tema: &'static str,
     /// A cor da marca do site, já conferida. Sem ela, vale a do tema.
     pub cor_de_destaque: Option<String>,
     /// A logo no cabeçalho, quando o site tem uma pronta.
@@ -164,6 +167,7 @@ impl Moldura {
             mais_paginas: Vec::new(),
             rodape,
             estilo_das_secoes: ESTILO_DAS_SECOES,
+            estilo_do_tema: "",
             cor_de_destaque: None,
             logo: None,
             icone: None,
@@ -538,6 +542,7 @@ mod testes {
             mais_paginas: Vec::new(),
             rodape: Vec::new(),
             estilo_das_secoes: "",
+            estilo_do_tema: "",
             cor_de_destaque: None,
             logo: None,
             icone: None,

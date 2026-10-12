@@ -40,6 +40,12 @@
 <label for="perfis">Redes sociais (endereços https), uma por linha</label>
 <textarea id="perfis" name="perfis">{{ d.perfis }}</textarea>
 </fieldset>
+<label for="tema">Tema: as fontes, as cores de base e as formas do site</label>
+<select id="tema" name="tema">
+{%- for (valor, rotulo, atual) in temas %}
+<option value="{{ valor }}"{% if atual %} selected{% endif %}>{{ rotulo }}</option>
+{%- endfor %}
+</select>
 <label for="cor">Cor da marca, como #225cf2 (em branco usa a cor do tema)</label>
 <input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
 <label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567 (em branco, o site não carrega script nenhum)</label>

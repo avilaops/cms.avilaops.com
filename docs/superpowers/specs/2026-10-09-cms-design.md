@@ -189,6 +189,19 @@ maneira dos templates do Lojas, e não como `if` no template.
   embutido no `<head>`.
 - Fontes servidas pelo próprio servidor, com `font-display: swap`. Nenhuma
   requisição a terceiros na página padrão.
+- Temas (pedido do Nicolas em 12/10/2026): a aparência é uma lista fechada de
+  temas completos que moram no CMS, e não mais um tema só. Cada tema traz as
+  fontes, as cores de base e as formas; o site escolhe um na tela de
+  identidade (ou pelo conector, em `editar_identidade`) e continua podendo
+  trocar a cor da marca. Hoje são quatro: `classico` (fonte do aparelho, sem
+  arquivo de fonte), `industrial` (Oswald e Barlow, caixa alta, cantos
+  retos), `editorial` (IBM Plex Serif nos títulos, fundo de papel) e
+  `moderno` (Archivo, títulos pesados, cantos redondos). As fontes são livres
+  (SIL Open Font License, com o texto em `crates/web/recursos/fontes/OFL.txt`),
+  vão dentro do binário e saem de `/recursos/fontes/`, só no recorte latino.
+  Todos os temas têm fundo claro: a conferência de contraste da cor da marca
+  continua valendo. Tema novo entra no código, com teste que garante que ele
+  só usa fonte que o CMS serve.
 - Nenhum JavaScript na página pública padrão. A exceção é a página com o
   bloco de modelo 3D (pedido do Nicolas em 12/10/2026): ela carrega o
   visualizador do próprio CMS, um script só, servido pelo site

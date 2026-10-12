@@ -32,6 +32,7 @@ use crate::modelos;
 use crate::resposta::{
     ErroWeb, html, liberar_tag_do_google, liberar_visualizador_3d, redirecionar, simples, texto,
 };
+use crate::tema;
 use crate::visao::logo_do_cabecalho;
 use crate::visao::{
     CaixaDoAutor, Cartao, CartaoDeItem, Filtro, Moldura, OpcaoDeFiltro, PaginaDeAviso,
@@ -214,6 +215,7 @@ async fn responder(
             sitemap(estado, &pedido, caminho).await
         }
         _ if caminho.starts_with("/recursos/") => Ok(modelos::visualizador(caminho)
+            .or_else(|| tema::fonte(caminho))
             .unwrap_or_else(|| simples(StatusCode::NOT_FOUND, "Não encontrado."))),
         _ => match (caminho.strip_prefix("/midia/"), Icone::do_caminho(caminho)) {
             (Some(arquivo), _) => {
@@ -400,6 +402,7 @@ async fn moldura(
     // Só entra na página a cor que passa na conferência: o que está gravado
     // pode ser de antes de a regra existir.
     moldura.ordenar_menu(&pedido.gravado.perfil.menu);
+    moldura.estilo_do_tema = tema::estilo(pedido.gravado.perfil.tema);
     moldura.logo = logo_do_cabecalho(&pedido.site);
     // Só entra na página a tag que passa na conferência, como a cor.
     moldura.tag_do_google = pedido

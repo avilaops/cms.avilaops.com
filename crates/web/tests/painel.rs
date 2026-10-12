@@ -3686,3 +3686,70 @@ async fn produto_de_catalogo_sai_com_ficha_listagem_e_filtro(pool: PgPool) {
 
     std::fs::remove_dir_all(&painel.diretorio).ok();
 }
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn dono_escolhe_o_tema_e_o_site_sai_com_as_fontes_do_cms(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    painel
+        .publicar_home("ana", "padaria", "Pão fresco todo dia")
+        .await;
+    const IDENTIDADE: &str = "/painel/sites/padaria/identidade";
+    let h = host("padaria");
+    // O clássico não carrega arquivo de fonte.
+    assert!(!painel.visitar(&h, "/").await.corpo.contains("@font-face"));
+    let tela = painel.abrir(Some("ana"), IDENTIDADE).await;
+    assert!(tela.corpo.contains(r#"<option value="classico" selected>"#));
+    assert!(tela.corpo.contains(r#"<option value="industrial">"#));
+
+    let recusado = painel
+        .postar(
+            "ana",
+            IDENTIDADE,
+            &formulario(&[("nome", "Padaria da Ana"), ("tema", "neon")]),
+        )
+        .await;
+    assert!(recusado.corpo.contains("Este tema não existe."));
+
+    let salvo = painel
+        .postar(
+            "ana",
+            IDENTIDADE,
+            &formulario(&[("nome", "Padaria da Ana"), ("tema", "industrial")]),
+        )
+        .await;
+    assert!(salvo.cabecalho("location").ends_with("/identidade?r=salvo"));
+    assert!(
+        painel
+            .abrir(Some("ana"), IDENTIDADE)
+            .await
+            .corpo
+            .contains(r#"<option value="industrial" selected>"#)
+    );
+
+    // O site troca na hora, e a fonte sai do próprio site.
+    let home = painel.visitar(&h, "/").await;
+    assert!(home.corpo.contains(r#"font-family:"Oswald""#));
+    assert!(home.corpo.contains("url(/recursos/fontes/oswald.woff2)"));
+    assert!(!home.corpo.contains("fonts.googleapis.com"));
+    let fonte = painel.visitar(&h, "/recursos/fontes/oswald.woff2").await;
+    assert_eq!(fonte.status, StatusCode::OK);
+    assert_eq!(fonte.cabecalho("content-type"), "font/woff2");
+    assert!(fonte.cabecalho("cache-control").contains("immutable"));
+    assert_eq!(
+        painel
+            .visitar(&h, "/recursos/fontes/outra.woff2")
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    // A prévia do painel acha a mesma fonte.
+    assert_eq!(
+        painel
+            .abrir(None, "/recursos/fontes/oswald.woff2")
+            .await
+            .status,
+        StatusCode::OK
+    );
+    std::fs::remove_dir_all(&painel.diretorio).ok();
+}

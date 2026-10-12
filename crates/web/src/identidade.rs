@@ -7,7 +7,9 @@ use axum::response::Response;
 use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
 use cms_dominio::eventos::origem_do_site;
-use cms_dominio::site::{CAMINHO_DA_LICENCA_DE_IMAGENS, conferir_cor, conferir_tag_do_google};
+use cms_dominio::site::{
+    CAMINHO_DA_LICENCA_DE_IMAGENS, Tema, conferir_cor, conferir_tag_do_google,
+};
 use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
@@ -38,6 +40,8 @@ pub(crate) struct DadosDaIdentidade {
     diretrizes: String,
     /// A cor da marca, como `#225cf2`; vazio usa a cor do tema.
     cor: String,
+    /// O tema do site, pelo nome gravado (`classico`, `industrial`...).
+    tema: String,
     /// A ordem das páginas no menu: um caminho por linha, como `/servicos`.
     menu: String,
     /// A tag do Google, como `GTM-ABC1234`; vazio deixa o site sem script.
@@ -72,6 +76,7 @@ impl DadosDaIdentidade {
             perfis: organizacao.perfis.join("\n"),
             diretrizes: perfil.diretrizes_ia.join("\n"),
             cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
+            tema: perfil.tema.slug().to_string(),
             menu: perfil.menu.join("\n"),
             tag: perfil.tag_do_google.clone().unwrap_or_default(),
             licenca: perfil.licenca_de_imagens.clone().unwrap_or_default(),
@@ -94,6 +99,7 @@ impl DadosDaIdentidade {
             "perfis" => &mut self.perfis,
             "diretrizes" => &mut self.diretrizes,
             "corDeDestaque" => &mut self.cor,
+            "tema" => &mut self.tema,
             "menu" => &mut self.menu,
             "tagDoGoogle" => &mut self.tag,
             "licencaDeImagens" => &mut self.licenca,
@@ -111,6 +117,8 @@ struct PaginaDeIdentidade {
     d: DadosDaIdentidade,
     /// Identificador, descrição e se é a logo atual.
     logos: Vec<(String, String, bool)>,
+    /// Os temas: nome gravado, como aparece para escolher e se é o atual.
+    temas: Vec<(&'static str, String, bool)>,
     /// A logo de agora, para a pessoa ver qual é antes de trocar.
     logo_atual: Option<String>,
     /// As páginas que podem ir para o menu do topo, com a posição de cada uma.
@@ -233,6 +241,13 @@ pub async fn abrir(
     let corpo = PaginaDeIdentidade {
         pagina_da_licenca: format!("{origem}{CAMINHO_DA_LICENCA_DE_IMAGENS}"),
         logo_atual: miniatura(&site.perfil.logo, &site.slug),
+        temas: Tema::TODOS
+            .into_iter()
+            .map(|tema| {
+                let rotulo = format!("{}: {}", tema.nome(), tema.descricao());
+                (tema.slug(), rotulo, dados.tema.trim() == tema.slug())
+            })
+            .collect(),
         paginas,
         site: site.perfil.nome,
         slug: site.slug,
@@ -288,6 +303,14 @@ pub(crate) async fn aplicar(
         },
         None => None,
     };
+    let Some(tema) = Tema::do_slug(&dados.tema) else {
+        let nomes: Vec<&str> = Tema::TODOS.into_iter().map(Tema::slug).collect();
+        return Ok(Err(format!(
+            "Este tema não existe. Os temas são: {}.",
+            nomes.join(", ")
+        )));
+    };
+    dados.tema = tema.slug().to_string();
     // Quem chamou recebe de volta a cor como ficou gravada.
     dados.cor = cor_de_destaque.clone().unwrap_or_default();
     let tag_do_google = match opcional(&dados.tag) {
@@ -334,6 +357,7 @@ pub(crate) async fn aplicar(
         },
         diretrizes_ia: linhas(&dados.diretrizes),
         cor_de_destaque,
+        tema,
         tag_do_google,
         licenca_de_imagens: opcional(&dados.licenca),
         // Só caminho do site entra na ordem do menu.

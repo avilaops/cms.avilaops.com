@@ -18,6 +18,7 @@ mod modelos;
 mod painel;
 mod publico;
 mod resposta;
+mod tema;
 mod visao;
 
 use std::fmt;

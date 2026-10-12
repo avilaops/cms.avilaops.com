@@ -108,6 +108,7 @@ footer.rodape .mais{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin-bottom
 .larga .faixa{max-width:72rem}
 .larga article>:not(section):not(.abertura){max-width:var(--largura);margin-left:auto;margin-right:auto}
 {{ moldura.estilo_das_secoes|safe }}
+{{- moldura.estilo_do_tema|safe }}
 {%- if let Some(cor) = moldura.cor_de_destaque %}
 :root{--destaque:{{ cor }}}
 {%- endif %}

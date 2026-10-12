@@ -13,6 +13,74 @@ const ORCAMENTO_DE_PESO_PADRAO_KB: u32 = 500;
 /// imagem de autoria própria.
 pub const CAMINHO_DA_LICENCA_DE_IMAGENS: &str = "/licenca-de-imagens";
 
+/// A aparência do site: fontes, cores de base e formas. A lista é fechada e
+/// os temas moram no CMS, com as fontes servidas por ele; o site escolhe um
+/// e, se quiser, troca a cor da marca.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Tema {
+    /// O de sempre: fonte do próprio aparelho, sem arquivo de fonte.
+    #[default]
+    Classico,
+    /// Títulos condensados em caixa alta e cantos retos.
+    Industrial,
+    /// Títulos com serifa sobre fundo de papel.
+    Editorial,
+    /// Sem serifa geométrica, títulos pesados e cantos redondos.
+    Moderno,
+}
+
+impl Tema {
+    pub const TODOS: [Tema; 4] = [
+        Tema::Classico,
+        Tema::Industrial,
+        Tema::Editorial,
+        Tema::Moderno,
+    ];
+
+    /// O nome que vai gravado e que o conector usa.
+    pub fn slug(self) -> &'static str {
+        match self {
+            Tema::Classico => "classico",
+            Tema::Industrial => "industrial",
+            Tema::Editorial => "editorial",
+            Tema::Moderno => "moderno",
+        }
+    }
+
+    pub fn nome(self) -> &'static str {
+        match self {
+            Tema::Classico => "Clássico",
+            Tema::Industrial => "Industrial",
+            Tema::Editorial => "Editorial",
+            Tema::Moderno => "Moderno",
+        }
+    }
+
+    /// Para quem escolhe: como o tema é, em uma frase.
+    pub fn descricao(self) -> &'static str {
+        match self {
+            Tema::Classico => "fonte do aparelho, leve e neutro",
+            Tema::Industrial => "títulos condensados em caixa alta, cantos retos",
+            Tema::Editorial => "títulos com serifa, fundo de papel",
+            Tema::Moderno => "títulos pesados, cantos redondos",
+        }
+    }
+
+    /// O tema pelo nome gravado. Vazio é o clássico.
+    pub fn do_slug(slug: &str) -> Option<Self> {
+        let slug = slug.trim();
+        if slug.is_empty() {
+            return Some(Tema::default());
+        }
+        Self::TODOS.into_iter().find(|tema| tema.slug() == slug)
+    }
+
+    fn eh_o_padrao(&self) -> bool {
+        *self == Tema::default()
+    }
+}
+
 /// O que o dono define sobre o site. É o `Site` do motor sem a origem, que
 /// depende do host em que o pedido chegou.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,6 +98,9 @@ pub struct PerfilDoSite {
     /// ela, vale a cor do tema.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cor_de_destaque: Option<String>,
+    /// O tema do site. O clássico não vai gravado.
+    #[serde(default, skip_serializing_if = "Tema::eh_o_padrao")]
+    pub tema: Tema,
     /// As páginas do menu do topo, na ordem, pelos caminhos (`/servicos`,
     /// `/blog`). O que não está na lista vai para o rodapé. Vazia, todas as
     /// páginas ficam no topo, em ordem de endereço.
@@ -143,6 +214,7 @@ impl PerfilDoSite {
             diretrizes_ia: Vec::new(),
             orcamento_peso_kb: ORCAMENTO_DE_PESO_PADRAO_KB,
             cor_de_destaque: None,
+            tema: Tema::default(),
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,
@@ -228,6 +300,7 @@ impl From<Site> for PerfilDoSite {
             diretrizes_ia: site.diretrizes_ia,
             orcamento_peso_kb: site.orcamento_peso_kb,
             cor_de_destaque: None,
+            tema: Tema::default(),
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,

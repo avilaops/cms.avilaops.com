@@ -17,7 +17,9 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens, modelos};
+use crate::{
+    biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens, modelos, tema,
+};
 
 const CAMINHO: &str = "/painel";
 
@@ -496,6 +498,11 @@ async fn responder(
             return resposta;
         }
         _ => {}
+    }
+    // As fontes dos temas, para a prévia do painel sair com a cara do site.
+    // São arquivos públicos: os mesmos que todo site serve.
+    if let Some(fonte) = tema::fonte(caminho).filter(|_| leitura) {
+        return Ok(fonte);
     }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
