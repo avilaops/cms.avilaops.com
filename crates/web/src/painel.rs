@@ -351,6 +351,8 @@ enum Rota<'a> {
     Catalogo(&'a str),
     SalvarAutor(&'a str),
     SalvarCategoria(&'a str),
+    RenomearCategoria(&'a str, &'a str),
+    ApagarCategoria(&'a str, &'a str),
     Autorizar,
     Decidir,
     Conector,
@@ -414,6 +416,12 @@ impl<'a> Rota<'a> {
             (true, ["painel", "sites", slug, "catalogo"]) => Some(Rota::Catalogo(slug)),
             (false, ["painel", "sites", slug, "autores"]) => Some(Rota::SalvarAutor(slug)),
             (false, ["painel", "sites", slug, "categorias"]) => Some(Rota::SalvarCategoria(slug)),
+            (false, ["painel", "sites", slug, "categorias", categoria, "renomear"]) => {
+                Some(Rota::RenomearCategoria(slug, categoria))
+            }
+            (false, ["painel", "sites", slug, "categorias", categoria, "apagar"]) => {
+                Some(Rota::ApagarCategoria(slug, categoria))
+            }
             _ => None,
         }
     }
@@ -431,6 +439,8 @@ impl<'a> Rota<'a> {
                 | Rota::Gravar(..)
                 | Rota::SalvarAutor(_)
                 | Rota::SalvarCategoria(_)
+                | Rota::RenomearCategoria(..)
+                | Rota::ApagarCategoria(..)
                 | Rota::Decidir
                 | Rota::RevogarConexao(_)
                 | Rota::GravarDominio(..)
@@ -535,6 +545,12 @@ async fn responder(
         }
         Rota::SalvarCategoria(slug) => {
             conteudo::salvar_no_catalogo(estado, &conta, slug, false, corpo).await
+        }
+        Rota::RenomearCategoria(slug, categoria) => {
+            conteudo::mexer_na_categoria(estado, &conta, slug, categoria, false, corpo).await
+        }
+        Rota::ApagarCategoria(slug, categoria) => {
+            conteudo::mexer_na_categoria(estado, &conta, slug, categoria, true, corpo).await
         }
         Rota::Autorizar => conector::tela_de_autorizacao(estado, &conta, uri).await,
         Rota::Decidir => conector::autorizar(estado, &conta, corpo).await,

@@ -22,6 +22,12 @@ pub enum ErroDeCatalogo {
     SemNome,
     #[error("A foto escolhida não é da biblioteca deste site.")]
     FotoDesconhecida,
+    #[error("Categoria não encontrada neste site.")]
+    CategoriaInexistente,
+    #[error(
+        "Esta categoria ainda tem posts. Troque a categoria deles antes de apagar, ou só mude o nome dela."
+    )]
+    CategoriaEmUso,
 }
 
 impl From<sqlx::Error> for ErroDeCatalogo {
@@ -230,6 +236,96 @@ pub async fn salvar_categoria(
     .execute(pool)
     .await?;
     Ok(slug)
+}
+
+/// Muda o nome de uma categoria, sem mexer no endereço dela. O post guarda a
+/// categoria inteira no conteúdo, então o nome novo entra também no rascunho
+/// e no que está no ar de cada post dela: o site passa a mostrar o nome novo
+/// sem ninguém precisar publicar de novo.
+pub async fn renomear_categoria(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    slug: &str,
+    nome: &str,
+) -> Result<(), ErroDeCatalogo> {
+    exigir_editor(ator)?;
+    let nome = nome.trim();
+    if nome.is_empty() {
+        return Err(ErroDeCatalogo::SemNome);
+    }
+    let mut transacao = pool.begin().await?;
+    let mudou = sqlx::query!(
+        "update categoria set nome = $3 where site_id = $1 and slug = $2",
+        site_id,
+        slug,
+        nome
+    )
+    .execute(&mut *transacao)
+    .await?
+    .rows_affected();
+    if mudou == 0 {
+        return Err(ErroDeCatalogo::CategoriaInexistente);
+    }
+    sqlx::query!(
+        r#"
+        update versao v
+        set conteudo = jsonb_set(v.conteudo, '{dados,categoria,nome}', to_jsonb($3::text))
+        from documento d
+        where d.site_id = $1
+          and v.id in (d.versao_rascunho, d.versao_publicada)
+          and v.conteudo -> 'dados' -> 'categoria' ->> 'slug' = $2
+        "#,
+        site_id,
+        slug,
+        nome
+    )
+    .execute(&mut *transacao)
+    .await?;
+    transacao.commit().await?;
+    Ok(())
+}
+
+/// Apaga uma categoria que nenhum post usa, nem no rascunho nem no ar.
+pub async fn apagar_categoria(
+    pool: &PgPool,
+    site_id: Uuid,
+    ator: &Ator,
+    slug: &str,
+) -> Result<(), ErroDeCatalogo> {
+    exigir_editor(ator)?;
+    let mut transacao = pool.begin().await?;
+    let em_uso = sqlx::query_scalar!(
+        r#"
+        select exists (
+            select 1
+            from documento d
+            join versao v on v.id in (d.versao_rascunho, d.versao_publicada)
+            where d.site_id = $1
+              and v.conteudo -> 'dados' -> 'categoria' ->> 'slug' = $2
+        ) as "em_uso!"
+        "#,
+        site_id,
+        slug
+    )
+    .fetch_one(&mut *transacao)
+    .await?;
+    if em_uso {
+        return Err(ErroDeCatalogo::CategoriaEmUso);
+    }
+    let apagou = sqlx::query!(
+        "delete from categoria where site_id = $1 and slug = $2",
+        site_id,
+        slug
+    )
+    .execute(&mut *transacao)
+    .await?
+    .rows_affected();
+    if apagou == 0 {
+        return Err(ErroDeCatalogo::CategoriaInexistente);
+    }
+    transacao.commit().await?;
+    Ok(())
 }
 
 /// Um documento na lista do painel.

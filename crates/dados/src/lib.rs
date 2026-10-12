@@ -19,8 +19,8 @@ use sqlx::migrate::Migrator;
 
 pub use catalogo::{
     AutorDoSite, DadosDoAutor, DocumentoAberto, DocumentoDoSite, ErroDeCatalogo, abrir_documento,
-    autor_para_conteudo, autores_do_site, categorias_do_site, documentos_do_site, midia_vazia,
-    salvar_autor, salvar_categoria,
+    apagar_categoria, autor_para_conteudo, autores_do_site, categorias_do_site, documentos_do_site,
+    midia_vazia, renomear_categoria, salvar_autor, salvar_categoria,
 };
 pub use conector::{
     Autorizacao, ClienteMcp, Conexao, ConexaoDaConta, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeConector,

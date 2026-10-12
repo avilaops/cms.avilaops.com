@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update versao v\n        set conteudo = jsonb_set(v.conteudo, '{dados,categoria,nome}', to_jsonb($3::text))\n        from documento d\n        where d.site_id = $1\n          and v.id in (d.versao_rascunho, d.versao_publicada)\n          and v.conteudo -> 'dados' -> 'categoria' ->> 'slug' = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc05045c2349e8e014cea791f99cd14b2e6b9b05f3d8252d5955e9f48c237190"
+}

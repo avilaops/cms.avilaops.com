@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update categoria set nome = $3 where site_id = $1 and slug = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cf4498ce40ee0b03c1018568f297aa26ec4a7ccd19f97247d9ce6118dc186466"
+}

@@ -1198,6 +1198,44 @@ async fn post_sai_com_autor_categoria_e_capa_do_cadastro(pool: PgPool) {
     assert!(catalogo.corpo.contains("Ana Souza"));
     assert!(catalogo.corpo.contains("/blog/categoria/receitas"));
 
+    // Tocar no autor abre o formulário já preenchido com os dados dele.
+    let aberto = painel
+        .abrir(Some("ana"), &format!("{SITE}/catalogo?autor=ana-souza"))
+        .await;
+    assert!(aberto.corpo.contains("Alterar Ana Souza"));
+    assert!(aberto.corpo.contains(r#"value="Padeira""#));
+
+    // Categoria sem post muda de nome sem mudar de endereço, e pode ser apagada.
+    painel
+        .postar("ana", &format!("{SITE}/categorias"), "nome=Avisos")
+        .await;
+    let renomeada = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/categorias/avisos/renomear"),
+            "nome=Comunicados",
+        )
+        .await;
+    assert!(
+        renomeada
+            .cabecalho("location")
+            .ends_with("/catalogo?r=categoria")
+    );
+    let catalogo = painel.abrir(Some("ana"), &format!("{SITE}/catalogo")).await;
+    assert!(catalogo.corpo.contains("Comunicados"));
+    assert!(catalogo.corpo.contains("/blog/categoria/avisos"));
+    for esperado in ["categoria-apagada", "sem-categoria"] {
+        let apagada = painel
+            .postar("ana", &format!("{SITE}/categorias/avisos/apagar"), "")
+            .await;
+        assert!(
+            apagada
+                .cabecalho("location")
+                .ends_with(&format!("/catalogo?r={esperado}")),
+            "{esperado}"
+        );
+    }
+
     let post = formulario(&[
         ("especie", "post"),
         ("titulo", "Como fazer pão de fermentação natural"),

@@ -42,9 +42,20 @@
 <h2>Categorias</h2>
 <ul>
 {%- for categoria in categorias %}
-<li><strong>{{ categoria.nome }}</strong><span class="etiquetas">/blog/categoria/{{ categoria.slug }}</span></li>
+<li><strong>{{ categoria.nome }}</strong><span class="etiquetas">/blog/categoria/{{ categoria.slug }}</span>
+<details>
+<summary>Alterar</summary>
+<form method="post" action="/painel/sites/{{ slug }}/categorias/{{ categoria.slug }}/renomear">
+<label for="c{{ loop.index }}-nome">Nome novo (o endereço continua o mesmo)</label>
+<input id="c{{ loop.index }}-nome" name="nome" required maxlength="60" value="{{ categoria.nome }}">
+<button type="submit">Salvar nome</button>
+</form>
+<form class="discreto" method="post" action="/painel/sites/{{ slug }}/categorias/{{ categoria.slug }}/apagar"><button type="submit">Apagar categoria</button></form>
+</details>
+</li>
 {%- endfor %}
 </ul>
+<h3>Nova categoria</h3>
 <form method="post" action="/painel/sites/{{ slug }}/categorias">
 <label for="categoria">Nome da categoria</label>
 <input id="categoria" name="nome" required maxlength="60">

@@ -69,6 +69,11 @@ fn recado(uri: &Uri) -> (Option<String>, Option<String>) {
         Some("sem-rascunho") => erro("Não há rascunho novo para esta ação."),
         Some("sem-nome") => erro("Informe o nome."),
         Some("foto") => erro("A foto escolhida não é da biblioteca deste site."),
+        Some("categoria-apagada") => aviso("Categoria apagada."),
+        Some("sem-categoria") => erro("Categoria não encontrada neste site."),
+        Some("categoria-em-uso") => erro(
+            "Esta categoria ainda tem posts. Troque a categoria deles antes de apagar, ou só mude o nome dela.",
+        ),
         _ => (None, None),
     }
 }
@@ -859,15 +864,56 @@ pub async fn salvar_no_catalogo(
             .await
             .map(|_| "categoria")
     };
-    let codigo = match salvo {
+    voltar_ao_catalogo(&site.slug, salvo)
+}
+
+/// Volta para a tela de autores e categorias com o recado do que aconteceu.
+fn voltar_ao_catalogo(
+    slug: &str,
+    feito: Result<&'static str, ErroDeCatalogo>,
+) -> Result<Response, ErroWeb> {
+    let codigo = match feito {
         Ok(codigo) => codigo,
         Err(ErroDeCatalogo::Dados(erro)) => return Err(erro.into()),
         Err(ErroDeCatalogo::SemPermissao) => "sem-permissao",
         Err(ErroDeCatalogo::SemNome) => "sem-nome",
         Err(ErroDeCatalogo::FotoDesconhecida) => "foto",
+        Err(ErroDeCatalogo::CategoriaInexistente) => "sem-categoria",
+        Err(ErroDeCatalogo::CategoriaEmUso) => "categoria-em-uso",
     };
     Ok(redirecionar(
         StatusCode::SEE_OTHER,
-        &format!("/painel/sites/{}/catalogo?r={codigo}", site.slug),
+        &format!("/painel/sites/{slug}/catalogo?r={codigo}"),
     ))
+}
+
+/// Renomeia ou apaga uma categoria, pelos botões da lista.
+pub async fn mexer_na_categoria(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    categoria: &str,
+    apagar: bool,
+    corpo: &[u8],
+) -> Result<Response, ErroWeb> {
+    let (site, ator) = match ao_site(estado, conta, slug).await? {
+        Ok(acesso) => acesso,
+        Err(resposta) => return Ok(resposta),
+    };
+    let feito = if apagar {
+        cms_dados::apagar_categoria(&estado.pool, site.id, &ator, categoria)
+            .await
+            .map(|()| "categoria-apagada")
+    } else {
+        let formulario =
+            serde_urlencoded::from_bytes::<FormularioDeCategoria>(corpo).unwrap_or_default();
+        cms_dados::renomear_categoria(&estado.pool, site.id, &ator, categoria, &formulario.nome)
+            .await
+            .map(|()| "categoria")
+    };
+    if feito.is_ok() {
+        // O nome da categoria aparece nos posts e nas listas do site.
+        estado.cache.invalidar_site(site.id);
+    }
+    voltar_ao_catalogo(&site.slug, feito)
 }

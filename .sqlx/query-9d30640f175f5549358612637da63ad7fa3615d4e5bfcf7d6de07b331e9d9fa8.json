@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from categoria where site_id = $1 and slug = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9d30640f175f5549358612637da63ad7fa3615d4e5bfcf7d6de07b331e9d9fa8"
+}
