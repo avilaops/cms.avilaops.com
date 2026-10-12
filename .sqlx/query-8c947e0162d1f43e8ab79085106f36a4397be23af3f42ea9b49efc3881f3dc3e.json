@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update conexao_mcp set revogada_em = now() where conta_sub = $1 and revogada_em is null",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8c947e0162d1f43e8ab79085106f36a4397be23af3f42ea9b49efc3881f3dc3e"
+}

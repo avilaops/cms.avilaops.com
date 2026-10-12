@@ -293,6 +293,12 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- Conexão de serviço: para um serviço da casa que não tem como passar pelo
+  consentimento em tela (o MCP único da empresa, no n8n), o comando
+  `servidor criar-conexao-de-servico <nome> <escopo>...` cria uma conexão que
+  age como equipe, com os escopos informados e token que não vence. O token
+  sai uma vez na saída do comando e o banco guarda só o hash; criar de novo
+  com o mesmo nome revoga o anterior. As chamadas ficam no mesmo registro.
 - Formulário: a seção `formulario` tem até oito campos (texto, e-mail,
   telefone, mensagem), botão e agradecimento. Sai sem script; o envio vai ao
   endereço da própria página, e o CMS o confere contra a definição do bloco

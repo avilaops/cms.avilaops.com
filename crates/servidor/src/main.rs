@@ -4,6 +4,8 @@
 //! - `servidor migrar`: aplica as migrações pendentes.
 //! - `servidor migrar --conferir`: sai com 0 se não há migração pendente.
 //! - `servidor semear-demonstracao`: recria o site de demonstração.
+//! - `servidor criar-conexao-de-servico <nome> <escopo>...`: cria o token de
+//!   um serviço da casa para o conector e o imprime uma única vez.
 
 mod configuracao;
 mod eventos;
@@ -41,7 +43,7 @@ enum Erro {
     Semente(String),
 }
 
-const USO: &str = "uso: servidor <servir | migrar [--conferir] | semear-demonstracao>";
+const USO: &str = "uso: servidor <servir | migrar [--conferir] | semear-demonstracao | criar-conexao-de-servico <nome> <escopo>...>";
 
 #[tokio::main]
 async fn main() -> ExitCode {
@@ -91,6 +93,25 @@ async fn executar(argumentos: &[String]) -> Result<ExitCode, Erro> {
                 arquivos = resumo.arquivos,
                 "site de demonstração recriado"
             );
+            Ok(ExitCode::SUCCESS)
+        }
+        ["criar-conexao-de-servico", nome, escopos @ ..] => {
+            let nome_valido = (2..=30).contains(&nome.len())
+                && nome
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+            let conhecidos =
+                |escopo: &&str| cms_dados::ESCOPOS.iter().any(|(nome, _)| nome == escopo);
+            if !nome_valido || escopos.is_empty() || !escopos.iter().all(conhecidos) {
+                return Err(Erro::Uso(USO.to_string()));
+            }
+            let pool = conectar(&ambiente).await?;
+            let escopos: Vec<String> = escopos.iter().map(|escopo| (*escopo).to_string()).collect();
+            let token = cms_dados::criar_conexao_de_servico(&pool, nome, &escopos).await?;
+            tracing::info!(servico = %nome, ?escopos, "conexão de serviço criada");
+            // A última linha da saída é o token, e só ela: quem chama a guarda
+            // em arquivo, sem passar por tela nem por log.
+            println!("{token}");
             Ok(ExitCode::SUCCESS)
         }
         _ => Err(Erro::Uso(USO.to_string())),

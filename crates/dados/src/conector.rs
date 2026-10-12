@@ -278,6 +278,54 @@ pub async fn conexao_por_token(
     }))
 }
 
+/// Cria a conexão de um serviço da casa: um token que não vence, sem pessoa
+/// autorizando em tela, para quem não tem como passar pelo consentimento (o
+/// MCP único da empresa, no n8n). Age como equipe. Criar de novo com o mesmo
+/// nome revoga a anterior: é assim que o token é trocado.
+///
+/// Devolve o token, que só existe aqui: o banco guarda o hash.
+pub async fn criar_conexao_de_servico(
+    pool: &PgPool,
+    nome: &str,
+    escopos: &[String],
+) -> Result<String, ErroDeDados> {
+    let conta = format!("servico:{nome}");
+    let mut transacao = pool.begin().await?;
+    sqlx::query!(
+        "update conexao_mcp set revogada_em = now() where conta_sub = $1 and revogada_em is null",
+        conta
+    )
+    .execute(&mut *transacao)
+    .await?;
+    let cliente_id = sqlx::query_scalar!(
+        "insert into cliente_mcp (nome, redirect_uris) values ($1, '{}') returning id",
+        format!("Serviço: {nome}")
+    )
+    .fetch_one(&mut *transacao)
+    .await?;
+    let acesso = segredo();
+    // A renovação nasce vencida: token de serviço não se renova, troca-se.
+    sqlx::query!(
+        r#"
+        insert into conexao_mcp
+            (cliente_id, conta_sub, conta_email, conta_nome, conta_equipe, escopos,
+             acesso_hash, acesso_expira_em, renovacao_hash, renovacao_expira_em)
+        values ($1, $2, $3, $4, true, $5, $6, 'infinity', $7, now())
+        "#,
+        cliente_id,
+        conta,
+        format!("{nome}@servico.cms"),
+        format!("{nome} (serviço)"),
+        escopos,
+        hash_de_conteudo(acesso.as_bytes()),
+        hash_de_conteudo(segredo().as_bytes())
+    )
+    .execute(&mut *transacao)
+    .await?;
+    transacao.commit().await?;
+    Ok(acesso)
+}
+
 /// Uma conexão na tela do conector.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConexaoDaConta {

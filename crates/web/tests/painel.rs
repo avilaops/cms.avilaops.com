@@ -2529,7 +2529,7 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
     .await;
     assert_eq!(de_fora.status, StatusCode::FORBIDDEN);
     let sem_bloco = enviar(&[("formulario", "7"), ("c0", "Caio")], None).await;
-    assert_eq!(sem_bloco.status, StatusCode::BAD_REQUEST);
+    assert_eq!(sem_bloco.status, StatusCode::METHOD_NOT_ALLOWED);
     assert_eq!(mensagens().await, 0);
 
     // O envio de verdade guarda a mensagem, avisa e leva ao agradecimento.
@@ -2582,6 +2582,63 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
         .await;
     assert!(erro);
     assert!(recusa.as_str().expect("frase").contains("mensagens:ler"));
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn servico_da_casa_entra_com_token_proprio_e_so_com_o_que_foi_liberado(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let escopos = ["sites:ler".to_string(), "conteudo:ler".to_string()];
+    let token = cms_dados::criar_conexao_de_servico(&pool, "n8n", &escopos)
+        .await
+        .expect("conexão de serviço");
+
+    // Age como equipe: alcança o site sem participar dele, dentro dos escopos.
+    let (erro, site) = painel
+        .ferramenta(&token, "ver_site", json!({ "site": "padaria" }))
+        .await;
+    assert!(!erro, "{site}");
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "salvar_categoria",
+            json!({ "site": "padaria", "nome": "Receitas" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(
+        recusa
+            .as_str()
+            .expect("frase")
+            .contains("conteudo:escrever")
+    );
+
+    // Criar de novo troca o token: o anterior deixa de valer, e as chamadas
+    // do serviço ficam no registro como as de qualquer conexão.
+    let novo = cms_dados::criar_conexao_de_servico(&pool, "n8n", &escopos)
+        .await
+        .expect("token trocado");
+    assert_ne!(novo, token);
+    assert!(
+        cms_dados::conexao_por_token(&pool, &token)
+            .await
+            .expect("consulta")
+            .is_none()
+    );
+    let (erro, _) = painel.ferramenta(&novo, "listar_modelos", json!({})).await;
+    assert!(!erro);
+    let (em_vigor, chamadas): (i64, i64) = sqlx::query_as(
+        r#"
+        select (select count(*) from conexao_mcp
+                where conta_sub = 'servico:n8n' and revogada_em is null),
+               (select count(*) from chamada_mcp c join conexao_mcp x on x.id = c.conexao_id
+                where x.conta_sub = 'servico:n8n')
+        "#,
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("contagens");
+    assert_eq!((em_vigor, chamadas), (1, 3));
 }
 
 impl Painel {

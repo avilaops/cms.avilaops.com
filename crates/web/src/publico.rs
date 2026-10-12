@@ -694,8 +694,12 @@ async fn receber_formulario(
             Bloco::Formulario { campos, .. } => Some((indice, campos)),
             _ => None,
         });
+    // Página sem aquele formulário não aceita envio nenhum.
     let Some((indice, campos)) = formulario else {
-        return Ok(simples(StatusCode::BAD_REQUEST, "Formulário desconhecido."));
+        return Ok(simples(
+            StatusCode::METHOD_NOT_ALLOWED,
+            "Método não permitido.",
+        ));
     };
     let destino = format!("{caminho}?enviado={indice}");
     // Robô que preencheu a isca recebe o mesmo agradecimento, e nada é guardado.

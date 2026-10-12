@@ -24,8 +24,9 @@ pub use catalogo::{
 };
 pub use conector::{
     Autorizacao, ClienteMcp, Conexao, ConexaoDaConta, ESCOPO_DE_PUBLICAR, ESCOPOS, ErroDeConector,
-    Tokens, cliente_mcp, conexao_por_token, conexoes_da_conta, criar_codigo, registrar_chamada,
-    registrar_cliente, renovar_tokens, revogar_conexao, trocar_codigo,
+    Tokens, cliente_mcp, conexao_por_token, conexoes_da_conta, criar_codigo,
+    criar_conexao_de_servico, registrar_chamada, registrar_cliente, renovar_tokens,
+    revogar_conexao, trocar_codigo,
 };
 pub use contas::{
     ConviteCriado, ConvitePendente, ErroDeConta, Membro, SiteDaConta, aceitar_convite,
