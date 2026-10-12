@@ -278,6 +278,10 @@ pub async fn conexao_por_token(
     }))
 }
 
+/// O endereço de retorno do cliente de um serviço. O cadastro exige um, e
+/// serviço não passa pelo consentimento: `.invalid` nunca resolve.
+const SEM_RETORNO: &str = "https://servico.invalid/sem-retorno";
+
 /// Cria a conexão de um serviço da casa: um token que não vence, sem pessoa
 /// autorizando em tela, para quem não tem como passar pelo consentimento (o
 /// MCP único da empresa, no n8n). Age como equipe. Criar de novo com o mesmo
@@ -298,8 +302,9 @@ pub async fn criar_conexao_de_servico(
     .execute(&mut *transacao)
     .await?;
     let cliente_id = sqlx::query_scalar!(
-        "insert into cliente_mcp (nome, redirect_uris) values ($1, '{}') returning id",
-        format!("Serviço: {nome}")
+        "insert into cliente_mcp (nome, redirect_uris) values ($1, $2) returning id",
+        format!("Serviço: {nome}"),
+        &[SEM_RETORNO.to_string()]
     )
     .fetch_one(&mut *transacao)
     .await?;
