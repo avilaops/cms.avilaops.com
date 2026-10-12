@@ -455,7 +455,8 @@ const TIPOS_DE_BLOCO: [&str; 20] = [
 /// verdade é o contrato do motor, na leitura.
 fn esquema_do_conteudo() -> Value {
     // Imagem, autor e categoria vão pelo cadastro (texto) ou por extenso.
-    let referencia = |descricao: &str| json!({ "type": ["string", "object"], "description": descricao });
+    let referencia =
+        |descricao: &str| json!({ "type": ["string", "object"], "description": descricao });
     json!({
         "type": "object",
         "description": DESCRICAO_DO_CONTEUDO,

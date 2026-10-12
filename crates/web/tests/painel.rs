@@ -1658,10 +1658,18 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
             .expect("ferramenta")
     };
     let conteudo = &esquema("criar_rascunho")["conteudo"];
-    assert_eq!(conteudo["properties"]["especie"]["enum"], json!(["pagina", "post"]));
-    let tipos = &conteudo["properties"]["dados"]["properties"]["corpo"]["items"]["properties"]
-        ["tipo"]["enum"];
-    assert!(tipos.as_array().expect("tipos").contains(&json!("formulario")));
+    assert_eq!(
+        conteudo["properties"]["especie"]["enum"],
+        json!(["pagina", "post"])
+    );
+    let tipos = &conteudo["properties"]["dados"]["properties"]["corpo"]["items"]["properties"]["tipo"]
+        ["enum"];
+    assert!(
+        tipos
+            .as_array()
+            .expect("tipos")
+            .contains(&json!("formulario"))
+    );
     assert_eq!(esquema("criar_rascunhos")["conteudos"]["maxItems"], 25);
     // Cada ferramenta diz se só lê e se desfaz algo, para o assistente saber
     // quando confirmar com a pessoa.
