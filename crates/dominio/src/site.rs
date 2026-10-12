@@ -8,6 +8,11 @@ use serde::{Deserialize, Serialize};
 /// Peso máximo recomendado de uma página, até o Dono mudar.
 const ORCAMENTO_DE_PESO_PADRAO_KB: u32 = 500;
 
+/// A página de cada site que diz em que termos as imagens dele podem ser
+/// usadas e como pedir autorização. É para onde aponta a licença de toda
+/// imagem de autoria própria.
+pub const CAMINHO_DA_LICENCA_DE_IMAGENS: &str = "/licenca-de-imagens";
+
 /// O que o dono define sobre o site. É o `Site` do motor sem a origem, que
 /// depende do host em que o pedido chegou.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -35,6 +40,11 @@ pub struct PerfilDoSite {
     /// ela, o site não carrega script nenhum.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tag_do_google: Option<String>,
+    /// Os termos de uso das imagens do site, um parágrafo por linha. É o
+    /// texto da página de licença. Sem ele, vale o texto padrão: todos os
+    /// direitos reservados.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub licenca_de_imagens: Option<String>,
 }
 
 /// A tag do Google não tem o formato de um contêiner nem de uma propriedade.
@@ -103,6 +113,14 @@ pub fn conferir_cor(cor: &str) -> Result<String, CorRecusada> {
     Ok(cor)
 }
 
+/// O texto de um campo opcional, se tiver algo escrito.
+fn preenchido(valor: &Option<String>) -> Option<&str> {
+    valor
+        .as_deref()
+        .map(str::trim)
+        .filter(|texto| !texto.is_empty())
+}
+
 impl PerfilDoSite {
     /// O perfil de um site recém-criado: só o nome. O resto o Dono preenche,
     /// e o painel aponta o que falta.
@@ -127,7 +145,62 @@ impl PerfilDoSite {
             cor_de_destaque: None,
             menu: Vec::new(),
             tag_do_google: None,
+            licenca_de_imagens: None,
         }
+    }
+
+    /// Quem responde pelo site: a razão social, ou o nome do site sem ela.
+    pub fn titular(&self) -> &str {
+        preenchido(&self.organizacao.razao_social).unwrap_or(&self.nome)
+    }
+
+    /// O texto da página de licença de imagens, um parágrafo por item: os
+    /// termos que o dono escreveu, ou o texto padrão, e depois como pedir
+    /// autorização, com o contato do cadastro.
+    pub fn termos_das_imagens(&self) -> Vec<String> {
+        let titular = self.titular();
+        let proprios: Vec<String> = self
+            .licenca_de_imagens
+            .iter()
+            .flat_map(|texto| texto.lines())
+            .map(str::trim)
+            .filter(|linha| !linha.is_empty())
+            .map(str::to_string)
+            .collect();
+        let mut termos = if proprios.is_empty() {
+            vec![
+                format!(
+                    "As imagens deste site com crédito de {titular} pertencem a {titular}. Todos os direitos reservados."
+                ),
+                "Copiar, republicar ou usar essas imagens, inteiras ou em parte, depende de autorização por escrito."
+                    .to_string(),
+                "Imagem com crédito de outra pessoa ou empresa segue a licença de quem a fez."
+                    .to_string(),
+            ]
+        } else {
+            proprios
+        };
+        let organizacao = &self.organizacao;
+        termos.push(
+            match (
+                preenchido(&organizacao.email),
+                preenchido(&organizacao.telefone),
+            ) {
+                (Some(email), Some(telefone)) => format!(
+                    "Para pedir autorização de uso, escreva para {email} ou ligue para {telefone}."
+                ),
+                (Some(email), None) => {
+                    format!("Para pedir autorização de uso, escreva para {email}.")
+                }
+                (None, Some(telefone)) => {
+                    format!("Para pedir autorização de uso, ligue para {telefone}.")
+                }
+                (None, None) => format!(
+                    "Para pedir autorização de uso, fale com {titular} pelos canais deste site."
+                ),
+            },
+        );
+        termos
     }
 
     pub fn para_site(&self, origem: &str) -> Site {
@@ -157,6 +230,7 @@ impl From<Site> for PerfilDoSite {
             cor_de_destaque: None,
             menu: Vec::new(),
             tag_do_google: None,
+            licenca_de_imagens: None,
         }
     }
 }
@@ -240,6 +314,32 @@ mod testes {
         ] {
             assert_eq!(conferir_tag_do_google(torta), Err(TagRecusada), "{torta}");
         }
+    }
+
+    #[test]
+    fn licenca_de_imagens_tem_texto_padrao_e_o_contato_do_cadastro() {
+        let mut perfil = PerfilDoSite::inicial("Padaria da Ana");
+        let padrao = perfil.termos_das_imagens();
+        assert!(padrao[0].contains("pertencem a Padaria da Ana. Todos os direitos reservados."));
+        assert_eq!(
+            padrao.last().map(String::as_str),
+            Some("Para pedir autorização de uso, fale com Padaria da Ana pelos canais deste site.")
+        );
+
+        // Com razão social, é ela que assina; os termos do dono trocam o padrão.
+        perfil.organizacao.razao_social = Some("Padaria da Ana Ltda.".to_string());
+        perfil.organizacao.email = Some("contato@padaria.example".to_string());
+        perfil.licenca_de_imagens =
+            Some("Uso livre com crédito.\n\n  Sem uso comercial.  ".to_string());
+        assert_eq!(perfil.titular(), "Padaria da Ana Ltda.");
+        assert_eq!(
+            perfil.termos_das_imagens(),
+            [
+                "Uso livre com crédito.",
+                "Sem uso comercial.",
+                "Para pedir autorização de uso, escreva para contato@padaria.example.",
+            ]
+        );
     }
 
     #[test]

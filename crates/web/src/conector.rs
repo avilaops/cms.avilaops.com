@@ -550,6 +550,10 @@ const AQUISICAO: (&str, &str) = (
     "aquisicao",
     "O endereço onde se pede a licença: https:// ou um caminho do site.",
 );
+const PROPRIA: (&str, &str) = (
+    "propria",
+    "Escreva sim quando a imagem é de autoria da empresa do site: crédito, autor, aviso de direitos e licença saem em nome dela, com a página de licença de imagens do site, e os argumentos credito, autoria, aviso, licenca e aquisicao são ignorados.",
+);
 
 /// O que o dono define sobre o site. Os mesmos nomes saem em ver_site.
 const IDENTIDADE: &[(&str, &str)] = &[
@@ -587,6 +591,10 @@ const IDENTIDADE: &[(&str, &str)] = &[
     (
         "tagDoGoogle",
         "A tag do Google do site, como GTM-ABC1234 (Tag Manager) ou G-ABC1234567 (Analytics). Com ela, as páginas carregam o script do Google para medir visitas. Vazio tira o script.",
+    ),
+    (
+        "licencaDeImagens",
+        "Os termos de uso das imagens do site, um parágrafo por linha. É o texto da página /licenca-de-imagens, para onde aponta a licença das imagens de autoria própria; o e-mail e o telefone de contato entram no fim dela. Vazio usa o texto padrão: todos os direitos reservados.",
     ),
     (
         "menu",
@@ -791,6 +799,7 @@ const FERRAMENTAS: [Ferramenta; 33] = [
             AVISO,
             LICENCA,
             AQUISICAO,
+            PROPRIA,
         ],
     },
     Ferramenta {
@@ -804,7 +813,7 @@ const FERRAMENTAS: [Ferramenta; 33] = [
     Ferramenta {
         nome: "editar_midia",
         escopo: "midia:escrever",
-        descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
+        descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Imagem feita pela empresa do site: propria = sim. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
         argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
         entrada: Entrada::Nenhuma,
         opcionais: &[
@@ -818,6 +827,7 @@ const FERRAMENTAS: [Ferramenta; 33] = [
             AVISO,
             LICENCA,
             AQUISICAO,
+            PROPRIA,
         ],
     },
     Ferramenta {
@@ -1062,6 +1072,12 @@ impl Chamada<'_> {
     /// Um argumento que pode faltar. Vazio é diferente de ausente: vazio apaga.
     fn opcional(&self, nome: &str) -> Option<&str> {
         self.argumentos.get(nome).and_then(Value::as_str)
+    }
+
+    /// Um argumento de sim ou não: só vale "sim".
+    fn sim(&self, nome: &str) -> bool {
+        self.opcional(nome)
+            .is_some_and(|valor| valor.trim().eq_ignore_ascii_case("sim"))
     }
 
     /// O site pedido e o ator da conta nele. Site de que a conta não
@@ -1522,18 +1538,26 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                 }
             };
             let texto = |nome: &str| chamada.opcional(nome).map(str::to_string);
+            let (credito, direitos) = if chamada.sim("propria") {
+                biblioteca::autoria_propria(&site)
+            } else {
+                (
+                    texto("credito").unwrap_or_default(),
+                    Direitos {
+                        autoria: texto("autoria"),
+                        aviso: texto("aviso"),
+                        licenca: texto("licenca"),
+                        aquisicao: texto("aquisicao"),
+                    },
+                )
+            };
             let envio = biblioteca::Envio {
                 nome: chamada.texto("nome")?.to_string(),
                 bytes: bytes.into(),
                 alt: chamada.texto("alt")?.to_string(),
                 legenda: texto("legenda").unwrap_or_default(),
-                credito: texto("credito").unwrap_or_default(),
-                direitos: Direitos {
-                    autoria: texto("autoria"),
-                    aviso: texto("aviso"),
-                    licenca: texto("licenca"),
-                    aquisicao: texto("aquisicao"),
-                },
+                credito,
+                direitos,
             };
             match biblioteca::registrar(chamada.estado, &site, &ator, envio).await? {
                 Ok(id) => Ok(do_site(json!({ "id": id, "situacao": "pendente" }), None)),
@@ -1560,16 +1584,25 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             let novo = |nome: &str, atual: Option<String>| {
                 chamada.opcional(nome).map(str::to_string).or(atual)
             };
+            let (credito, direitos) = if chamada.sim("propria") {
+                let (dono, direitos) = biblioteca::autoria_propria(&site);
+                (Some(dono), direitos)
+            } else {
+                (
+                    novo("credito", atual.credito),
+                    Direitos {
+                        autoria: novo("autoria", atual.autoria),
+                        aviso: novo("aviso", atual.aviso),
+                        licenca: novo("licenca", atual.licenca),
+                        aquisicao: novo("aquisicao", atual.aquisicao),
+                    },
+                )
+            };
             let descricao = DescricaoDaMidia {
                 alt: novo("alt", Some(atual.alt)).unwrap_or_default(),
                 legenda: novo("legenda", atual.legenda),
-                credito: novo("credito", atual.credito),
-                direitos: Direitos {
-                    autoria: novo("autoria", atual.autoria),
-                    aviso: novo("aviso", atual.aviso),
-                    licenca: novo("licenca", atual.licenca),
-                    aquisicao: novo("aquisicao", atual.aquisicao),
-                },
+                credito,
+                direitos,
             };
             match cms_dados::atualizar_midia(pool, site.id, &ator, id, &descricao).await {
                 Ok(()) => Ok(do_site(json!({ "id": id }), None)),

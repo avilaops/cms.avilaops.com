@@ -10,7 +10,9 @@ use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::CampoRecebido;
 use cms_dominio::eventos::origem_do_site;
-use cms_dominio::site::{aparece_na_busca, conferir_cor, conferir_tag_do_google};
+use cms_dominio::site::{
+    CAMINHO_DA_LICENCA_DE_IMAGENS, aparece_na_busca, conferir_cor, conferir_tag_do_google,
+};
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
     ItensDoSite, OpcoesRobots, PaginaDeCategoria, gerar_llms, gerar_llms_completo, gerar_robots,
@@ -18,7 +20,7 @@ use motor_web::descoberta::{
 };
 use motor_web::seo::montar_cabecalho;
 use motor_web::tipos::{
-    Bloco, Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site, TipoDeCampo,
+    Bloco, Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site, TipoDeCampo, Trecho,
 };
 use motor_web::validacao::normalizar_slug;
 
@@ -425,6 +427,11 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
     let Some(mut documento) =
         cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, caminho).await?
     else {
+        // A página de licença é do CMS, a não ser que o site publique a dele
+        // no mesmo endereço.
+        if caminho == CAMINHO_DA_LICENCA_DE_IMAGENS {
+            return licenca_de_imagens(estado, pedido).await;
+        }
         return match cms_dados::ausencia(&estado.pool, pedido.gravado.id, caminho).await? {
             Ausencia::Redirecionado(destino) => {
                 Ok(redirecionar(StatusCode::MOVED_PERMANENTLY, &destino))
@@ -442,6 +449,42 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
         pagina,
         pedido.indexavel && documento.seo().indexar,
     ))
+}
+
+/// A página que diz em que termos as imagens do site podem ser usadas e como
+/// pedir autorização. É o endereço que a imagem de autoria própria leva como
+/// licença, e de onde a busca de imagens tira o selo de imagem licenciável.
+async fn licenca_de_imagens(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWeb> {
+    let agora = Utc::now();
+    let mut documento = pagina_avulsa(
+        pedido,
+        CAMINHO_DA_LICENCA_DE_IMAGENS,
+        "Licença de imagens",
+        format!(
+            "Em que termos as imagens de {} podem ser usadas e como pedir autorização.",
+            pedido.site.nome
+        ),
+        true,
+        (agora, agora),
+        None,
+    );
+    if let Conteudo::Pagina(pagina) = &mut documento.conteudo {
+        pagina.corpo = pedido
+            .gravado
+            .perfil
+            .termos_das_imagens()
+            .into_iter()
+            .map(|texto| Bloco::Paragrafo {
+                trechos: vec![Trecho {
+                    texto,
+                    ..Trecho::default()
+                }],
+            })
+            .collect();
+    }
+    let moldura = moldura(estado, pedido, &documento).await?;
+    let pagina = PaginaDeDocumento::nova(moldura, &documento).render()?;
+    Ok(html(StatusCode::OK, pagina, pedido.indexavel))
 }
 
 /// Uma página que não está gravada: a listagem do blog e os avisos. Passa
