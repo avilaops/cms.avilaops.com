@@ -11,6 +11,7 @@ use axum::body::Bytes;
 use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::Response;
+use chrono::{Datelike, Utc};
 use cms_dados::{DescricaoDaMidia, ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
 use cms_dominio::{Ator, Conta, Papel};
 use motor_web::tipos::Direitos;
@@ -81,6 +82,8 @@ struct PaginaDeMidia {
     /// Quantas imagens a busca achou, por extenso.
     resumo: String,
     alt: String,
+    /// Em nome de quem fica a imagem marcada como de autoria própria.
+    dono: String,
 }
 
 #[derive(Default)]
@@ -114,6 +117,7 @@ async fn pagina(
         resumo: lista.resumo("Nenhuma imagem", "imagem", "imagens"),
         lista,
         alt: recado.alt,
+        dono: AutoriaPropria::do_site(site).dono,
     }
     .render()?;
     Ok(html_privado(status, corpo))
@@ -169,13 +173,38 @@ pub struct Envio {
     pub direitos: Direitos,
 }
 
-/// Lê o formulário de envio. `None` para o que não é um formulário válido.
-async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<Envio> {
+/// Quem assina uma imagem de autoria própria: a empresa do site, e o aviso de
+/// direitos no nome dela, com o ano de agora.
+struct AutoriaPropria {
+    dono: String,
+    aviso: String,
+}
+
+impl AutoriaPropria {
+    fn do_site(site: &SiteGravado) -> Self {
+        let perfil = &site.perfil;
+        let dono = perfil
+            .organizacao
+            .razao_social
+            .clone()
+            .filter(|nome| !nome.trim().is_empty())
+            .unwrap_or_else(|| perfil.nome.clone());
+        Self {
+            aviso: format!("© {} {dono}", Utc::now().year()),
+            dono,
+        }
+    }
+}
+
+/// Lê o formulário de envio, e se a pessoa marcou a imagem como de autoria
+/// própria. `None` para o que não é um formulário válido.
+async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<(Envio, bool)> {
     let tipo = cabecalhos.get(CONTENT_TYPE)?.to_str().ok()?;
     let limite = multer::parse_boundary(tipo).ok()?;
     let fluxo = futures_util::stream::once(async move { Ok::<Bytes, std::io::Error>(corpo) });
     let mut partes = multer::Multipart::new(fluxo, limite);
     let mut envio = Envio::default();
+    let mut propria = false;
     while let Some(campo) = partes.next_field().await.ok()? {
         let nome_do_campo = campo.name().map(str::to_string);
         let nome_do_arquivo = campo.file_name().map(str::to_string);
@@ -196,13 +225,14 @@ async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<Envio> {
                     "aviso" => direitos.aviso = Some(texto),
                     "licenca" => direitos.licenca = Some(texto),
                     "aquisicao" => direitos.aquisicao = Some(texto),
+                    "propria" => propria = !texto.is_empty(),
                     _ => {}
                 }
             }
             None => {}
         }
     }
-    Some(envio)
+    Some((envio, propria))
 }
 
 fn dimensoes(bytes: &[u8]) -> Option<(u32, u32)> {
@@ -287,9 +317,15 @@ pub async fn enviar(
         Ok(acesso) => acesso,
         Err(resposta) => return Ok(resposta),
     };
-    let Some(envio) = ler_envio(cabecalhos, corpo.clone()).await else {
+    let Some((mut envio, propria)) = ler_envio(cabecalhos, corpo.clone()).await else {
         return Ok(simples(StatusCode::BAD_REQUEST, "Formulário inválido."));
     };
+    if propria {
+        let autoria = AutoriaPropria::do_site(&site);
+        envio.credito = autoria.dono.clone();
+        envio.direitos.autoria = Some(autoria.dono);
+        envio.direitos.aviso = Some(autoria.aviso);
+    }
     let alt = envio.alt.clone();
     let (status, recado) = match registrar(estado, &site, &ator, envio).await? {
         Ok(_) => (
@@ -323,6 +359,8 @@ struct Correcao {
     aviso: String,
     licenca: String,
     aquisicao: String,
+    /// Marcada, a imagem passa a ser de autoria da empresa do site.
+    propria: String,
 }
 
 pub async fn corrigir(
@@ -339,7 +377,13 @@ pub async fn corrigir(
     let Ok(midia_id) = Uuid::parse_str(midia_id) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
-    let correcao = serde_urlencoded::from_bytes::<Correcao>(corpo).unwrap_or_default();
+    let mut correcao = serde_urlencoded::from_bytes::<Correcao>(corpo).unwrap_or_default();
+    if !correcao.propria.is_empty() {
+        let autoria = AutoriaPropria::do_site(&site);
+        correcao.credito = autoria.dono.clone();
+        correcao.autoria = autoria.dono;
+        correcao.aviso = autoria.aviso;
+    }
     let descricao = DescricaoDaMidia {
         alt: correcao.alt,
         legenda: Some(correcao.legenda),

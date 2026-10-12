@@ -14,6 +14,7 @@
 <input id="arquivo" name="arquivo" type="file" accept="image/jpeg,image/png,image/webp" required>
 <label for="alt">Descrição para quem não enxerga a imagem</label>
 <input id="alt" name="alt" required maxlength="300" value="{{ alt }}">
+<label class="marcar"><input type="checkbox" name="propria" value="1"> Imagem de autoria própria: crédito, autor e aviso de direitos em nome de {{ dono }}</label>
 <details>
 <summary>Legenda, crédito e direitos (opcional)</summary>
 <label for="legenda">Legenda (aparece embaixo da imagem)</label>
@@ -49,6 +50,7 @@
 <details>
 <summary>Corrigir</summary>
 <form method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}">
+<label class="marcar"><input type="checkbox" name="propria" value="1"> Autoria própria: preenche crédito, autor e aviso de direitos em nome de {{ dono }}</label>
 <label for="m{{ loop.index }}-alt">Descrição para quem não enxerga a imagem</label>
 <input id="m{{ loop.index }}-alt" name="alt" required maxlength="300" value="{{ midia.alt }}">
 <label for="m{{ loop.index }}-legenda">Legenda (aparece embaixo da imagem)</label>
