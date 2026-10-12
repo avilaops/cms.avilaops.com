@@ -10,7 +10,7 @@ const receberEvento = trigger({
       responseMode: 'onReceived',
       options: {},
     },
-    credentials: { httpHeaderAuth: newCredential('CMS - entrada de eventos') },
+    credentials: { httpHeaderAuth: { id: 'qeFeIBKCXEzCc6LK', name: 'CMS - entrada de eventos' } },
   },
   output: [
     {
@@ -519,14 +519,14 @@ const encerrarEvento = node({
         'https://cms.avilaops.com/api/admin/eventos/{{ $("Normalizar evento").item.json.id }}/encerrar',
       ),
       authentication: 'genericCredentialType',
-      genericAuthType: 'httpTemplatedCustomAuth',
+      genericAuthType: 'httpHeaderAuth',
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
       jsonBody: expr('{{ { resultado: $json.resultado } }}'),
       options: {},
     },
-    credentials: { httpTemplatedCustomAuth: newCredential('CMS - volta de eventos') },
+    credentials: { httpHeaderAuth: { id: '7MFYBzJ1eoSs9EI0', name: 'CMS - volta de eventos' } },
   },
   output: [{ data: 'Encerrado.' }],
 });
