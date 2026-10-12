@@ -1,5 +1,6 @@
 name: Consultas
-# Regera o `.sqlx`, os dados com que as consultas são conferidas sem banco.
+# Regera o `.sqlx`, os dados com que as consultas são conferidas sem banco,
+# e o `Cargo.lock`.
 # Roda à mão, no ramo em que a consulta ou a migração mudou; o resultado sai
 # como artefato, para quem pediu conferir e versionar.
 on:
@@ -46,9 +47,13 @@ jobs:
         run: sqlx migrate run --source crates/dados/migrations
       - name: Preparar
         run: cargo sqlx prepare --workspace
+      # O `Cargo.lock` vai junto: quando a mudança troca a versão do motor, é
+      # aqui que ele é atualizado, e a validação roda com `--locked`.
       - uses: actions/upload-artifact@v4
         with:
           name: sqlx
-          path: .sqlx
+          path: |
+            .sqlx
+            Cargo.lock
           include-hidden-files: true
           retention-days: 3

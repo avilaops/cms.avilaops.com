@@ -49,7 +49,7 @@ Precisa do `gh` autenticado e de `applications` no `~/.ssh/config`.
 
 Mudou consulta ou migração: rode o workflow `Consultas` no ramo
 (`gh workflow run consultas.yml`), baixe o artefato `sqlx` e versione o
-diretório `.sqlx`.
+diretório `.sqlx` e o `Cargo.lock` que vêm nele.
 
 ## Como validar
 
