@@ -276,8 +276,8 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `listar_sites`, `ver_site` | `sites:ler` |
 | `criar_site` | `sites:criar` |
 | `listar_documentos`, `ver_documento` | `conteudo:ler` |
-| `criar_rascunho`, `editar_rascunho` | `conteudo:escrever` |
-| `validar_documento` | `conteudo:ler` |
+| `criar_rascunho`, `criar_rascunhos`, `editar_rascunho` | `conteudo:escrever` |
+| `validar_documento`, `ver_previa` | `conteudo:ler` |
 | `enviar_para_revisao` | `conteudo:escrever` |
 | `publicar`, `despublicar`, `agendar_publicacao`, `cancelar_agendamento`, `devolver` | `conteudo:publicar` |
 | `listar_midia`, `enviar_midia`, `editar_midia`, `apagar_midia` | `midia:escrever` |

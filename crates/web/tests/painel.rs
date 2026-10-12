@@ -1534,6 +1534,102 @@ async fn assistente_so_se_conecta_com_registro_consentimento_e_pkce(pool: PgPool
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn assistente_cria_em_lote_e_ve_a_previa(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar("ana", &["sites:ler", "conteudo:ler", "conteudo:escrever"])
+        .await;
+    let pagina = |slug: &str, titulo: &str| {
+        json!({
+            "especie": "pagina",
+            "dados": {
+                "slug": slug,
+                "titulo": titulo,
+                "corpo": [
+                    { "tipo": "titulo", "nivel": 2, "texto": "Como funciona" },
+                    { "tipo": "paragrafo", "trechos": [{ "texto": "Pão quente todo dia." }] }
+                ],
+                "seo": {
+                    "titulo": format!("{titulo} | Padaria da Ana"),
+                    "descricao": "A padaria do bairro, com pão quente de manhã e à tarde.",
+                    "indexar": true
+                }
+            }
+        })
+    };
+
+    // O documento fora do contrato volta com o erro; os outros dois entram.
+    let (erro, lote) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunhos",
+            json!({ "site": "padaria", "conteudos": [
+                pagina("sobre", "Sobre"),
+                { "especie": "pagina", "dados": { "slug": "torta", "campoQueNaoExiste": true } },
+                pagina("encomendas", "Encomendas"),
+            ] }),
+        )
+        .await;
+    assert!(!erro, "{lote}");
+    let rascunhos = lote["rascunhos"].as_array().expect("rascunhos");
+    assert_eq!(rascunhos.len(), 3);
+    assert_eq!(rascunhos[0]["indice"], 0);
+    assert_eq!(rascunhos[0]["problemas"], json!([]));
+    assert!(
+        rascunhos[1]["erro"]
+            .as_str()
+            .expect("erro")
+            .contains("não segue o contrato")
+    );
+    assert!(rascunhos[2]["documento"].is_string());
+    let (_, documentos) = painel
+        .ferramenta(&token, "listar_documentos", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(documentos["documentos"].as_array().expect("lista").len(), 2);
+
+    // Lista vazia e lote grande demais são recusados inteiros.
+    for conteudos in [json!([]), json!(vec![pagina("a", "A"); 26])] {
+        let (erro, _) = painel
+            .ferramenta(
+                &token,
+                "criar_rascunhos",
+                json!({ "site": "padaria", "conteudos": conteudos }),
+            )
+            .await;
+        assert!(erro);
+    }
+
+    // A prévia lê o rascunho: nada vai ao ar.
+    let documento = rascunhos[0]["documento"].as_str().expect("documento");
+    let (erro, previa) = painel
+        .ferramenta(
+            &token,
+            "ver_previa",
+            json!({ "site": "padaria", "documento": documento }),
+        )
+        .await;
+    assert!(!erro, "{previa}");
+    assert_eq!(previa["caminho"], "/sobre");
+    assert_eq!(previa["titulo"], "Sobre");
+    assert_eq!(previa["naBusca"]["titulo"], "Sobre | Padaria da Ana");
+    assert_eq!(previa["problemas"], json!([]));
+    let texto = previa["texto"].as_str().expect("texto");
+    assert!(texto.contains("Como funciona") && texto.contains("Pão quente todo dia."));
+    assert!(previa["palavras"].as_u64().expect("palavras") >= 6);
+    assert!(
+        previa["previaNoPainel"]
+            .as_str()
+            .expect("endereço")
+            .ends_with(&format!("/painel/sites/padaria/doc/{documento}/previa"))
+    );
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/sobre").await.status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPool) {
     let painel = Painel::novo(&pool).await;
     painel.criar_site("ana", "padaria", "Padaria da Ana").await;
@@ -1549,8 +1645,24 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        31
+        33
     );
+    // O formato do conteúdo vai no esquema: a espécie e os tipos de bloco.
+    let esquema = |nome: &str| {
+        lista["result"]["tools"]
+            .as_array()
+            .expect("lista")
+            .iter()
+            .find(|ferramenta| ferramenta["name"] == nome)
+            .map(|ferramenta| ferramenta["inputSchema"]["properties"].clone())
+            .expect("ferramenta")
+    };
+    let conteudo = &esquema("criar_rascunho")["conteudo"];
+    assert_eq!(conteudo["properties"]["especie"]["enum"], json!(["pagina", "post"]));
+    let tipos = &conteudo["properties"]["dados"]["properties"]["corpo"]["items"]["properties"]
+        ["tipo"]["enum"];
+    assert!(tipos.as_array().expect("tipos").contains(&json!("formulario")));
+    assert_eq!(esquema("criar_rascunhos")["conteudos"]["maxItems"], 25);
     // Cada ferramenta diz se só lê e se desfaz algo, para o assistente saber
     // quando confirmar com a pessoa.
     let dica = |nome: &str, qual: &str| {

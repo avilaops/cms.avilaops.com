@@ -20,6 +20,7 @@ use cms_dados::{
 use cms_dominio::modelos::{MODELOS, conteudo_do_modelo};
 use cms_dominio::{Ator, Conta};
 use cms_integracoes::busca;
+use motor_web::conteudo::{contar_palavras, texto_do_corpo};
 use motor_web::tipos::{Conteudo, Direitos};
 use motor_web::validacao::{Problema, UPLOAD_MAXIMO_BYTES};
 use serde::Deserialize;
@@ -411,6 +412,111 @@ pub async fn revogar(
     Ok(redirecionar(StatusCode::SEE_OTHER, "/painel/conector"))
 }
 
+/// O que uma ferramenta recebe além dos argumentos em texto.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Entrada {
+    Nenhuma,
+    /// `conteudo`: um documento no contrato do CMS.
+    Documento,
+    /// `conteudos`: uma lista de documentos.
+    Lote,
+}
+
+/// Quantos documentos cabem em uma chamada de `criar_rascunhos`.
+const LOTE_MAXIMO: usize = 25;
+
+/// Os blocos e as seções que o corpo aceita, pelo `tipo`.
+const TIPOS_DE_BLOCO: [&str; 20] = [
+    "paragrafo",
+    "titulo",
+    "imagem",
+    "lista",
+    "citacao",
+    "tabela",
+    "perguntas",
+    "video",
+    "chamada",
+    "cartoes",
+    "destaque",
+    "depoimentos",
+    "numeros",
+    "passos",
+    "planos",
+    "galeria",
+    "logos",
+    "faixa",
+    "formulario",
+    "contato",
+];
+
+/// O formato de `conteudo`, para o assistente errar menos antes de chamar.
+/// Descreve o envelope, os campos de cada espécie e os tipos de bloco; o
+/// formato de dentro de cada bloco vem de `ver_modelo`, e quem confere de
+/// verdade é o contrato do motor, na leitura.
+fn esquema_do_conteudo() -> Value {
+    // Imagem, autor e categoria vão pelo cadastro (texto) ou por extenso.
+    let referencia = |descricao: &str| json!({ "type": ["string", "object"], "description": descricao });
+    json!({
+        "type": "object",
+        "description": DESCRICAO_DO_CONTEUDO,
+        "required": ["especie", "dados"],
+        "properties": {
+            "especie": { "type": "string", "enum": ["pagina", "post"] },
+            "dados": {
+                "type": "object",
+                "required": ["slug", "titulo", "seo"],
+                "properties": {
+                    "slug": { "type": "string", "description": "O endereço, sem barra no começo. Vazio só na página inicial." },
+                    "titulo": { "type": "string" },
+                    "menu": { "type": "string", "description": "Só na página: o nome curto no menu do site, com até 24 letras." },
+                    "abertura": {
+                        "type": "object",
+                        "description": "Só na página: o topo, com texto e até dois botões.",
+                        "required": ["texto"],
+                        "properties": {
+                            "sobretitulo": { "type": "string" },
+                            "texto": { "type": "string" },
+                            "acoes": { "type": "array", "maxItems": 2, "items": { "type": "object" } },
+                        },
+                    },
+                    "tipo": { "type": "string", "description": "Só no post, obrigatório: o tipo de artigo, como em ver_modelo." },
+                    "resumo": { "type": "string", "description": "Só no post, obrigatório." },
+                    "capa": referencia("A imagem de capa: o id da biblioteca (listar_midia). Obrigatória no post."),
+                    "autor": referencia("Só no post, obrigatório: o slug do autor (listar_autores)."),
+                    "categoria": referencia("Só no post, obrigatório: o slug da categoria (listar_categorias)."),
+                    "tags": { "type": "array", "items": { "type": "string" } },
+                    "seo": {
+                        "type": "object",
+                        "required": ["titulo", "descricao", "indexar"],
+                        "properties": {
+                            "titulo": { "type": "string" },
+                            "descricao": { "type": "string" },
+                            "indexar": { "type": "boolean" },
+                            "imagemSocial": referencia("A imagem de compartilhamento."),
+                        },
+                    },
+                    "trilha": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["nome", "url"],
+                            "properties": { "nome": { "type": "string" }, "url": { "type": "string" } },
+                        },
+                    },
+                    "corpo": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["tipo"],
+                            "properties": { "tipo": { "type": "string", "enum": TIPOS_DE_BLOCO } },
+                        },
+                    },
+                },
+            },
+        },
+    })
+}
+
 /// Uma ferramenta: nome, escopo que exige, o que faz e os argumentos.
 struct Ferramenta {
     nome: &'static str,
@@ -418,8 +524,8 @@ struct Ferramenta {
     descricao: &'static str,
     /// Os argumentos obrigatórios, todos texto, e a descrição de cada um.
     argumentos: &'static [(&'static str, &'static str)],
-    /// A ferramenta recebe também `conteudo`, um objeto.
-    com_conteudo: bool,
+    /// O documento que a ferramenta recebe além dos argumentos em texto.
+    entrada: Entrada,
     /// Os argumentos que podem faltar, também texto.
     opcionais: &'static [(&'static str, &'static str)],
 }
@@ -483,13 +589,13 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 31] = [
+const FERRAMENTAS: [Ferramenta; 33] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
         descricao: "Lista os sites de que a conta participa, com o papel em cada um.",
         argumentos: &[],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -497,7 +603,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "sites:ler",
         descricao: "Mostra a situação de um site, o papel da conta nele e a identidade: nome, descrição, logo e organização.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -511,7 +617,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
             ),
             ("nome", "O nome do site."),
         ],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -519,7 +625,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Lista as páginas e os posts de um site, com a situação de cada um.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -527,7 +633,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Devolve o conteúdo de um documento: o rascunho, ou o que está no ar quando não há rascunho.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -535,7 +641,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Lista os modelos de página e de post: início, sobre, serviços, preços, contato, campanha e outros.",
         argumentos: &[],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -543,7 +649,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Devolve o conteúdo de um modelo, no contrato do CMS, com todas as seções daquele tipo de página. Troque os textos de orientação pelos do negócio e mande em criar_rascunho.",
         argumentos: &[("modelo", "O id do modelo, como em listar_modelos.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -551,7 +657,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:escrever",
         descricao: "Cria uma página ou um post como rascunho. Nunca é barrado: devolve o identificador e os problemas que impediriam publicar.",
         argumentos: &[SITE],
-        com_conteudo: true,
+        entrada: Entrada::Documento,
         opcionais: &[],
     },
     Ferramenta {
@@ -559,7 +665,23 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:escrever",
         descricao: "Regrava o rascunho de um documento. Devolve os problemas que impediriam publicar.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: true,
+        entrada: Entrada::Documento,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "criar_rascunhos",
+        escopo: "conteudo:escrever",
+        descricao: "Cria vários rascunhos de uma vez, até 25 por chamada, para trazer um site ou um blog inteiro. Cada documento é gravado por si: o que não segue o contrato volta com o erro, e os outros entram. Devolve, na ordem recebida, o identificador e os problemas de cada um.",
+        argumentos: &[SITE],
+        entrada: Entrada::Lote,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "ver_previa",
+        escopo: "conteudo:ler",
+        descricao: "Mostra como o rascunho vai sair, sem publicar: o endereço, o título, o que aparece na busca, a contagem de palavras, o texto do corpo em Markdown e os problemas que impediriam publicar. Devolve também o endereço da prévia no painel, que a pessoa abre com a conta dela.",
+        argumentos: &[SITE, DOCUMENTO],
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -567,7 +689,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Devolve os problemas do rascunho, com código, campo e mensagem. Use para corrigir antes de pedir revisão.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -575,7 +697,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:escrever",
         descricao: "Pede a revisão do rascunho a um editor. É recusado se houver problema que bloqueia.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -583,7 +705,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:publicar",
         descricao: "Põe o rascunho no ar. Exige papel de editor ou dono no site.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[(
             "data",
             "Só para a equipe da Ávila Ops, ao trazer conteúdo de outro site: a data original de publicação, em ISO 8601 (2026-09-01T12:00:00Z), no passado. Sem ela, vale a data de agora.",
@@ -601,7 +723,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
                 "A data e a hora, em ISO 8601 com fuso, como 2026-11-03T09:00:00-03:00.",
             ),
         ],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -609,7 +731,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:publicar",
         descricao: "Desfaz o agendamento de um documento. Ele continua como rascunho.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -617,7 +739,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:publicar",
         descricao: "Devolve a quem escreveu um rascunho que está em revisão, para corrigir. Exige papel de editor ou dono.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -625,7 +747,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:publicar",
         descricao: "Tira o documento do ar. O endereço passa a responder 410.",
         argumentos: &[SITE, DOCUMENTO],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -633,7 +755,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "midia:escrever",
         descricao: "Lista as imagens da biblioteca do site, com o id para usar no conteúdo, a legenda, o crédito e os direitos de cada uma.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -648,7 +770,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
                 "A descrição da imagem para quem não a enxerga. Obrigatória.",
             ),
         ],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[
             (
                 "url",
@@ -671,7 +793,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "midia:escrever",
         descricao: "Apaga uma imagem da biblioteca, com o arquivo original e as variantes. Imagem em uso em página, post ou cadastro de autor não é apagada. Não tem volta.",
         argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -679,7 +801,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "midia:escrever",
         descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
         argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[
             (
                 "alt",
@@ -698,7 +820,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "mensagens:ler",
         descricao: "Lista as mensagens mais recentes que os visitantes mandaram pelos formulários do site, com a página de origem e os campos preenchidos. É dado pessoal de terceiros: use só para o que a pessoa pediu. Exige papel de editor ou dono.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -706,7 +828,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "sites:ler",
         descricao: "Lista os redirecionamentos do site: de qual endereço antigo para qual destino.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -724,7 +846,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
                 "O destino: um caminho do site, como /blog/o-que-e-erp, ou um endereço https:// de outro site. Com /* no fim, como /blog/*, recebe o resto do caminho antigo.",
             ),
         ],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -738,7 +860,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
                 "O caminho de origem, como em listar_redirecionamentos.",
             ),
         ],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -746,7 +868,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "sites:ler",
         descricao: "Mostra o endereço provisório do site, os domínios próprios pedidos (ativos ou esperando o DNS) e o registro de DNS a criar.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -754,7 +876,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "sites:editar",
         descricao: "Registra o domínio próprio do site, como padaria.com.br. Ele vira o endereço do site sozinho, em até dez minutos, depois que o DNS apontar para o servidor (veja ver_dominio); até lá nada muda. Exige papel de dono e a página inicial publicada.",
         argumentos: &[SITE, ("dominio", "Só o domínio, sem http e sem barra.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -762,7 +884,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Lista os autores cadastrados no site.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -770,7 +892,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:ler",
         descricao: "Lista as categorias do blog do site.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -778,7 +900,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:escrever",
         descricao: "Cadastra um autor, ou regrava o que já existe com o mesmo nome. Post só vai ao ar com autor que tem foto e bio. Exige papel de editor ou dono.",
         argumentos: &[SITE, ("nome", "O nome de quem assina.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[
             ("cargo", "O cargo ou a ocupação."),
             ("bio", "Quem é a pessoa, em poucas frases."),
@@ -798,7 +920,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "conteudo:escrever",
         descricao: "Cadastra uma categoria do blog, ou regrava o nome da que tem o mesmo endereço. Exige papel de editor ou dono.",
         argumentos: &[SITE, ("nome", "O nome da categoria.")],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
     Ferramenta {
@@ -806,7 +928,7 @@ const FERRAMENTAS: [Ferramenta; 31] = [
         escopo: "sites:editar",
         descricao: "Muda a identidade do site. Só o que for enviado muda; o resto fica como está. Exige papel de dono.",
         argumentos: &[SITE],
-        com_conteudo: false,
+        entrada: Entrada::Nenhuma,
         opcionais: IDENTIDADE,
     },
 ];
@@ -831,12 +953,25 @@ fn descrever(ferramenta: &Ferramenta) -> Value {
             json!({ "type": "string", "description": descricao }),
         );
     }
-    if ferramenta.com_conteudo {
-        propriedades.insert(
-            "conteudo".to_string(),
-            json!({ "type": "object", "description": DESCRICAO_DO_CONTEUDO }),
-        );
-        obrigatorios.push("conteudo");
+    match ferramenta.entrada {
+        Entrada::Nenhuma => {}
+        Entrada::Documento => {
+            propriedades.insert("conteudo".to_string(), esquema_do_conteudo());
+            obrigatorios.push("conteudo");
+        }
+        Entrada::Lote => {
+            propriedades.insert(
+                "conteudos".to_string(),
+                json!({
+                    "type": "array",
+                    "description": "Os documentos a criar, cada um no formato de `conteudo` em criar_rascunho.",
+                    "minItems": 1,
+                    "maxItems": LOTE_MAXIMO,
+                    "items": esquema_do_conteudo(),
+                }),
+            );
+            obrigatorios.push("conteudos");
+        }
     }
     // O assistente usa isto para saber o que pode chamar sem perguntar e o
     // que pede confirmação da pessoa.
@@ -905,6 +1040,8 @@ struct Chamada<'a> {
     estado: &'a Estado,
     conexao: &'a Conexao,
     argumentos: &'a Value,
+    /// A origem do painel, para os endereços que a pessoa abre.
+    origem: &'a str,
 }
 
 impl Chamada<'_> {
@@ -1015,14 +1152,9 @@ impl Chamada<'_> {
         Ok(())
     }
 
-    /// Lê `conteudo` no contrato do motor. As datas são do servidor: se não
+    /// Lê um documento no contrato do motor. As datas são do servidor: se não
     /// vierem, entram provisórias, e a publicação grava as de verdade.
-    async fn conteudo(&self, site_id: Uuid) -> Result<Conteudo, Recusa> {
-        let mut valor = self
-            .argumentos
-            .get("conteudo")
-            .cloned()
-            .ok_or_else(|| recusa("Falta o argumento \"conteudo\"."))?;
+    async fn ler_conteudo(&self, site_id: Uuid, mut valor: Value) -> Result<Conteudo, Recusa> {
         let agora = json!(Utc::now());
         if let Some(dados) = valor.get_mut("dados").and_then(Value::as_object_mut) {
             for campo in ["publicadoEm", "atualizadoEm"] {
@@ -1038,6 +1170,25 @@ impl Chamada<'_> {
             ));
         }
         Ok(conteudo)
+    }
+
+    /// Grava um documento como rascunho: o caminho de `criar_rascunho`,
+    /// `editar_rascunho` e de cada item de `criar_rascunhos`.
+    async fn gravar_rascunho(
+        &self,
+        site_id: Uuid,
+        ator: &Ator,
+        documento_id: Option<Uuid>,
+        valor: Value,
+    ) -> Result<fluxo::Salvo, Recusa> {
+        let pool = &self.estado.pool;
+        let mut conteudo = self.ler_conteudo(site_id, valor).await?;
+        // O que o assistente escreveu sobre a imagem não vale: dimensões e
+        // variantes são as da biblioteca.
+        cms_dados::hidratar_conteudo(pool, site_id, &mut conteudo).await?;
+        fluxo::salvar_rascunho(pool, site_id, ator, documento_id, &conteudo)
+            .await
+            .map_err(do_fluxo)
     }
 }
 
@@ -1441,21 +1592,87 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             } else {
                 None
             };
-            let mut conteudo = chamada.conteudo(site.id).await?;
-            // O que o assistente escreveu sobre a imagem não vale: dimensões e
-            // variantes são as da biblioteca.
-            cms_dados::hidratar_conteudo(pool, site.id, &mut conteudo).await?;
-            let salvo = fluxo::salvar_rascunho(pool, site.id, &ator, documento_id, &conteudo)
-                .await
-                .map_err(do_fluxo)?;
+            let valor = chamada
+                .argumentos
+                .get("conteudo")
+                .cloned()
+                .ok_or_else(|| recusa("Falta o argumento \"conteudo\"."))?;
+            let salvo = chamada
+                .gravar_rascunho(site.id, &ator, documento_id, valor)
+                .await?;
             Ok(do_site(
                 json!({ "documento": salvo.documento_id, "problemas": problemas_em_json(&salvo.problemas) }),
                 Some(salvo.documento_id),
             ))
         }
+        "criar_rascunhos" => {
+            let conteudos = chamada
+                .argumentos
+                .get("conteudos")
+                .and_then(Value::as_array)
+                .filter(|lista| !lista.is_empty())
+                .ok_or_else(|| {
+                    recusa("Falta o argumento \"conteudos\", uma lista de documentos.")
+                })?;
+            if conteudos.len() > LOTE_MAXIMO {
+                return Err(recusa(format!(
+                    "São {} documentos; cabem até {LOTE_MAXIMO} por chamada. Divida em mais chamadas.",
+                    conteudos.len()
+                )));
+            }
+            let mut rascunhos = Vec::with_capacity(conteudos.len());
+            for (indice, valor) in conteudos.iter().enumerate() {
+                // Um documento recusado não derruba os outros do lote.
+                let feito = chamada
+                    .gravar_rascunho(site.id, &ator, None, valor.clone())
+                    .await;
+                rascunhos.push(match feito {
+                    Ok(salvo) => json!({
+                        "indice": indice,
+                        "documento": salvo.documento_id,
+                        "problemas": problemas_em_json(&salvo.problemas),
+                    }),
+                    Err(Recusa::Mensagem(erro)) => json!({ "indice": indice, "erro": erro }),
+                    Err(interna) => return Err(interna),
+                });
+            }
+            Ok(do_site(json!({ "rascunhos": rascunhos }), None))
+        }
         _ => {
             let id = chamada.documento()?;
             let resultado = match ferramenta {
+                "ver_previa" => {
+                    let aberto = cms_dados::abrir_documento(pool, site.id, id)
+                        .await?
+                        .ok_or_else(|| recusa("Documento não encontrado neste site."))?;
+                    let (titulo, seo, corpo) = match &aberto.conteudo {
+                        Conteudo::Pagina(pagina) => (&pagina.titulo, &pagina.seo, &pagina.corpo),
+                        Conteudo::Post(post) => (&post.titulo, &post.seo, &post.corpo),
+                        Conteudo::Produto(_) => {
+                            return Err(recusa("O CMS não guarda produto."));
+                        }
+                    };
+                    let problemas = fluxo::problemas_do_rascunho(pool, site.id, id)
+                        .await
+                        .map_err(do_fluxo)?;
+                    json!({
+                        "caminho": aberto.caminho,
+                        "situacao": aberto.situacao,
+                        "titulo": titulo,
+                        "naBusca": {
+                            "titulo": seo.titulo,
+                            "descricao": seo.descricao,
+                            "indexar": seo.indexar,
+                        },
+                        "palavras": contar_palavras(corpo),
+                        "texto": texto_do_corpo(corpo),
+                        "problemas": problemas_em_json(&problemas),
+                        "previaNoPainel": format!(
+                            "{}/painel/sites/{}/doc/{id}/previa",
+                            chamada.origem, site.slug
+                        ),
+                    })
+                }
                 "ver_documento" => {
                     let aberto = cms_dados::abrir_documento(pool, site.id, id)
                         .await?
@@ -1531,7 +1748,12 @@ fn conteudo_de_ferramenta(texto: String, eh_erro: bool) -> Value {
     json!({ "content": [{ "type": "text", "text": texto }], "isError": eh_erro })
 }
 
-async fn chamar(estado: &Estado, conexao: &Conexao, parametros: &Value) -> Result<Value, ErroWeb> {
+async fn chamar(
+    estado: &Estado,
+    conexao: &Conexao,
+    origem: &str,
+    parametros: &Value,
+) -> Result<Value, ErroWeb> {
     let nome = parametros.get("name").and_then(Value::as_str).unwrap_or("");
     let Some(ferramenta) = FERRAMENTAS.iter().find(|f| f.nome == nome) else {
         return Ok(conteudo_de_ferramenta(
@@ -1555,6 +1777,7 @@ async fn chamar(estado: &Estado, conexao: &Conexao, parametros: &Value) -> Resul
         estado,
         conexao,
         argumentos: parametros.get("arguments").unwrap_or(&vazio),
+        origem,
     };
     let (texto, eh_erro, site_id, documento_id) = match executar(ferramenta.nome, &chamada).await {
         Ok(feito) => (
@@ -1674,13 +1897,13 @@ pub async fn mcp(
             "protocolVersion": VERSAO_DO_PROTOCOLO,
             "capabilities": { "tools": {} },
             "serverInfo": { "name": "cms-avila-ops", "version": env!("CARGO_PKG_VERSION") },
-            "instructions": "CMS da Ávila Ops. Escreva rascunhos, confira com validar_documento e envie para revisão; publicar depende de a pessoa ter liberado.",
+            "instructions": "CMS da Ávila Ops. Escreva rascunhos (vários de uma vez com criar_rascunhos), confira com validar_documento ou ver_previa e envie para revisão; publicar depende de a pessoa ter liberado.",
         })),
         "ping" => Ok(json!({})),
         "tools/list" => {
             Ok(json!({ "tools": FERRAMENTAS.iter().map(descrever).collect::<Vec<_>>() }))
         }
-        "tools/call" => Ok(chamar(estado, &conexao, parametros).await?),
+        "tools/call" => Ok(chamar(estado, &conexao, origem, parametros).await?),
         _ => Err(json!({ "code": -32601, "message": "Método desconhecido." })),
     };
     Ok(json_com(
@@ -1690,4 +1913,35 @@ pub async fn mcp(
             Err(erro) => json!({ "jsonrpc": "2.0", "id": id, "error": erro }),
         },
     ))
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    /// O esquema não pode ficar para trás do motor: todo bloco que os modelos
+    /// usam precisa estar na lista de tipos.
+    #[test]
+    fn todo_bloco_dos_modelos_esta_no_esquema() {
+        for modelo in &MODELOS {
+            let conteudo = conteudo_do_modelo(modelo.id, Utc::now()).expect("modelo");
+            let valor = json!(conteudo);
+            for bloco in valor["dados"]["corpo"].as_array().expect("corpo") {
+                let tipo = bloco["tipo"].as_str().expect("tipo");
+                assert!(TIPOS_DE_BLOCO.contains(&tipo), "{}: {tipo}", modelo.id);
+            }
+        }
+    }
+
+    /// E o contrário: todo tipo da lista é um bloco que o motor lê.
+    #[test]
+    fn todo_tipo_do_esquema_existe_no_motor() {
+        for tipo in TIPOS_DE_BLOCO {
+            let erro = serde_json::from_value::<motor_web::tipos::Bloco>(json!({ "tipo": tipo }))
+                .err()
+                .map(|erro| erro.to_string())
+                .unwrap_or_default();
+            assert!(!erro.contains("unknown variant"), "{tipo}: {erro}");
+        }
+    }
 }
