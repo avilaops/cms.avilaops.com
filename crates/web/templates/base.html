@@ -63,6 +63,7 @@ iframe{width:100%;height:auto;aspect-ratio:16/9;border:0;border-radius:.5rem;mar
 .paginas{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:center;padding:1.5rem 0;color:var(--suave)}
 footer.rodape{border-top:1px solid var(--linha);padding:1.5rem 0;font-size:.9375rem;color:var(--suave)}
 footer.rodape p{margin:.15rem 0}
+footer.rodape .mais{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin-bottom:1rem}
 .larga .faixa{max-width:72rem}
 .larga article>:not(section):not(.abertura){max-width:var(--largura);margin-left:auto;margin-right:auto}
 {{ moldura.estilo_das_secoes|safe }}
@@ -94,6 +95,13 @@ footer.rodape p{margin:.15rem 0}
 </main>
 <footer class="rodape">
 <div class="faixa">
+{%- if !moldura.mais_paginas.is_empty() %}
+<nav class="mais" aria-label="Mais páginas">
+{%- for link in moldura.mais_paginas %}
+<a href="{{ link.url }}"{% if link.atual %} aria-current="page"{% endif %}>{{ link.rotulo }}</a>
+{%- endfor %}
+</nav>
+{%- endif %}
 {%- for linha in moldura.rodape %}
 <p>{{ linha }}</p>
 {%- endfor %}

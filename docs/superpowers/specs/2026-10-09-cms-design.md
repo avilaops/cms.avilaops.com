@@ -318,8 +318,11 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   não se redirecionam. É o que permite trazer um site que já existia.
 - `publicar` aceita `data` só da equipe da Ávila Ops, no passado: a data
   original de conteúdo trazido de outro site.
-- A identidade guarda a ordem do menu (`menu`, um caminho por linha), e o
-  cabeçalho do site mostra a logo quando ela tem variante gerada.
+- A identidade guarda o menu do topo (`menu`, um caminho por linha, na
+  ordem). Com a lista definida, só o que está nela aparece no topo e as
+  outras páginas vão para o rodapé; sem lista, todas ficam no topo. O
+  cabeçalho do site mostra a logo quando ela tem variante gerada, e o ícone
+  do site (favicon) sai da logo.
 - Página de apresentação: a página aceita `abertura` (o topo, com o `<h1>`,
   texto, até dois botões e a capa ao lado) e o corpo aceita seções de página
   inteira: `cartoes`, `destaque`, `depoimentos`, `numeros`, `passos`, `planos`,

@@ -25,8 +25,9 @@ pub struct PerfilDoSite {
     /// ela, vale a cor do tema.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cor_de_destaque: Option<String>,
-    /// A ordem das páginas no menu, pelos caminhos (`/servicos`, `/blog`). O
-    /// que não está na lista vem depois, em ordem de endereço.
+    /// As páginas do menu do topo, na ordem, pelos caminhos (`/servicos`,
+    /// `/blog`). O que não está na lista vai para o rodapé. Vazia, todas as
+    /// páginas ficam no topo, em ordem de endereço.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub menu: Vec<String>,
 }

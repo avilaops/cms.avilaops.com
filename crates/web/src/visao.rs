@@ -22,6 +22,8 @@ pub struct Moldura {
     pub head: String,
     pub nome_do_site: String,
     pub navegacao: Vec<Link>,
+    /// As páginas que o site deixou fora do menu: aparecem no rodapé.
+    pub mais_paginas: Vec<Link>,
     pub rodape: Vec<String>,
     /// O estilo das seções, que vem do motor para ser igual em todo site.
     pub estilo_das_secoes: &'static str,
@@ -53,19 +55,29 @@ pub fn logo_do_cabecalho(site: &Site) -> Option<Logo> {
 }
 
 impl Moldura {
-    /// Põe as páginas do menu na ordem que o site definiu. "Início" fica na
-    /// frente e o que não está na lista mantém a ordem em que chegou, depois.
+    /// Monta o menu que o site definiu: "Início" na frente e as páginas da
+    /// lista, na ordem dela. O que não está na lista sai do topo e vai para o
+    /// rodapé, na ordem em que chegou: é onde ficam a política de privacidade
+    /// e as páginas que não são do dia a dia. Sem lista, tudo fica no topo.
     pub fn ordenar_menu(&mut self, ordem: &[String]) {
+        if ordem.is_empty() {
+            return;
+        }
         let posicao = |link: &Link| {
             if link.url == "/" {
-                return 0;
+                return Some(0);
             }
             ordem
                 .iter()
                 .position(|caminho| caminho.trim_end_matches('/') == link.url)
-                .map_or(usize::MAX, |i| i + 1)
+                .map(|i| i + 1)
         };
-        self.navegacao.sort_by_key(posicao);
+        let (mut no_menu, fora): (Vec<Link>, Vec<Link>) = std::mem::take(&mut self.navegacao)
+            .into_iter()
+            .partition(|link| posicao(link).is_some());
+        no_menu.sort_by_key(posicao);
+        self.navegacao = no_menu;
+        self.mais_paginas = fora;
     }
 }
 
@@ -119,6 +131,7 @@ impl Moldura {
             head,
             nome_do_site: site.nome.clone(),
             navegacao,
+            mais_paginas: Vec::new(),
             rodape,
             estilo_das_secoes: ESTILO_DAS_SECOES,
             cor_de_destaque: None,
@@ -299,7 +312,7 @@ mod testes {
     }
 
     #[test]
-    fn menu_segue_a_ordem_do_site_e_o_resto_vem_depois() {
+    fn menu_segue_a_ordem_do_site_e_o_resto_vai_para_o_rodape() {
         let mut moldura = Moldura {
             idioma: String::new(),
             head: String::new(),
@@ -314,6 +327,7 @@ mod testes {
             ]
             .map(link)
             .into(),
+            mais_paginas: Vec::new(),
             rodape: Vec::new(),
             estilo_das_secoes: "",
             cor_de_destaque: None,
@@ -322,16 +336,18 @@ mod testes {
         };
         moldura.ordenar_menu(&["/servicos/".to_string(), "/blog".to_string()]);
         let ordem: Vec<&str> = moldura.navegacao.iter().map(|l| l.url.as_str()).collect();
-        assert_eq!(
-            ordem,
-            [
-                "/",
-                "/servicos",
-                "/blog",
-                "/comparativos",
-                "/contato",
-                "/segmentos"
-            ]
-        );
+        assert_eq!(ordem, ["/", "/servicos", "/blog"]);
+        let fora: Vec<&str> = moldura
+            .mais_paginas
+            .iter()
+            .map(|l| l.url.as_str())
+            .collect();
+        assert_eq!(fora, ["/comparativos", "/contato", "/segmentos"]);
+
+        // Sem ordem definida, nada sai do topo.
+        moldura.navegacao.append(&mut moldura.mais_paginas);
+        moldura.ordenar_menu(&[]);
+        assert_eq!(moldura.navegacao.len(), 6);
+        assert!(moldura.mais_paginas.is_empty());
     }
 }
