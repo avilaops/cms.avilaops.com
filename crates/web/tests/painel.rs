@@ -2198,25 +2198,13 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
     assert!(faltas.contains(&"secao.imagem.falta"), "{faltas:?}");
     let (erro, _) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
     assert!(erro);
-    // Agendamento pelo conector: precisa de data com fuso e no futuro, e
-    // pode ser desfeito.
+    // Rascunho com problema que bloqueia também não é agendado.
     let mut agendar = alvo.clone();
-    agendar["quando"] = json!("amanhã cedo");
-    let (erro, recusa) = painel
-        .ferramenta(&token, "agendar_publicacao", agendar.clone())
-        .await;
-    assert!(erro);
-    assert!(recusa.as_str().expect("frase").contains("ISO 8601"));
     agendar["quando"] = json!((chrono::Utc::now() + chrono::Duration::days(2)).to_rfc3339());
-    let (erro, agendado) = painel
+    let (erro, _) = painel
         .ferramenta(&token, "agendar_publicacao", agendar)
         .await;
-    assert!(!erro, "{agendado}");
-    assert_eq!(agendado["situacao"], "agendado");
-    let (erro, cancelado) = painel
-        .ferramenta(&token, "cancelar_agendamento", alvo.clone())
-        .await;
-    assert!(!erro, "{cancelado}");
+    assert!(erro);
     // Data informada na publicação é só para a equipe trazer conteúdo antigo.
     let mut com_data = alvo.clone();
     com_data["data"] = json!("2026-09-01T12:00:00Z");
@@ -2273,6 +2261,26 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
         )
         .await;
     assert!(!erro && criada["problemas"] == json!([]), "{criada}");
+    // Agendamento pelo conector: precisa de data com fuso e no futuro, e
+    // pode ser desfeito.
+    let da_criada = json!({ "site": "padaria", "documento": criada["documento"] });
+    let mut agendar = da_criada.clone();
+    agendar["quando"] = json!("amanhã cedo");
+    let (erro, recusa) = painel
+        .ferramenta(&token, "agendar_publicacao", agendar.clone())
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("ISO 8601"));
+    agendar["quando"] = json!((chrono::Utc::now() + chrono::Duration::days(2)).to_rfc3339());
+    let (erro, agendado) = painel
+        .ferramenta(&token, "agendar_publicacao", agendar)
+        .await;
+    assert!(!erro, "{agendado}");
+    assert_eq!(agendado["situacao"], "agendado");
+    let (erro, cancelado) = painel
+        .ferramenta(&token, "cancelar_agendamento", da_criada.clone())
+        .await;
+    assert!(!erro, "{cancelado}");
     let (erro, no_ar) = painel
         .ferramenta(
             &token,
