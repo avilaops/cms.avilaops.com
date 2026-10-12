@@ -1,0 +1,21 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Mensagens de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Mensagens</h1>
+<p class="quem">O que os visitantes mandaram pelos formulários do site. Cada mensagem fica guardada por 180 dias.</p>
+{%- if linhas.is_empty() %}
+<p>Nenhuma mensagem ainda.</p>
+{%- else %}
+<ul>
+{%- for linha in linhas %}
+<li>
+<span class="etiquetas">{{ linha.quando }} · {{ linha.caminho }}</span>
+{%- for campo in linha.campos %}
+<p><strong>{{ campo.0 }}:</strong> {{ campo.1 }}</p>
+{%- endfor %}
+</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+{% endblock %}

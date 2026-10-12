@@ -7,8 +7,9 @@
 
 use chrono::{DateTime, Utc};
 use motor_web::tipos::{
-    Abertura, Acao, Autor, Bloco, Cartao, Categoria, Conteudo, Depoimento, Direitos, ItemTrilha,
-    Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoPost, Trecho,
+    Abertura, Acao, Autor, Bloco, Campo, Cartao, Categoria, Conteudo, Depoimento, Direitos,
+    ItemTrilha, Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoDeCampo, TipoPost,
+    Trecho,
 };
 
 /// Um modelo na lista de escolha.
@@ -221,6 +222,14 @@ fn faixa(titulo: &str, texto: &str, rotulo: &str) -> Bloco {
     }
 }
 
+fn campo(rotulo: &str, tipo: TipoDeCampo, obrigatorio: bool) -> Campo {
+    Campo {
+        rotulo: rotulo.into(),
+        tipo,
+        obrigatorio,
+    }
+}
+
 fn contato() -> Bloco {
     Bloco::Contato {
         titulo: Some("Fale com a gente".into()),
@@ -425,7 +434,22 @@ fn de_pagina(id: &str) -> Option<(&'static str, &'static str, Option<Abertura>, 
                 "Diga por onde é mais rápido falar com vocês.",
                 &[],
             ),
-            vec![contato()],
+            vec![
+                Bloco::Formulario {
+                    titulo: Some("Mande uma mensagem".into()),
+                    texto: Some(
+                        "Diga o que a pessoa precisa contar para você responder bem.".into(),
+                    ),
+                    campos: vec![
+                        campo("Seu nome", TipoDeCampo::Texto, true),
+                        campo("WhatsApp ou e-mail", TipoDeCampo::Texto, true),
+                        campo("Como podemos ajudar", TipoDeCampo::Mensagem, true),
+                    ],
+                    botao: "Enviar mensagem".into(),
+                    agradecimento: "Recebemos a sua mensagem e vamos responder em breve.".into(),
+                },
+                contato(),
+            ],
         ),
         "perguntas" => (
             "perguntas-frequentes",

@@ -28,7 +28,7 @@ use uuid::Uuid;
 
 use crate::identidade::{self, DadosDaIdentidade};
 use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
-use crate::{Estado, biblioteca};
+use crate::{Estado, biblioteca, mensagens};
 
 const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
 
@@ -426,7 +426,7 @@ struct Ferramenta {
 
 const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (slug).");
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
-const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. As datas são do servidor.";
+const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato, formulario); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. As datas são do servidor.";
 
 const LEGENDA: (&str, &str) = ("legenda", "A legenda, que aparece embaixo da imagem.");
 const CREDITO: (&str, &str) = ("credito", "Quem leva o crédito, como aparece em \"Foto:\".");
@@ -483,7 +483,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 30] = [
+const FERRAMENTAS: [Ferramenta; 31] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -692,6 +692,14 @@ const FERRAMENTAS: [Ferramenta; 30] = [
             LICENCA,
             AQUISICAO,
         ],
+    },
+    Ferramenta {
+        nome: "listar_mensagens",
+        escopo: "mensagens:ler",
+        descricao: "Lista as mensagens mais recentes que os visitantes mandaram pelos formulários do site, com a página de origem e os campos preenchidos. É dado pessoal de terceiros: use só para o que a pessoa pediu. Exige papel de editor ou dono.",
+        argumentos: &[SITE],
+        com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_redirecionamentos",
@@ -1185,6 +1193,24 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             }),
             None,
         )),
+        "listar_mensagens" => {
+            if !mensagens::pode_ler(&ator) {
+                return Err(recusa("Só o dono e os editores do site leem as mensagens."));
+            }
+            let lista: Vec<Value> =
+                cms_dados::mensagens_do_site(pool, site.id, mensagens::MENSAGENS_NA_LISTA)
+                    .await?
+                    .into_iter()
+                    .map(|mensagem| {
+                        json!({
+                            "quando": mensagem.criado_em,
+                            "pagina": mensagem.caminho,
+                            "campos": mensagem.campos,
+                        })
+                    })
+                    .collect();
+            Ok(do_site(json!({ "mensagens": lista }), None))
+        }
         "listar_redirecionamentos" => {
             let regras: Vec<Value> = cms_dados::redirecionamentos_do_site(pool, site.id)
                 .await?

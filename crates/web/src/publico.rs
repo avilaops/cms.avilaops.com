@@ -1,13 +1,14 @@
 //! O site público: do host ao que está publicado.
 
 use askama::Template;
-use axum::http::header::COOKIE;
+use axum::http::header::{COOKIE, ORIGIN};
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use axum::response::Response;
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
+use cms_dominio::eventos::CampoRecebido;
 use cms_dominio::eventos::origem_do_site;
 use cms_dominio::site::{aparece_na_busca, conferir_cor};
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
@@ -16,7 +17,9 @@ use motor_web::descoberta::{
     gerar_sitemaps,
 };
 use motor_web::seo::montar_cabecalho;
-use motor_web::tipos::{Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site};
+use motor_web::tipos::{
+    Bloco, Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site, TipoDeCampo,
+};
 use motor_web::validacao::normalizar_slug;
 
 use crate::Estado;
@@ -56,7 +59,18 @@ pub async fn atender(
     metodo: &Method,
     cabecalhos: &HeaderMap,
     uri: &Uri,
+    corpo: &[u8],
 ) -> Response {
+    // O único envio que um site aceita é o de um formulário da própria página.
+    if metodo == Method::POST {
+        return match responder(estado, cabecalhos, uri, Some(corpo)).await {
+            Ok(resposta) => resposta,
+            Err(erro) => {
+                tracing::error!(%erro, caminho = uri.path(), "falha ao receber o formulário");
+                simples(StatusCode::INTERNAL_SERVER_ERROR, "Erro interno.")
+            }
+        };
+    }
     if metodo != Method::GET && metodo != Method::HEAD {
         return simples(StatusCode::METHOD_NOT_ALLOWED, "Método não permitido.");
     }
@@ -67,7 +81,7 @@ pub async fn atender(
     {
         return guardada;
     }
-    let resposta = match responder(estado, cabecalhos, uri).await {
+    let resposta = match responder(estado, cabecalhos, uri, None).await {
         Ok(resposta) => resposta,
         Err(erro) => {
             tracing::error!(%erro, caminho = uri.path(), "falha ao atender o pedido");
@@ -110,6 +124,7 @@ async fn responder(
     estado: &Estado,
     cabecalhos: &HeaderMap,
     uri: &Uri,
+    envio: Option<&[u8]>,
 ) -> Result<Response, ErroWeb> {
     let configuracao = &estado.configuracao;
     let Some(host) = host_do_pedido(cabecalhos) else {
@@ -166,6 +181,12 @@ async fn responder(
     };
 
     let caminho = uri.path();
+    if let Some(corpo) = envio {
+        return receber_formulario(estado, &pedido, cabecalhos, caminho, corpo).await;
+    }
+    if let Some(resposta) = agradecer(estado, &pedido, uri).await? {
+        return Ok(resposta);
+    }
     let mut resposta = match caminho {
         "/robots.txt" => Ok(robots(&pedido)),
         "/llms.txt" | "/llms-full.txt" => descoberta_para_ia(estado, &pedido, caminho).await,
@@ -330,6 +351,20 @@ async fn moldura(
     // pode ser de antes de a regra existir.
     moldura.ordenar_menu(&pedido.gravado.perfil.menu);
     moldura.logo = logo_do_cabecalho(&pedido.site);
+    // A logo pode ter sido escolhida enquanto ainda era convertida: o que
+    // ficou gravado não tem variante, e a biblioteca já tem.
+    if moldura.logo.is_none() {
+        if let Ok(id) = uuid::Uuid::parse_str(&pedido.site.logo.id) {
+            let pronta =
+                cms_dados::midia_para_conteudo(&estado.pool, pedido.gravado.id, id).await?;
+            moldura.logo = pronta.and_then(|logo| {
+                logo_do_cabecalho(&Site {
+                    logo,
+                    ..pedido.site.clone()
+                })
+            });
+        }
+    }
     moldura.cor_de_destaque = pedido
         .gravado
         .perfil
@@ -564,7 +599,7 @@ struct Aviso {
     caminho: &'static str,
     titulo: &'static str,
     descricao: &'static str,
-    mensagem: &'static str,
+    mensagem: String,
 }
 
 async fn avisar(estado: &Estado, pedido: &Pedido, aviso: Aviso) -> Result<Response, ErroWeb> {
@@ -582,7 +617,7 @@ async fn avisar(estado: &Estado, pedido: &Pedido, aviso: Aviso) -> Result<Respon
     let pagina = PaginaDeAviso {
         moldura,
         titulo: aviso.titulo.into(),
-        mensagem: aviso.mensagem.into(),
+        mensagem: aviso.mensagem,
     }
     .render()?;
     Ok(html(aviso.status, pagina, false))
@@ -594,7 +629,7 @@ async fn nao_encontrado(estado: &Estado, pedido: &Pedido) -> Result<Response, Er
         caminho: "/pagina-nao-encontrada",
         titulo: "Página não encontrada",
         descricao: "O endereço pedido não existe neste site.",
-        mensagem: "O endereço que você abriu não existe ou saiu do ar.",
+        mensagem: "O endereço que você abriu não existe ou saiu do ar.".into(),
     };
     avisar(estado, pedido, aviso).await
 }
@@ -607,7 +642,155 @@ async fn saiu_do_ar(estado: &Estado, pedido: &Pedido) -> Result<Response, ErroWe
         caminho: "/pagina-removida",
         titulo: "Página removida",
         descricao: "Esta página foi tirada do ar.",
-        mensagem: "O conteúdo que estava neste endereço foi tirado do ar.",
+        mensagem: "O conteúdo que estava neste endereço foi tirado do ar.".into(),
     };
     avisar(estado, pedido, aviso).await
+}
+
+/// O maior envio de formulário aceito: oito campos, um deles de texto longo.
+const MAXIMO_DO_ENVIO: usize = 32 * 1024;
+
+fn recado(status: StatusCode, titulo: &'static str, mensagem: String) -> Aviso {
+    Aviso {
+        status,
+        caminho: "/mensagem",
+        titulo,
+        descricao: "Envio de mensagem pelo site.",
+        mensagem,
+    }
+}
+
+/// Recebe o envio de um formulário da página: confere contra a definição do
+/// bloco, guarda a mensagem e leva o visitante ao agradecimento.
+async fn receber_formulario(
+    estado: &Estado,
+    pedido: &Pedido,
+    cabecalhos: &HeaderMap,
+    caminho: &str,
+    corpo: &[u8],
+) -> Result<Response, ErroWeb> {
+    // Página de outro site não envia para cá.
+    let de_fora = cabecalhos
+        .get(ORIGIN)
+        .and_then(|valor| valor.to_str().ok())
+        .is_some_and(|origem| origem != pedido.site.origem.trim_end_matches('/'));
+    if de_fora || corpo.len() > MAXIMO_DO_ENVIO {
+        return Ok(simples(StatusCode::FORBIDDEN, "Envio recusado."));
+    }
+    let pares: Vec<(String, String)> = serde_urlencoded::from_bytes(corpo).unwrap_or_default();
+    let valor = |nome: &str| {
+        pares
+            .iter()
+            .find(|(chave, _)| chave == nome)
+            .map(|(_, valor)| valor.replace("\r\n", "\n").trim().to_string())
+            .unwrap_or_default()
+    };
+    let documento =
+        cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, caminho).await?;
+    let formulario = valor("formulario")
+        .parse::<usize>()
+        .ok()
+        .and_then(|indice| match documento.as_ref()?.corpo().get(indice)? {
+            Bloco::Formulario { campos, .. } => Some((indice, campos)),
+            _ => None,
+        });
+    let Some((indice, campos)) = formulario else {
+        return Ok(simples(StatusCode::BAD_REQUEST, "Formulário desconhecido."));
+    };
+    let destino = format!("{caminho}?enviado={indice}");
+    // Robô que preencheu a isca recebe o mesmo agradecimento, e nada é guardado.
+    if !valor("site").is_empty() {
+        return Ok(redirecionar(StatusCode::SEE_OTHER, &destino));
+    }
+
+    let mut recebidos = Vec::new();
+    let mut faltas: Vec<&str> = Vec::new();
+    for (posicao, campo) in campos.iter().enumerate() {
+        let digitado: String = valor(&format!("c{posicao}"))
+            .chars()
+            .take(campo.tipo.limite())
+            .collect();
+        let email_torto = campo.tipo == TipoDeCampo::Email
+            && !digitado.is_empty()
+            && !digitado
+                .split_once('@')
+                .is_some_and(|(nome, dominio)| !nome.is_empty() && dominio.contains('.'));
+        if (digitado.is_empty() && campo.obrigatorio) || email_torto {
+            faltas.push(&campo.rotulo);
+        } else if !digitado.is_empty() {
+            recebidos.push(CampoRecebido {
+                rotulo: campo.rotulo.clone(),
+                valor: digitado,
+            });
+        }
+    }
+    if !faltas.is_empty() || recebidos.is_empty() {
+        let mensagem = if faltas.is_empty() {
+            "A mensagem chegou vazia. Volte e preencha o formulário.".to_string()
+        } else {
+            format!("Volte e confira: {}.", faltas.join(", "))
+        };
+        let aviso = recado(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Faltou preencher",
+            mensagem,
+        );
+        return avisar(estado, pedido, aviso).await;
+    }
+    let avisar_para = pedido.gravado.perfil.organizacao.email.as_deref();
+    let guardada = cms_dados::guardar_mensagem(
+        &estado.pool,
+        pedido.gravado.id,
+        caminho,
+        &recebidos,
+        avisar_para,
+    )
+    .await?;
+    match guardada {
+        cms_dados::Recebimento::Guardada(_) => Ok(redirecionar(StatusCode::SEE_OTHER, &destino)),
+        cms_dados::Recebimento::Freada => {
+            let aviso = recado(
+                StatusCode::TOO_MANY_REQUESTS,
+                "Muitas mensagens agora",
+                "O site recebeu muitas mensagens em pouco tempo. Tente de novo em alguns minutos."
+                    .to_string(),
+            );
+            avisar(estado, pedido, aviso).await
+        }
+    }
+}
+
+/// A página de agradecimento, para onde o envio leva (`?enviado=<bloco>`).
+/// `None` quando o pedido não é esse.
+async fn agradecer(
+    estado: &Estado,
+    pedido: &Pedido,
+    uri: &Uri,
+) -> Result<Option<Response>, ErroWeb> {
+    let indice = uri.query().and_then(|consulta| {
+        consulta
+            .split('&')
+            .find_map(|par| par.strip_prefix("enviado="))?
+            .parse::<usize>()
+            .ok()
+    });
+    let Some(indice) = indice else {
+        return Ok(None);
+    };
+    let documento =
+        cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, uri.path()).await?;
+    let agradecimento =
+        documento
+            .as_ref()
+            .and_then(|documento| match documento.corpo().get(indice)? {
+                Bloco::Formulario { agradecimento, .. } => Some(agradecimento.clone()),
+                _ => None,
+            });
+    match agradecimento {
+        Some(mensagem) => {
+            let aviso = recado(StatusCode::OK, "Mensagem enviada", mensagem);
+            Ok(Some(avisar(estado, pedido, aviso).await?))
+        }
+        None => Ok(None),
+    }
 }

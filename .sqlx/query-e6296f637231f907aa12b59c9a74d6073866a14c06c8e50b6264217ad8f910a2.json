@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "delete from mensagem where criado_em < now() - interval '180 days'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "e6296f637231f907aa12b59c9a74d6073866a14c06c8e50b6264217ad8f910a2"
+}

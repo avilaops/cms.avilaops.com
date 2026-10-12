@@ -285,6 +285,7 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `listar_modelos`, `ver_modelo` | `conteudo:ler` |
 | `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
 | `listar_redirecionamentos`, `ver_dominio` | `sites:ler` |
+| `listar_mensagens` | `mensagens:ler` |
 | `salvar_redirecionamento`, `remover_redirecionamento`, `pedir_dominio` | `sites:editar` |
 | `editar_identidade` | `sites:editar` |
 
@@ -292,6 +293,15 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- Formulário: a seção `formulario` tem até oito campos (texto, e-mail,
+  telefone, mensagem), botão e agradecimento. Sai sem script; o envio vai ao
+  endereço da própria página, e o CMS o confere contra a definição do bloco
+  (obrigatórios, limite de cada campo, formato do e-mail). Um campo-isca barra
+  robô, página de outro site não envia, e cada site aceita 20 mensagens a cada
+  dez minutos. A mensagem fica 180 dias, sem endereço de rede de quem enviou,
+  visível ao dono e aos editores no painel e pela ferramenta
+  `listar_mensagens` (escopo `mensagens:ler`). Cada mensagem gera o evento
+  `mensagem.recebida`, com os campos e o e-mail de contato do site.
 - Cada ferramenta sai com `annotations`: `readOnlyHint` nas que só leem
   (`listar_`, `ver_`, `validar_`) e `destructiveHint` nas que tiram do ar ou
   apagam (`despublicar`, `apagar_midia`, `remover_redirecionamento`).

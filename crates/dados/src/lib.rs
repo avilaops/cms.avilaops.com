@@ -8,6 +8,7 @@ mod documentos;
 mod dominios;
 mod eventos;
 pub mod fluxo;
+mod mensagens;
 mod midias;
 mod redirecionamentos;
 mod rotinas;
@@ -43,6 +44,7 @@ pub use dominios::{
 pub use eventos::{
     Encerramento, EventoAEntregar, encerrar_evento, marcar_evento_entregue, reivindicar_eventos,
 };
+pub use mensagens::{MensagemDoSite, Recebimento, guardar_mensagem, mensagens_do_site};
 pub use midias::{
     DescricaoDaMidia, ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada,
     apagar_midia, atualizar_midia, concluir_midia, falhar_midia, hash_de_conteudo,

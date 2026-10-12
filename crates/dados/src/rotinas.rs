@@ -53,8 +53,8 @@ pub async fn agendados_vencidos(pool: &PgPool) -> Result<Vec<Agendado>, ErroDeDa
     Ok(agendados)
 }
 
-/// Apaga o histórico e o registro de chamadas com mais de um ano. Devolve
-/// quantas linhas saíram.
+/// Apaga o histórico e o registro de chamadas com mais de um ano, e as
+/// mensagens de formulário com mais de 180 dias. Devolve quantas linhas saíram.
 pub async fn limpar_historico(pool: &PgPool) -> Result<u64, ErroDeDados> {
     let historico =
         sqlx::query!("delete from historico where criado_em < now() - interval '1 year'")
@@ -72,5 +72,11 @@ pub async fn limpar_historico(pool: &PgPool) -> Result<u64, ErroDeDados> {
     .execute(pool)
     .await?
     .rows_affected();
-    Ok(historico + chamadas + eventos)
+    // Mensagem de formulário é dado pessoal de visitante: fica 180 dias.
+    let mensagens =
+        sqlx::query!("delete from mensagem where criado_em < now() - interval '180 days'")
+            .execute(pool)
+            .await?
+            .rows_affected();
+    Ok(historico + chamadas + eventos + mensagens)
 }

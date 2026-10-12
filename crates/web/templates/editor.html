@@ -132,6 +132,10 @@
 <label for="b{{ bloco.i }}_rotulo">Texto do botão</label>
 <input id="b{{ bloco.i }}_rotulo" name="b{{ bloco.i }}_rotulo" value="{{ bloco.rotulo }}">
 {%- endif %}
+{%- if bloco.usa_agradecimento %}
+<label for="b{{ bloco.i }}_agradecimento">O que a pessoa lê depois de enviar</label>
+<input id="b{{ bloco.i }}_agradecimento" name="b{{ bloco.i }}_agradecimento" maxlength="300" value="{{ bloco.agradecimento }}">
+{%- endif %}
 {%- if bloco.usa_url %}
 <label for="b{{ bloco.i }}_url">Endereço</label>
 <input id="b{{ bloco.i }}_url" name="b{{ bloco.i }}_url" autocapitalize="none" spellcheck="false" value="{{ bloco.url }}">

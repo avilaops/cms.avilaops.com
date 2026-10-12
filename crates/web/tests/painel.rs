@@ -1549,7 +1549,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        30
+        31
     );
     // Cada ferramenta diz se só lê e se desfaz algo, para o assistente saber
     // quando confirmar com a pessoa.
@@ -2407,6 +2407,181 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
         StatusCode::NOT_FOUND
     );
     assert_eq!(antes["situacao"], "publicado");
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "conteudo:ler",
+                "conteudo:escrever",
+                "conteudo:publicar",
+                "mensagens:ler",
+            ],
+        )
+        .await;
+    let pagina = json!({
+        "especie": "pagina",
+        "dados": {
+            "slug": "contato",
+            "titulo": "Fale com a padaria",
+            "corpo": [{
+                "tipo": "formulario",
+                "titulo": "Mande uma mensagem",
+                "campos": [
+                    { "rotulo": "Seu nome", "tipo": "texto", "obrigatorio": true },
+                    { "rotulo": "E-mail", "tipo": "email" },
+                    { "rotulo": "Mensagem", "tipo": "mensagem", "obrigatorio": true }
+                ],
+                "botao": "Enviar",
+                "agradecimento": "Recebemos a sua mensagem. A Ana responde ainda hoje."
+            }],
+            "seo": {
+                "titulo": "Contato da Padaria da Ana",
+                "descricao": "Fale com a Padaria da Ana: encomendas, dúvidas sobre os pães e horário de funcionamento da loja.",
+                "indexar": true
+            }
+        }
+    });
+    let (erro, criado) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": pagina }),
+        )
+        .await;
+    assert!(!erro && criado["problemas"] == json!([]), "{criado}");
+    let (erro, _) = painel
+        .ferramenta(
+            &token,
+            "publicar",
+            json!({ "site": "padaria", "documento": criado["documento"] }),
+        )
+        .await;
+    assert!(!erro);
+
+    let h = host("padaria");
+    let no_ar = painel.visitar(&h, "/contato").await;
+    assert!(
+        no_ar
+            .corpo
+            .contains(r#"<form method="post" id="formulario-0">"#)
+    );
+    assert!(!no_ar.corpo.contains("<script src"));
+
+    let enviar = |campos: &[(&str, &str)], origem: Option<&str>| {
+        let mut pedido = Request::builder()
+            .method("POST")
+            .uri("/contato")
+            .header("host", &h)
+            .header("content-type", "application/x-www-form-urlencoded");
+        if let Some(origem) = origem {
+            pedido = pedido.header("origin", origem);
+        }
+        painel.enviar(pedido, Body::from(formulario(campos)))
+    };
+    let mensagens = || async {
+        sqlx::query_scalar::<_, i64>("select count(*) from mensagem")
+            .fetch_one(&pool)
+            .await
+            .expect("contagem")
+    };
+
+    // Campo obrigatório vazio e e-mail torto voltam com o nome do campo.
+    let incompleto = enviar(
+        &[
+            ("formulario", "0"),
+            ("c0", " "),
+            ("c1", "ana-sem-arroba"),
+            ("c2", "Oi"),
+        ],
+        None,
+    )
+    .await;
+    assert_eq!(incompleto.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(
+        incompleto
+            .corpo
+            .contains("Volte e confira: Seu nome, E-mail.")
+    );
+    // Robô que preenche a isca vê o agradecimento, e nada é guardado.
+    let robo = enviar(
+        &[
+            ("formulario", "0"),
+            ("site", "http://spam.example"),
+            ("c0", "Robô"),
+            ("c2", "Compre"),
+        ],
+        None,
+    )
+    .await;
+    assert_eq!(robo.status, StatusCode::SEE_OTHER);
+    // Página de outro site não envia para cá, e bloco que não é formulário não recebe.
+    let de_fora = enviar(
+        &[("formulario", "0"), ("c0", "Caio"), ("c2", "Oi")],
+        Some("https://outro.example"),
+    )
+    .await;
+    assert_eq!(de_fora.status, StatusCode::FORBIDDEN);
+    let sem_bloco = enviar(&[("formulario", "7"), ("c0", "Caio")], None).await;
+    assert_eq!(sem_bloco.status, StatusCode::BAD_REQUEST);
+    assert_eq!(mensagens().await, 0);
+
+    // O envio de verdade guarda a mensagem, avisa e leva ao agradecimento.
+    let enviado = enviar(
+        &[
+            ("formulario", "0"),
+            ("c0", "Caio Lima"),
+            ("c1", "caio@exemplo.example"),
+            ("c2", "Vocês fazem pão sem glúten?\r\nPreciso para sábado."),
+        ],
+        Some(&format!("https://{h}")),
+    )
+    .await;
+    assert_eq!(enviado.status, StatusCode::SEE_OTHER, "{}", enviado.corpo);
+    assert_eq!(enviado.cabecalho("location"), "/contato?enviado=0");
+    let obrigado = painel.visitar(&h, "/contato?enviado=0").await;
+    assert_eq!(obrigado.status, StatusCode::OK);
+    assert!(obrigado.corpo.contains("A Ana responde ainda hoje."));
+    assert_eq!(obrigado.cabecalho("x-robots-tag"), "noindex");
+    assert_eq!(mensagens().await, 1);
+    let avisos: i64 =
+        sqlx::query_scalar("select count(*) from evento where tipo = 'mensagem.recebida'")
+            .fetch_one(&pool)
+            .await
+            .expect("eventos");
+    assert_eq!(avisos, 1);
+
+    // O dono lê pelo conector e pelo painel; quem não tem a permissão, não.
+    let (erro, lidas) = painel
+        .ferramenta(&token, "listar_mensagens", json!({ "site": "padaria" }))
+        .await;
+    assert!(!erro, "{lidas}");
+    assert_eq!(lidas["mensagens"][0]["pagina"], "/contato");
+    assert_eq!(
+        lidas["mensagens"][0]["campos"][2],
+        json!({ "rotulo": "Mensagem", "valor": "Vocês fazem pão sem glúten?\nPreciso para sábado." })
+    );
+    let tela = painel
+        .abrir(Some("ana"), "/painel/sites/padaria/mensagens")
+        .await;
+    assert_eq!(tela.status, StatusCode::OK);
+    assert!(tela.corpo.contains("caio@exemplo.example"));
+    let (_, sem_permissao, _) = painel.conectar("ana", &["conteudo:ler"]).await;
+    let (erro, recusa) = painel
+        .ferramenta(
+            &sem_permissao,
+            "listar_mensagens",
+            json!({ "site": "padaria" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("mensagens:ler"));
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
 

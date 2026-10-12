@@ -16,7 +16,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade};
+use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens};
 
 const CAMINHO: &str = "/painel";
 
@@ -297,6 +297,7 @@ enum Rota<'a> {
     ArquivoDeMidia(&'a str, &'a str),
     ApagarMidia(&'a str, &'a str),
     CorrigirMidia(&'a str, &'a str),
+    Mensagens(&'a str),
     Site(&'a str),
     NovoDocumento(&'a str, &'a str),
     GravarNovo(&'a str),
@@ -331,6 +332,7 @@ impl<'a> Rota<'a> {
             (false, ["painel", "sites"]) => Some(Rota::CriarSite),
             (true, ["painel", "sites", slug, "equipe"]) => Some(Rota::Equipe(slug)),
             (false, ["painel", "sites", slug, "convites"]) => Some(Rota::Convidar(slug)),
+            (true, ["painel", "sites", slug, "mensagens"]) => Some(Rota::Mensagens(slug)),
             (true, ["painel", "sites", slug, "midia"]) => Some(Rota::Midia(slug)),
             (false, ["painel", "sites", slug, "midia"]) => Some(Rota::EnviarMidia(slug)),
             (true, ["painel", "sites", slug, "midia", "arquivo", arquivo]) => {
@@ -463,6 +465,7 @@ async fn responder(
             let origem = origem_do_painel(&estado.configuracao, host);
             equipe::convidar(estado, &conta, slug, &origem, corpo).await
         }
+        Rota::Mensagens(slug) => mensagens::abrir(estado, &conta, slug).await,
         Rota::Midia(slug) => biblioteca::abrir(estado, &conta, slug).await,
         Rota::EnviarMidia(slug) => {
             biblioteca::enviar(estado, &conta, slug, cabecalhos, corpo).await

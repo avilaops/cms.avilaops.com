@@ -9,12 +9,13 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use motor_web::tipos::{
-    Abertura, Acao as Botao, Autor, Bloco, Cartao, Categoria, Conteudo, Depoimento, ItemTrilha,
-    Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoPost, Trecho,
+    Abertura, Acao as Botao, Autor, Bloco, Campo, Cartao, Categoria, Conteudo, Depoimento,
+    ItemTrilha, Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoDeCampo, TipoPost,
+    Trecho,
 };
 
 /// Os tipos de bloco, na ordem em que aparecem para escolher.
-pub const TIPOS_DE_BLOCO: [(&str, &str); 19] = [
+pub const TIPOS_DE_BLOCO: [(&str, &str); 20] = [
     ("paragrafo", "Parágrafo"),
     ("titulo", "Título"),
     ("lista", "Lista"),
@@ -34,6 +35,7 @@ pub const TIPOS_DE_BLOCO: [(&str, &str); 19] = [
     ("logos", "Seção: logos"),
     ("faixa", "Seção: faixa de chamada"),
     ("contato", "Seção: contato"),
+    ("formulario", "Seção: formulário"),
 ];
 
 /// Um bloco como está no formulário: tudo texto, do jeito que foi digitado.
@@ -54,6 +56,8 @@ pub struct BlocoDigitado {
     pub resumo: String,
     /// Na seção de imagem e texto, a imagem vai para a direita.
     pub invertido: bool,
+    /// No formulário, o que o visitante lê depois de enviar.
+    pub agradecimento: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,6 +145,7 @@ impl Formulario {
                     titulo: do_bloco("titulo"),
                     resumo: do_bloco("resumo"),
                     invertido: do_bloco("invertido") == "1",
+                    agradecimento: do_bloco("agradecimento"),
                 }
             })
             .collect();
@@ -614,6 +619,24 @@ fn montar_secao(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Option<Bloco> {
             texto: opcional(&bloco.resumo),
             acoes: ler_botoes(&bloco.texto),
         },
+        "formulario" => Bloco::Formulario {
+            titulo,
+            texto: opcional(&bloco.resumo),
+            campos: por_linha()
+                .map(|c| Campo {
+                    rotulo: celula(&c, 0).to_string(),
+                    tipo: match celula(&c, 1).to_lowercase().as_str() {
+                        "email" | "e-mail" => TipoDeCampo::Email,
+                        "telefone" | "whatsapp" => TipoDeCampo::Telefone,
+                        "mensagem" => TipoDeCampo::Mensagem,
+                        _ => TipoDeCampo::Texto,
+                    },
+                    obrigatorio: !celula(&c, 2).is_empty(),
+                })
+                .collect(),
+            botao: bloco.rotulo.trim().to_string(),
+            agradecimento: bloco.agradecimento.trim().to_string(),
+        },
         "contato" => {
             let canal = |nome: &str| {
                 linhas(&bloco.texto).iter().find_map(|linha| {
@@ -772,6 +795,38 @@ fn digitar_secao(bloco: &Bloco) -> Option<BlocoDigitado> {
             resumo: texto(resumo),
             texto: escrever_botoes(acoes),
             ..base("faixa", &None, Vec::new())
+        },
+        Bloco::Formulario {
+            titulo,
+            texto: resumo,
+            campos,
+            botao,
+            agradecimento,
+        } => BlocoDigitado {
+            resumo: texto(resumo),
+            rotulo: botao.clone(),
+            agradecimento: agradecimento.clone(),
+            ..base(
+                "formulario",
+                titulo,
+                campos
+                    .iter()
+                    .map(|campo| {
+                        let tipo = match campo.tipo {
+                            TipoDeCampo::Texto => "texto",
+                            TipoDeCampo::Email => "email",
+                            TipoDeCampo::Telefone => "telefone",
+                            TipoDeCampo::Mensagem => "mensagem",
+                        };
+                        let obrigatorio = if campo.obrigatorio {
+                            "obrigatório"
+                        } else {
+                            ""
+                        };
+                        escrever_linha(&[&campo.rotulo, tipo, obrigatorio])
+                    })
+                    .collect(),
+            )
         },
         Bloco::Contato {
             titulo,
@@ -1181,6 +1236,16 @@ mod testes {
                     "faixa",
                     "",
                     "Agendar visita | /contato\nVer serviços | /servicos",
+                )
+            },
+            BlocoDigitado {
+                resumo: "Respondemos em um dia útil.".into(),
+                rotulo: "Enviar".into(),
+                agradecimento: "Recebemos a sua mensagem.".into(),
+                ..secao(
+                    "formulario",
+                    "Peça um orçamento",
+                    "Seu nome | texto | obrigatório\nE-mail | email\nO que você precisa | mensagem | obrigatório",
                 )
             },
             BlocoDigitado {

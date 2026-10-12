@@ -5,7 +5,7 @@
 //! teste de referência logo abaixo.
 
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -61,6 +61,26 @@ pub struct ConviteCriado {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct MensagemRecebida {
+    /// A página em que o formulário estava.
+    pub caminho: String,
+    pub campos: Vec<CampoRecebido>,
+    /// O e-mail de contato do site, para onde o aviso vai. Sem ele, a
+    /// mensagem fica só no painel.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avisar_para: Option<String>,
+}
+
+/// Um campo de formulário como o visitante o preencheu.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampoRecebido {
+    pub rotulo: String,
+    pub valor: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DominioAtivado {
     /// O domínio próprio que passou a ser o endereço do site.
     pub dominio: String,
@@ -76,6 +96,7 @@ pub enum Evento {
     SiteCriado(SiteCriado),
     ConviteCriado(ConviteCriado),
     DominioAtivado(DominioAtivado),
+    MensagemRecebida(MensagemRecebida),
 }
 
 impl Evento {
@@ -88,6 +109,7 @@ impl Evento {
             Evento::SiteCriado(_) => "site.criado",
             Evento::ConviteCriado(_) => "convite.criado",
             Evento::DominioAtivado(_) => "dominio.ativado",
+            Evento::MensagemRecebida(_) => "mensagem.recebida",
         }
     }
 }

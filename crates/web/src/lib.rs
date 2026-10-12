@@ -10,6 +10,7 @@ mod dominio;
 mod editor;
 mod equipe;
 mod identidade;
+mod mensagens;
 mod midia;
 mod painel;
 mod publico;
@@ -150,7 +151,7 @@ async fn despachar(
         Some(host) if Some(host.nome.as_str()) == host_do_painel => {
             painel::atender(&estado, &host.com_porta, &metodo, &cabecalhos, &uri, &corpo).await
         }
-        _ => publico::atender(&estado, &metodo, &cabecalhos, &uri).await,
+        _ => publico::atender(&estado, &metodo, &cabecalhos, &uri, &corpo).await,
     }
 }
 

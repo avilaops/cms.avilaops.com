@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into mensagem (site_id, documento_id, caminho, campos)\n        values (\n            $1,\n            (select id from documento\n             where site_id = $1 and caminho = $2 and situacao = 'publicado'),\n            $2,\n            $3\n        )\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "28af2908250be0794cdcd0d6999d67a2edb816657531340b78bf60e2c031f044"
+}

@@ -188,6 +188,8 @@ struct BlocoNaTela {
     resumo: String,
     usa_invertido: bool,
     invertido: bool,
+    usa_agradecimento: bool,
+    agradecimento: String,
 }
 
 fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)]) -> BlocoNaTela {
@@ -208,6 +210,7 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
             | "logos"
             | "faixa"
             | "contato"
+            | "formulario"
     );
     let lista_codigos = matches!(tipo, "cartoes" | "depoimentos" | "galeria" | "logos");
     let dica = match tipo {
@@ -236,6 +239,9 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         }
         "galeria" | "logos" => "Um código de imagem por linha. Os códigos estão logo abaixo",
         "faixa" => "Um botão por linha: Texto do botão | Endereço. No máximo dois",
+        "formulario" => {
+            "Um campo por linha: Rótulo | tipo | obrigatório. O tipo é texto, email, telefone ou mensagem; deixe o terceiro em branco se o campo for opcional. Até oito campos"
+        }
         "contato" => {
             "Um canal por linha, com o nome na frente: telefone: …, whatsapp: …, email: …, endereco: …, horario: …"
         }
@@ -270,14 +276,16 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         ordenada: bloco.ordenada,
         usa_fonte: tipo == "citacao",
         fonte: bloco.fonte.clone(),
-        usa_rotulo: tipo == "chamada" || tipo == "destaque",
+        usa_rotulo: matches!(tipo, "chamada" | "destaque" | "formulario"),
         rotulo: bloco.rotulo.clone(),
         usa_url: tipo == "video" || tipo == "chamada" || tipo == "destaque",
         url: bloco.url.clone(),
         // Toda seção tem título; as de texto corrido, não.
         usa_titulo: eh_secao,
         titulo: bloco.titulo.clone(),
-        usa_resumo: matches!(tipo, "cartoes" | "faixa" | "contato"),
+        usa_resumo: matches!(tipo, "cartoes" | "faixa" | "contato" | "formulario"),
+        usa_agradecimento: tipo == "formulario",
+        agradecimento: bloco.agradecimento.clone(),
         resumo: bloco.resumo.clone(),
         usa_invertido: tipo == "destaque",
         invertido: bloco.invertido,
