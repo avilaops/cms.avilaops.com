@@ -1549,8 +1549,22 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        26
+        30
     );
+    // Cada ferramenta diz se só lê e se desfaz algo, para o assistente saber
+    // quando confirmar com a pessoa.
+    let dica = |nome: &str, qual: &str| {
+        lista["result"]["tools"]
+            .as_array()
+            .expect("lista")
+            .iter()
+            .find(|ferramenta| ferramenta["name"] == nome)
+            .map(|ferramenta| ferramenta["annotations"][qual] == true)
+    };
+    assert_eq!(dica("listar_sites", "readOnlyHint"), Some(true));
+    assert_eq!(dica("criar_rascunho", "readOnlyHint"), Some(false));
+    assert_eq!(dica("despublicar", "destructiveHint"), Some(true));
+    assert_eq!(dica("publicar", "destructiveHint"), Some(false));
 
     let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
     assert!(!erro);
@@ -2184,6 +2198,25 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
     assert!(faltas.contains(&"secao.imagem.falta"), "{faltas:?}");
     let (erro, _) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
     assert!(erro);
+    // Agendamento pelo conector: precisa de data com fuso e no futuro, e
+    // pode ser desfeito.
+    let mut agendar = alvo.clone();
+    agendar["quando"] = json!("amanhã cedo");
+    let (erro, recusa) = painel
+        .ferramenta(&token, "agendar_publicacao", agendar.clone())
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("ISO 8601"));
+    agendar["quando"] = json!((chrono::Utc::now() + chrono::Duration::days(2)).to_rfc3339());
+    let (erro, agendado) = painel
+        .ferramenta(&token, "agendar_publicacao", agendar)
+        .await;
+    assert!(!erro, "{agendado}");
+    assert_eq!(agendado["situacao"], "agendado");
+    let (erro, cancelado) = painel
+        .ferramenta(&token, "cancelar_agendamento", alvo.clone())
+        .await;
+    assert!(!erro, "{cancelado}");
     // Data informada na publicação é só para a equipe trazer conteúdo antigo.
     let mut com_data = alvo.clone();
     com_data["data"] = json!("2026-09-01T12:00:00Z");
@@ -2296,7 +2329,20 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
         assert!(home.corpo.contains(secao), "{secao}");
     }
     assert!(home.corpo.contains(".s-grade{"));
-    // As imagens das seções são da biblioteca: em uso, não se apagam.
+    // As imagens das seções são da biblioteca: em uso, não se apagam, nem
+    // pelo conector.
+    let (erro, em_uso) = painel
+        .ferramenta(
+            &token,
+            "apagar_midia",
+            json!({ "site": "padaria", "id": imagem }),
+        )
+        .await;
+    assert!(erro);
+    assert!(
+        em_uso.as_str().expect("frase").contains("em uso"),
+        "{em_uso}"
+    );
     assert!(
         home.corpo
             .matches("/midia/forno-0a1b2c3d-1400.webp")

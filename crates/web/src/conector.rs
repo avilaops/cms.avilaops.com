@@ -483,7 +483,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 26] = [
+const FERRAMENTAS: [Ferramenta; 30] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -590,6 +590,37 @@ const FERRAMENTAS: [Ferramenta; 26] = [
         )],
     },
     Ferramenta {
+        nome: "agendar_publicacao",
+        escopo: "conteudo:publicar",
+        descricao: "Marca a publicação do rascunho para uma data futura. Na hora marcada ele vai ao ar sozinho; se tiver problema que bloqueia, perde o agendamento e fica como rascunho. Exige papel de editor ou dono.",
+        argumentos: &[
+            SITE,
+            DOCUMENTO,
+            (
+                "quando",
+                "A data e a hora, em ISO 8601 com fuso, como 2026-11-03T09:00:00-03:00.",
+            ),
+        ],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "cancelar_agendamento",
+        escopo: "conteudo:publicar",
+        descricao: "Desfaz o agendamento de um documento. Ele continua como rascunho.",
+        argumentos: &[SITE, DOCUMENTO],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "devolver",
+        escopo: "conteudo:publicar",
+        descricao: "Devolve a quem escreveu um rascunho que está em revisão, para corrigir. Exige papel de editor ou dono.",
+        argumentos: &[SITE, DOCUMENTO],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
         nome: "despublicar",
         escopo: "conteudo:publicar",
         descricao: "Tira o documento do ar. O endereço passa a responder 410.",
@@ -634,6 +665,14 @@ const FERRAMENTAS: [Ferramenta; 26] = [
             LICENCA,
             AQUISICAO,
         ],
+    },
+    Ferramenta {
+        nome: "apagar_midia",
+        escopo: "midia:escrever",
+        descricao: "Apaga uma imagem da biblioteca, com o arquivo original e as variantes. Imagem em uso em página, post ou cadastro de autor não é apagada. Não tem volta.",
+        argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
+        com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "editar_midia",
@@ -764,6 +803,10 @@ const FERRAMENTAS: [Ferramenta; 26] = [
     },
 ];
 
+/// As ferramentas que tiram algo do ar ou apagam: o assistente confirma com a
+/// pessoa antes de chamar.
+const DESFAZEM: [&str; 3] = ["despublicar", "apagar_midia", "remover_redirecionamento"];
+
 fn descrever(ferramenta: &Ferramenta) -> Value {
     let mut propriedades = serde_json::Map::new();
     let mut obrigatorios: Vec<&str> = Vec::new();
@@ -787,9 +830,18 @@ fn descrever(ferramenta: &Ferramenta) -> Value {
         );
         obrigatorios.push("conteudo");
     }
+    // O assistente usa isto para saber o que pode chamar sem perguntar e o
+    // que pede confirmação da pessoa.
+    let so_le = ["listar_", "ver_", "validar_"]
+        .iter()
+        .any(|prefixo| ferramenta.nome.starts_with(prefixo));
     json!({
         "name": ferramenta.nome,
         "description": ferramenta.descricao,
+        "annotations": {
+            "readOnlyHint": so_le,
+            "destructiveHint": DESFAZEM.contains(&ferramenta.nome),
+        },
         "inputSchema": { "type": "object", "properties": propriedades, "required": obrigatorios },
     })
 }
@@ -1298,6 +1350,14 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                 Err(mensagem) => Err(recusa(mensagem)),
             }
         }
+        "apagar_midia" => {
+            let nao_achada = || recusa("Imagem não encontrada na biblioteca do site.");
+            let id = Uuid::parse_str(chamada.texto("id")?).map_err(|_| nao_achada())?;
+            match biblioteca::remover(chamada.estado, &site, &ator, id).await? {
+                Ok(()) => Ok(do_site(json!({ "apagada": true }), None)),
+                Err(erro) => Err(recusa(erro.to_string())),
+            }
+        }
         "editar_midia" => {
             let nao_achada = || recusa("Imagem não encontrada na biblioteca do site.");
             let id = Uuid::parse_str(chamada.texto("id")?).map_err(|_| nao_achada())?;
@@ -1402,6 +1462,29 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                         .map_err(do_fluxo)?;
                     chamada.estado.cache.invalidar_site(site.id);
                     json!({ "situacao": "publicado" })
+                }
+                "agendar_publicacao" => {
+                    let quando = DateTime::parse_from_rfc3339(chamada.texto("quando")?)
+                        .map_err(|_| {
+                            recusa("O argumento \"quando\" não é uma data ISO 8601 com fuso, como 2026-11-03T09:00:00-03:00.")
+                        })?
+                        .with_timezone(&Utc);
+                    fluxo::agendar(pool, site.id, &ator, id, quando)
+                        .await
+                        .map_err(do_fluxo)?;
+                    json!({ "situacao": "agendado", "quando": quando })
+                }
+                "cancelar_agendamento" => {
+                    fluxo::cancelar_agendamento(pool, site.id, &ator, id)
+                        .await
+                        .map_err(do_fluxo)?;
+                    json!({ "situacao": "rascunho" })
+                }
+                "devolver" => {
+                    fluxo::devolver(pool, site.id, &ator, id)
+                        .await
+                        .map_err(do_fluxo)?;
+                    json!({ "situacao": "devolvido" })
                 }
                 "despublicar" => {
                     fluxo::despublicar(pool, site.id, &ator, id)

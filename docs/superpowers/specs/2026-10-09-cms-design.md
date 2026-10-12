@@ -279,8 +279,8 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `criar_rascunho`, `editar_rascunho` | `conteudo:escrever` |
 | `validar_documento` | `conteudo:ler` |
 | `enviar_para_revisao` | `conteudo:escrever` |
-| `publicar`, `despublicar` | `conteudo:publicar` |
-| `listar_midia`, `enviar_midia`, `editar_midia` | `midia:escrever` |
+| `publicar`, `despublicar`, `agendar_publicacao`, `cancelar_agendamento`, `devolver` | `conteudo:publicar` |
+| `listar_midia`, `enviar_midia`, `editar_midia`, `apagar_midia` | `midia:escrever` |
 | `listar_autores`, `listar_categorias` | `conteudo:ler` |
 | `listar_modelos`, `ver_modelo` | `conteudo:ler` |
 | `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
@@ -292,6 +292,9 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- Cada ferramenta sai com `annotations`: `readOnlyHint` nas que só leem
+  (`listar_`, `ver_`, `validar_`) e `destructiveHint` nas que tiram do ar ou
+  apagam (`despublicar`, `apagar_midia`, `remover_redirecionamento`).
 - Redirecionamento cadastrado: de um caminho antigo do site para outro caminho
   ou para um endereço `https://` de outro site, sempre 301. `de` terminado em
   `/*` vale para o prefixo, e `para` terminado em `/*` recebe o resto do

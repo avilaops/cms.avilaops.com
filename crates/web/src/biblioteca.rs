@@ -358,6 +358,36 @@ pub async fn corrigir(
     pagina(estado, &site, &ator, status, recado).await
 }
 
+/// Apaga a imagem da biblioteca e os arquivos dela no disco: o original e as
+/// variantes. A recusa (em uso, sem permissão, inexistente) volta para quem
+/// pediu, pelo painel ou pelo conector.
+pub async fn remover(
+    estado: &Estado,
+    site: &SiteGravado,
+    ator: &Ator,
+    midia_id: Uuid,
+) -> Result<Result<(), ErroDeMidia>, ErroWeb> {
+    let arquivos = match cms_dados::apagar_midia(&estado.pool, site.id, ator, midia_id).await {
+        Ok(arquivos) => arquivos,
+        Err(ErroDeMidia::Dados(erro)) => return Err(erro.into()),
+        Err(erro) => return Ok(Err(erro)),
+    };
+    let diretorio = &estado.configuracao.diretorio_de_midia;
+    let pasta = diretorio.join(site.id.to_string());
+    let original = caminho_do_original(diretorio, site.id, midia_id);
+    for caminho in arquivos
+        .iter()
+        .map(|arquivo| pasta.join(arquivo))
+        .chain([original])
+    {
+        // Arquivo que já não existe não impede a remoção.
+        if let Err(erro) = tokio::fs::remove_file(&caminho).await {
+            tracing::warn!(%erro, caminho = %caminho.display(), "arquivo de imagem não removido");
+        }
+    }
+    Ok(Ok(()))
+}
+
 pub async fn apagar(
     estado: &Estado,
     conta: &Conta,
@@ -371,31 +401,14 @@ pub async fn apagar(
     let Ok(midia_id) = Uuid::parse_str(midia_id) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
-    let (status, recado) = match cms_dados::apagar_midia(&estado.pool, site.id, &ator, midia_id)
-        .await
-    {
-        Ok(arquivos) => {
-            let diretorio = &estado.configuracao.diretorio_de_midia;
-            let pasta = diretorio.join(site.id.to_string());
-            let original = caminho_do_original(diretorio, site.id, midia_id);
-            for caminho in arquivos
-                .iter()
-                .map(|arquivo| pasta.join(arquivo))
-                .chain([original])
-            {
-                // Arquivo que já não existe não impede a remoção.
-                if let Err(erro) = tokio::fs::remove_file(&caminho).await {
-                    tracing::warn!(%erro, caminho = %caminho.display(), "arquivo de imagem não removido");
-                }
-            }
-            (
-                StatusCode::OK,
-                Recado {
-                    aviso: Some("Imagem apagada.".to_string()),
-                    ..Recado::default()
-                },
-            )
-        }
+    let (status, recado) = match remover(estado, &site, &ator, midia_id).await? {
+        Ok(()) => (
+            StatusCode::OK,
+            Recado {
+                aviso: Some("Imagem apagada.".to_string()),
+                ..Recado::default()
+            },
+        ),
         Err(ErroDeMidia::Dados(erro)) => return Err(erro.into()),
         Err(erro) => {
             let status = match erro {
