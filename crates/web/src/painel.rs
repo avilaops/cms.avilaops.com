@@ -12,6 +12,7 @@ use cms_dados::{ErroDeConta, SiteDaConta};
 use cms_dominio::eventos::origem_do_site;
 use cms_dominio::{Conta, Papel, Situacao};
 use cms_integracoes::auth::{COOKIE_DE_SESSAO, RespostaDoAuth};
+use motor_web::tipos::{Formato, Midia};
 use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
@@ -31,12 +32,32 @@ struct LinhaDeSite {
     midia: String,
     /// A página do site no painel.
     abrir: String,
+    /// A imagem que representa o site na lista: a capa da página inicial (a
+    /// mesma de quando o endereço é compartilhado) ou, sem ela, a logo.
+    previa: Option<String>,
+}
+
+/// A menor versão de uma imagem do site, servida pelo painel: a tela não
+/// carrega imagem de outro endereço.
+fn miniatura(midia: &Midia, slug: &str) -> Option<String> {
+    midia
+        .variantes
+        .iter()
+        .filter(|variante| variante.formato == Formato::Webp)
+        .min_by_key(|variante| variante.largura)
+        .and_then(|variante| variante.url.strip_prefix("/midia/"))
+        .map(|arquivo| format!("/painel/sites/{slug}/midia/arquivo/{arquivo}"))
 }
 
 impl LinhaDeSite {
     /// `dominio` é o domínio próprio do site, quando ele já está ativo: é
     /// esse o endereço que a pessoa conhece, e não o provisório.
-    fn nova(site: SiteDaConta, dominio: Option<String>, configuracao: &Configuracao) -> Self {
+    fn nova(
+        site: SiteDaConta,
+        dominio: Option<String>,
+        previa: Option<String>,
+        configuracao: &Configuracao,
+    ) -> Self {
         let url = origem_do_site(
             &configuracao.esquema,
             &configuracao.dominio_base,
@@ -56,6 +77,7 @@ impl LinhaDeSite {
             papel: site.papel.rotulo(),
             midia: format!("/painel/sites/{}/midia", site.slug),
             abrir: format!("/painel/sites/{}", site.slug),
+            previa,
             equipe: (site.papel == Papel::Dono)
                 .then(|| format!("/painel/sites/{}/equipe", site.slug)),
         }
@@ -190,7 +212,22 @@ async fn pagina(
             .into_iter()
             .find(|dominio| dominio.ativo)
             .map(|dominio| dominio.host);
-        sites.push(LinhaDeSite::nova(site, dominio, &estado.configuracao));
+        let inicio = cms_dados::documento_publicado(&estado.pool, site.id, "/").await?;
+        let mut previa = inicio
+            .as_ref()
+            .and_then(|documento| documento.capa())
+            .and_then(|capa| miniatura(capa, &site.slug));
+        if previa.is_none() {
+            previa = cms_dados::site_por_slug(&estado.pool, &site.slug)
+                .await?
+                .and_then(|gravado| miniatura(&gravado.perfil.logo, &site.slug));
+        }
+        sites.push(LinhaDeSite::nova(
+            site,
+            dominio,
+            previa,
+            &estado.configuracao,
+        ));
     }
     let quem = if conta.nome.is_empty() {
         conta.email.clone()

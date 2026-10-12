@@ -15,7 +15,11 @@
 {%- else %}
 <ul>
 {%- for site in sites %}
-<li>
+<li class="site">
+{%- if let Some(previa) = site.previa %}
+<a href="{{ site.url }}"><img src="{{ previa }}" alt="" width="96" height="64" loading="lazy"></a>
+{%- endif %}
+<div>
 <a href="{{ site.abrir }}"><strong>{{ site.nome }}</strong></a>
 <a href="{{ site.url }}">{{ site.endereco }}</a>
 <span class="etiquetas">{{ site.situacao }} · {{ site.papel }}</span>
@@ -27,6 +31,7 @@
 <a href="{{ equipe }}">Equipe</a>
 {%- endif %}
 </nav>
+</div>
 </li>
 {%- endfor %}
 </ul>
