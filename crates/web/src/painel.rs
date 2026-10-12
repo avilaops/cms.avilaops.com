@@ -34,16 +34,19 @@ struct LinhaDeSite {
 }
 
 impl LinhaDeSite {
-    fn nova(site: SiteDaConta, configuracao: &Configuracao) -> Self {
+    /// `dominio` é o domínio próprio do site, quando ele já está ativo: é
+    /// esse o endereço que a pessoa conhece, e não o provisório.
+    fn nova(site: SiteDaConta, dominio: Option<String>, configuracao: &Configuracao) -> Self {
         let url = origem_do_site(
             &configuracao.esquema,
             &configuracao.dominio_base,
             &site.slug,
-            None,
+            dominio.as_deref(),
         );
         Self {
             nome: site.nome,
-            endereco: format!("{}.{}", site.slug, configuracao.dominio_base),
+            endereco: dominio
+                .unwrap_or_else(|| format!("{}.{}", site.slug, configuracao.dominio_base)),
             url,
             situacao: match site.situacao {
                 Situacao::EmMontagem => "Em montagem",
@@ -180,11 +183,15 @@ async fn pagina(
     status: StatusCode,
     recado: Recado,
 ) -> Result<Response, ErroWeb> {
-    let sites = cms_dados::sites_da_conta(&estado.pool, conta)
-        .await?
-        .into_iter()
-        .map(|site| LinhaDeSite::nova(site, &estado.configuracao))
-        .collect();
+    let mut sites = Vec::new();
+    for site in cms_dados::sites_da_conta(&estado.pool, conta).await? {
+        let dominio = cms_dados::dominios_do_site(&estado.pool, site.id)
+            .await?
+            .into_iter()
+            .find(|dominio| dominio.ativo)
+            .map(|dominio| dominio.host);
+        sites.push(LinhaDeSite::nova(site, dominio, &estado.configuracao));
+    }
     let quem = if conta.nome.is_empty() {
         conta.email.clone()
     } else {
