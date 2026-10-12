@@ -13,6 +13,7 @@ use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{Datelike, Utc};
 use cms_dados::{DescricaoDaMidia, ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
+use cms_dominio::site::CAMINHO_DA_LICENCA_DE_IMAGENS;
 use cms_dominio::{Ator, Conta, Papel};
 use motor_web::tipos::Direitos;
 use motor_web::validacao::validar_upload;
@@ -38,11 +39,18 @@ struct Linha {
     aviso: String,
     licenca: String,
     aquisicao: String,
+    /// A imagem leva a licença do site: é de autoria própria.
+    propria: bool,
+    /// A imagem tem licença de fora: os endereços dela aparecem abertos.
+    de_terceiros: bool,
 }
 
 impl Linha {
     fn nova(midia: MidiaDoSite, slug: &str, ator: &Ator) -> Self {
+        let propria = midia.licenca.as_deref() == Some(CAMINHO_DA_LICENCA_DE_IMAGENS);
         Self {
+            propria,
+            de_terceiros: !propria && (midia.licenca.is_some() || midia.aquisicao.is_some()),
             id: midia.id,
             alt: midia.alt,
             miniatura: midia
@@ -65,8 +73,10 @@ impl Linha {
             credito: midia.credito.unwrap_or_default(),
             autoria: midia.autoria.unwrap_or_default(),
             aviso: midia.aviso.unwrap_or_default(),
-            licenca: midia.licenca.unwrap_or_default(),
-            aquisicao: midia.aquisicao.unwrap_or_default(),
+            // Na imagem própria a caixa marcada já diz a licença: os campos de
+            // terceiros ficam vazios, e desmarcar a caixa tira a licença.
+            licenca: midia.licenca.filter(|_| !propria).unwrap_or_default(),
+            aquisicao: midia.aquisicao.filter(|_| !propria).unwrap_or_default(),
         }
     }
 }
@@ -117,7 +127,7 @@ async fn pagina(
         resumo: lista.resumo("Nenhuma imagem", "imagem", "imagens"),
         lista,
         alt: recado.alt,
-        dono: AutoriaPropria::do_site(site).dono,
+        dono: site.perfil.titular().to_string(),
     }
     .render()?;
     Ok(html_privado(status, corpo))
@@ -173,27 +183,19 @@ pub struct Envio {
     pub direitos: Direitos,
 }
 
-/// Quem assina uma imagem de autoria própria: a empresa do site, e o aviso de
-/// direitos no nome dela, com o ano de agora.
-struct AutoriaPropria {
-    dono: String,
-    aviso: String,
-}
-
-impl AutoriaPropria {
-    fn do_site(site: &SiteGravado) -> Self {
-        let perfil = &site.perfil;
-        let dono = perfil
-            .organizacao
-            .razao_social
-            .clone()
-            .filter(|nome| !nome.trim().is_empty())
-            .unwrap_or_else(|| perfil.nome.clone());
-        Self {
-            aviso: format!("© {} {dono}", Utc::now().year()),
-            dono,
-        }
-    }
+/// O crédito e os direitos de uma imagem de autoria própria: a empresa do
+/// site assina, o aviso de direitos sai no nome dela com o ano de agora, e a
+/// licença é a página de licença de imagens do site.
+pub(crate) fn autoria_propria(site: &SiteGravado) -> (String, Direitos) {
+    let dono = site.perfil.titular().to_string();
+    let licenca = Some(CAMINHO_DA_LICENCA_DE_IMAGENS.to_string());
+    let direitos = Direitos {
+        autoria: Some(dono.clone()),
+        aviso: Some(format!("© {} {dono}", Utc::now().year())),
+        licenca: licenca.clone(),
+        aquisicao: licenca,
+    };
+    (dono, direitos)
 }
 
 /// Lê o formulário de envio, e se a pessoa marcou a imagem como de autoria
@@ -321,10 +323,7 @@ pub async fn enviar(
         return Ok(simples(StatusCode::BAD_REQUEST, "Formulário inválido."));
     };
     if propria {
-        let autoria = AutoriaPropria::do_site(&site);
-        envio.credito = autoria.dono.clone();
-        envio.direitos.autoria = Some(autoria.dono);
-        envio.direitos.aviso = Some(autoria.aviso);
+        (envio.credito, envio.direitos) = autoria_propria(&site);
     }
     let alt = envio.alt.clone();
     let (status, recado) = match registrar(estado, &site, &ator, envio).await? {
@@ -359,7 +358,8 @@ struct Correcao {
     aviso: String,
     licenca: String,
     aquisicao: String,
-    /// Marcada, a imagem passa a ser de autoria da empresa do site.
+    /// Marcada, a imagem passa a ser de autoria da empresa do site, com a
+    /// licença dele.
     propria: String,
 }
 
@@ -377,23 +377,25 @@ pub async fn corrigir(
     let Ok(midia_id) = Uuid::parse_str(midia_id) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
-    let mut correcao = serde_urlencoded::from_bytes::<Correcao>(corpo).unwrap_or_default();
-    if !correcao.propria.is_empty() {
-        let autoria = AutoriaPropria::do_site(&site);
-        correcao.credito = autoria.dono.clone();
-        correcao.autoria = autoria.dono;
-        correcao.aviso = autoria.aviso;
-    }
+    let correcao = serde_urlencoded::from_bytes::<Correcao>(corpo).unwrap_or_default();
+    let (credito, direitos) = if correcao.propria.is_empty() {
+        (
+            correcao.credito,
+            Direitos {
+                autoria: Some(correcao.autoria),
+                aviso: Some(correcao.aviso),
+                licenca: Some(correcao.licenca),
+                aquisicao: Some(correcao.aquisicao),
+            },
+        )
+    } else {
+        autoria_propria(&site)
+    };
     let descricao = DescricaoDaMidia {
         alt: correcao.alt,
         legenda: Some(correcao.legenda),
-        credito: Some(correcao.credito),
-        direitos: Direitos {
-            autoria: Some(correcao.autoria),
-            aviso: Some(correcao.aviso),
-            licenca: Some(correcao.licenca),
-            aquisicao: Some(correcao.aquisicao),
-        },
+        credito: Some(credito),
+        direitos,
     };
     let (status, recado) =
         match cms_dados::atualizar_midia(&estado.pool, site.id, &ator, midia_id, &descricao).await

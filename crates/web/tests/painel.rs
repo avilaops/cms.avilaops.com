@@ -3207,3 +3207,154 @@ async fn dono_define_a_identidade_e_o_site_passa_a_mostra_la(pool: PgPool) {
         StatusCode::NOT_FOUND
     );
 }
+
+/// O crédito, a licença e a página de aquisição de cada imagem, na ordem de
+/// envio.
+async fn direitos_das_imagens(
+    pool: &PgPool,
+) -> Vec<(Option<String>, Option<String>, Option<String>)> {
+    sqlx::query_as("select credito, licenca, aquisicao_de_licenca from midia order by criado_em")
+        .fetch_all(pool)
+        .await
+        .expect("direitos das imagens")
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn imagem_propria_leva_a_licenca_do_site_e_a_pagina_dela_existe(pool: PgPool) {
+    use base64::Engine;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const LICENCA: &str = "/licenca-de-imagens";
+    let h = host("padaria");
+
+    // A página de licença existe sem ninguém escrever nada: o texto padrão.
+    let padrao = painel.visitar(&h, LICENCA).await;
+    assert_eq!(padrao.status, StatusCode::OK, "{}", padrao.corpo);
+    assert!(padrao.corpo.contains("<h1>Licença de imagens</h1>"));
+    assert!(
+        padrao
+            .corpo
+            .contains("pertencem a Padaria da Ana. Todos os direitos reservados.")
+    );
+
+    // Marcar a imagem como própria põe a licença do site nela.
+    painel
+        .enviar_imagem("ana", "padaria", &png(1400, 800, 200), "Vitrine da padaria")
+        .await;
+    let (imagem, _) = imagem_do_site(&pool).await;
+    let propria = formulario(&[("alt", "Vitrine da padaria"), ("propria", "1")]);
+    let marcada = painel
+        .postar(
+            "ana",
+            &format!("/painel/sites/padaria/midia/{imagem}"),
+            &propria,
+        )
+        .await;
+    assert_eq!(marcada.status, StatusCode::OK, "{}", marcada.corpo);
+    assert!(
+        marcada
+            .corpo
+            .contains(r#"name="propria" value="1" checked"#)
+    );
+    // A caixa marcada já diz a licença: os campos de terceiros ficam vazios.
+    assert!(!marcada.corpo.contains(r#"value="/licenca-de-imagens""#));
+    let dona = Some("Padaria da Ana".to_string());
+    let do_site = Some(LICENCA.to_string());
+    assert_eq!(
+        direitos_das_imagens(&pool).await,
+        [(dona.clone(), do_site.clone(), do_site.clone())]
+    );
+
+    // Desmarcar tira a licença do site.
+    let de_fora = formulario(&[("alt", "Vitrine da padaria"), ("credito", "Foto: Ana")]);
+    painel
+        .postar(
+            "ana",
+            &format!("/painel/sites/padaria/midia/{imagem}"),
+            &de_fora,
+        )
+        .await;
+    assert_eq!(
+        direitos_das_imagens(&pool).await,
+        [(Some("Foto: Ana".to_string()), None, None)]
+    );
+
+    // O dono escreve os termos, e a página passa a mostrá-los com o contato.
+    let identidade = formulario(&[
+        ("nome", "Padaria da Ana"),
+        ("email", "contato@padaria.example"),
+        ("licenca", "Uso livre com crédito.\r\nSem uso comercial."),
+    ]);
+    let salvo = painel
+        .postar("ana", "/painel/sites/padaria/identidade", &identidade)
+        .await;
+    assert!(salvo.cabecalho("location").ends_with("/identidade?r=salvo"));
+    let tela = painel
+        .abrir(Some("ana"), "/painel/sites/padaria/identidade")
+        .await;
+    assert!(tela.corpo.contains("Uso livre com crédito."));
+    assert!(tela.corpo.contains(&format!("https://{h}{LICENCA}")));
+    let escrita = painel.visitar(&h, LICENCA).await;
+    assert!(escrita.corpo.contains("<p>Uso livre com crédito.</p>"));
+    assert!(escrita.corpo.contains("<p>Sem uso comercial.</p>"));
+    assert!(
+        escrita
+            .corpo
+            .contains("Para pedir autorização de uso, escreva para contato@padaria.example.")
+    );
+    assert!(!escrita.corpo.contains("Todos os direitos reservados"));
+
+    // O assistente marca a imagem como própria com um argumento só.
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "sites:ler",
+                "sites:editar",
+                "conteudo:ler",
+                "conteudo:escrever",
+                "midia:escrever",
+            ],
+        )
+        .await;
+    let base64 = base64::engine::general_purpose::STANDARD.encode(png(1200, 900, 51));
+    let (erro, enviada) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({
+                "site": "padaria",
+                "nome": "fornada.png",
+                "alt": "Fornada de pães",
+                "base64": base64,
+                "credito": "Outra pessoa",
+                "propria": "sim",
+            }),
+        )
+        .await;
+    assert!(!erro, "{enviada}");
+    let (erro, editada) = painel
+        .ferramenta(
+            &token,
+            "editar_midia",
+            json!({ "site": "padaria", "id": imagem, "propria": "sim" }),
+        )
+        .await;
+    assert!(!erro, "{editada}");
+    assert_eq!(
+        direitos_das_imagens(&pool).await,
+        [
+            (dona.clone(), do_site.clone(), do_site.clone()),
+            (dona, do_site.clone(), do_site),
+        ]
+    );
+    let (_, site) = painel
+        .ferramenta(&token, "ver_site", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(
+        site["identidade"]["licencaDeImagens"],
+        "Uso livre com crédito.\r\nSem uso comercial."
+    );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}

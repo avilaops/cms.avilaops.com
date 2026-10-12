@@ -349,6 +349,16 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   de cada página, de onde a busca de imagens tira o crédito e o selo de imagem
   licenciável. Sem crédito escrito, o crédito é o nome do site. Correção em
   imagem que já está no ar entra na próxima publicação de cada conteúdo.
+- Cada site responde em `/licenca-de-imagens` com os termos de uso das imagens
+  e como pedir autorização. O texto é o `licencaDeImagens` da identidade; sem
+  ele, vale o padrão (todos os direitos reservados em nome da razão social, ou
+  do nome do site). O e-mail e o telefone do cadastro fecham a página. Página
+  publicada pelo site no mesmo endereço tem preferência.
+- Imagem de autoria própria (`propria` em `enviar_midia` e `editar_midia`, a
+  caixa "Autoria própria" no painel) sai com crédito, autor e aviso de
+  direitos em nome da empresa do site, e com licença e página de aquisição em
+  `/licenca-de-imagens`. Os endereços de licença digitados ficam para imagem
+  de terceiros.
 
 - `validar_documento` devolve os problemas do motor, com código, campo e
   mensagem. É assim que o assistente corrige antes de pedir a publicação.

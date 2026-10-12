@@ -44,6 +44,9 @@
 <input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
 <label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567 (em branco, o site não carrega script nenhum)</label>
 <input id="tag" name="tag" maxlength="20" autocapitalize="characters" spellcheck="false" value="{{ d.tag }}">
+<label for="licenca">Licença das imagens do site, um parágrafo por linha (em branco usa o texto padrão: todos os direitos reservados)</label>
+<textarea id="licenca" name="licenca" maxlength="2000">{{ d.licenca }}</textarea>
+<p class="dica">É o texto da página <a href="{{ pagina_da_licenca }}">{{ pagina_da_licenca }}</a> do site, para onde aponta a licença de toda imagem de autoria própria. O e-mail e o telefone de contato entram no fim dela.</p>
 <fieldset>
 <legend>Menu do topo</legend>
 {%- if paginas.is_empty() %}

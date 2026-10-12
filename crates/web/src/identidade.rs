@@ -6,7 +6,8 @@ use axum::http::{StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
-use cms_dominio::site::{conferir_cor, conferir_tag_do_google};
+use cms_dominio::eventos::origem_do_site;
+use cms_dominio::site::{CAMINHO_DA_LICENCA_DE_IMAGENS, conferir_cor, conferir_tag_do_google};
 use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
@@ -41,6 +42,9 @@ pub(crate) struct DadosDaIdentidade {
     menu: String,
     /// A tag do Google, como `GTM-ABC1234`; vazio deixa o site sem script.
     tag: String,
+    /// Os termos de uso das imagens do site, um parágrafo por linha; vazio
+    /// usa o texto padrão da página de licença.
+    licenca: String,
 }
 
 impl DadosDaIdentidade {
@@ -70,6 +74,7 @@ impl DadosDaIdentidade {
             cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
             menu: perfil.menu.join("\n"),
             tag: perfil.tag_do_google.clone().unwrap_or_default(),
+            licenca: perfil.licenca_de_imagens.clone().unwrap_or_default(),
         }
     }
 
@@ -91,6 +96,7 @@ impl DadosDaIdentidade {
             "corDeDestaque" => &mut self.cor,
             "menu" => &mut self.menu,
             "tagDoGoogle" => &mut self.tag,
+            "licencaDeImagens" => &mut self.licenca,
             _ => return None,
         })
     }
@@ -109,6 +115,8 @@ struct PaginaDeIdentidade {
     logo_atual: Option<String>,
     /// As páginas que podem ir para o menu do topo, com a posição de cada uma.
     paginas: Vec<PaginaDoMenu>,
+    /// O endereço da página de licença de imagens do site.
+    pagina_da_licenca: String,
 }
 
 /// Uma página na lista do menu do topo.
@@ -215,7 +223,15 @@ pub async fn abrir(
     };
     let dados = DadosDaIdentidade::do_perfil(&site.perfil);
     let paginas = paginas_do_menu(estado, &site).await?;
+    let configuracao = &estado.configuracao;
+    let origem = origem_do_site(
+        &configuracao.esquema,
+        &configuracao.dominio_base,
+        &site.slug,
+        site.dominio_ativo.as_deref(),
+    );
     let corpo = PaginaDeIdentidade {
+        pagina_da_licenca: format!("{origem}{CAMINHO_DA_LICENCA_DE_IMAGENS}"),
         logo_atual: miniatura(&site.perfil.logo, &site.slug),
         paginas,
         site: site.perfil.nome,
@@ -319,6 +335,7 @@ pub(crate) async fn aplicar(
         diretrizes_ia: linhas(&dados.diretrizes),
         cor_de_destaque,
         tag_do_google,
+        licenca_de_imagens: opcional(&dados.licenca),
         // Só caminho do site entra na ordem do menu.
         menu: linhas(&dados.menu)
             .into_iter()
