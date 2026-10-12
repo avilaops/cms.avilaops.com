@@ -31,7 +31,7 @@
 {%- include "lista_busca.html" %}
 <ul>
 {%- for documento in lista.itens %}
-<li><a href="/painel/sites/{{ slug }}/doc/{{ documento.id }}"><strong>{{ documento.titulo }}</strong></a><span class="etiquetas">{{ documento.especie }} · {{ documento.estado }}</span></li>
+<li><a href="/painel/sites/{{ slug }}/doc/{{ documento.id }}"><strong>{{ documento.titulo }}</strong></a><span class="etiquetas">{{ documento.especie }} · {{ documento.estado }}{% if let Some(caminho) = documento.caminho %} · {{ caminho }}{% endif %} · <a href="{{ documento.ver }}"{% if documento.no_ar %} target="_blank" rel="noopener"{% endif %}>{% if documento.no_ar %}ver no site{% else %}ver a prévia{% endif %}</a></span></li>
 {%- endfor %}
 </ul>
 {%- include "lista_paginas.html" %}

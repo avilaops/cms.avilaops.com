@@ -78,6 +78,11 @@ struct LinhaDeDocumento {
     titulo: String,
     especie: &'static str,
     estado: String,
+    /// O endereço da página no site, quando ela já tem um.
+    caminho: Option<String>,
+    /// Onde ver a página: no site, se está no ar; na prévia do painel, se não.
+    ver: String,
+    no_ar: bool,
 }
 
 fn estado_de(situacao: &str, tem_rascunho: bool, em_revisao: bool) -> String {
@@ -123,10 +128,26 @@ pub async fn inicio(
     };
     let configuracao = &estado.configuracao;
     let consulta = Consulta::da(uri);
+    let origem = origem_do_site(
+        &configuracao.esquema,
+        &configuracao.dominio_base,
+        &site.slug,
+        site.dominio_ativo.as_deref(),
+    );
     let documentos: Vec<LinhaDeDocumento> = cms_dados::documentos_do_site(&estado.pool, site.id)
         .await?
         .into_iter()
-        .map(|documento| LinhaDeDocumento {
+        .map(|documento| {
+            let no_ar = documento.situacao == "publicado";
+            (documento, no_ar)
+        })
+        .map(|(documento, no_ar)| LinhaDeDocumento {
+            ver: match (&documento.caminho, no_ar) {
+                (Some(caminho), true) => format!("{origem}{caminho}"),
+                _ => format!("/painel/sites/{}/doc/{}/previa", site.slug, documento.id),
+            },
+            no_ar,
+            caminho: documento.caminho,
             id: documento.id,
             titulo: if documento.titulo.trim().is_empty() {
                 "(sem título)".to_string()
@@ -144,22 +165,20 @@ pub async fn inicio(
                 documento.em_revisao,
             ),
         })
-        // A busca olha o título, o tipo e a situação: "post rascunho" funciona.
+        // A busca olha o título, o tipo, a situação e o endereço: "post rascunho" funciona.
         .filter(|linha| {
             consulta.casa(&format!(
-                "{} {} {}",
-                linha.titulo, linha.especie, linha.estado
+                "{} {} {} {}",
+                linha.titulo,
+                linha.especie,
+                linha.estado,
+                linha.caminho.as_deref().unwrap_or_default()
             ))
         })
         .collect();
     let lista = consulta.recortar(documentos, &format!("/painel/sites/{}", site.slug));
     let corpo = PaginaDoSite {
-        url: origem_do_site(
-            &configuracao.esquema,
-            &configuracao.dominio_base,
-            &site.slug,
-            site.dominio_ativo.as_deref(),
-        ),
+        url: origem,
         endereco: site
             .dominio_ativo
             .clone()
