@@ -1,0 +1,15 @@
+{%- if lista.paginas > 1 %}
+<nav class="paginas" aria-label="Páginas da lista">
+{%- if let Some(anterior) = lista.anterior %}
+<a href="{{ anterior }}" rel="prev">‹ Anterior</a>
+{%- else %}
+<span></span>
+{%- endif %}
+<span>Página {{ lista.pagina }} de {{ lista.paginas }}</span>
+{%- if let Some(proxima) = lista.proxima %}
+<a href="{{ proxima }}" rel="next">Próxima ›</a>
+{%- else %}
+<span></span>
+{%- endif %}
+</nav>
+{%- endif %}

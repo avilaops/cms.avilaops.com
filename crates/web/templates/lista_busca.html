@@ -1,0 +1,8 @@
+<form class="busca" method="get" action="{{ lista.caminho }}" role="search">
+<label for="busca">Buscar</label>
+<div>
+<input id="busca" name="busca" type="search" value="{{ lista.busca }}" maxlength="80">
+<button type="submit">Buscar</button>
+</div>
+</form>
+<p class="etiquetas">{{ resumo }}{% if !lista.busca.is_empty() %} · <a href="{{ lista.caminho }}">limpar a busca</a>{% endif %}</p>

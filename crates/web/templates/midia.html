@@ -31,12 +31,13 @@
 </details>
 <button type="submit">Enviar imagem</button>
 </form>
-<h2>Biblioteca</h2>
-{%- if midias.is_empty() %}
+<h2 id="biblioteca">Biblioteca</h2>
+{%- if lista.total == 0 && lista.busca.is_empty() %}
 <p>Nenhuma imagem ainda.</p>
 {%- else %}
+{%- include "lista_busca.html" %}
 <ul>
-{%- for midia in midias %}
+{%- for midia in lista.itens %}
 <li class="midia">
 {%- if let Some(miniatura) = midia.miniatura %}
 <img src="{{ miniatura }}" alt="" width="72" height="72" loading="lazy">
@@ -72,5 +73,6 @@
 </li>
 {%- endfor %}
 </ul>
+{%- include "lista_paginas.html" %}
 {%- endif %}
 {% endblock %}

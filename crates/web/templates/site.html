@@ -25,13 +25,15 @@
 {%- endfor %}
 </ul>
 </details>
-{%- if documentos.is_empty() %}
+{%- if lista.total == 0 && lista.busca.is_empty() %}
 <p>O site ainda não tem conteúdo. Comece pela página inicial: uma página nova com o endereço em branco.</p>
 {%- else %}
+{%- include "lista_busca.html" %}
 <ul>
-{%- for documento in documentos %}
+{%- for documento in lista.itens %}
 <li><a href="/painel/sites/{{ slug }}/doc/{{ documento.id }}"><strong>{{ documento.titulo }}</strong></a><span class="etiquetas">{{ documento.especie }} · {{ documento.estado }}</span></li>
 {%- endfor %}
 </ul>
+{%- include "lista_paginas.html" %}
 {%- endif %}
 {% endblock %}

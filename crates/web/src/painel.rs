@@ -466,7 +466,7 @@ async fn responder(
             equipe::convidar(estado, &conta, slug, &origem, corpo).await
         }
         Rota::Mensagens(slug) => mensagens::abrir(estado, &conta, slug).await,
-        Rota::Midia(slug) => biblioteca::abrir(estado, &conta, slug).await,
+        Rota::Midia(slug) => biblioteca::abrir(estado, &conta, slug, uri).await,
         Rota::EnviarMidia(slug) => {
             biblioteca::enviar(estado, &conta, slug, cabecalhos, corpo).await
         }
@@ -477,7 +477,7 @@ async fn responder(
         Rota::CorrigirMidia(slug, id) => {
             biblioteca::corrigir(estado, &conta, slug, id, corpo).await
         }
-        Rota::Site(slug) => conteudo::inicio(estado, &conta, slug).await,
+        Rota::Site(slug) => conteudo::inicio(estado, &conta, slug, uri).await,
         Rota::NovoDocumento(slug, especie) => {
             conteudo::novo(estado, &conta, slug, especie, uri).await
         }

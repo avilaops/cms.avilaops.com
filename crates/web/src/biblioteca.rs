@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use askama::Template;
 use axum::body::Bytes;
 use axum::http::header::CONTENT_TYPE;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::{DescricaoDaMidia, ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
 use cms_dominio::{Ator, Conta, Papel};
@@ -19,6 +19,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::acesso::ao_site;
+use crate::lista::{Consulta, Lista};
 use crate::resposta::{ErroWeb, html_privado, simples};
 use crate::{Estado, midia};
 
@@ -76,7 +77,9 @@ struct PaginaDeMidia {
     slug: String,
     erro: Option<String>,
     aviso: Option<String>,
-    midias: Vec<Linha>,
+    lista: Lista<Linha>,
+    /// Quantas imagens a busca achou, por extenso.
+    resumo: String,
     alt: String,
 }
 
@@ -93,27 +96,48 @@ async fn pagina(
     ator: &Ator,
     status: StatusCode,
     recado: Recado,
+    consulta: &Consulta,
 ) -> Result<Response, ErroWeb> {
     let midias = cms_dados::midias_do_site(&estado.pool, site.id)
         .await?
         .into_iter()
+        // A busca olha a descrição, o nome do arquivo e o identificador.
+        .filter(|midia| consulta.casa(&format!("{} {} {}", midia.alt, midia.nome, midia.id)))
         .map(|midia| Linha::nova(midia, &site.slug, ator))
         .collect();
+    let lista = consulta.recortar(midias, &format!("/painel/sites/{}/midia", site.slug));
     let corpo = PaginaDeMidia {
         site: site.perfil.nome.clone(),
         slug: site.slug.clone(),
         erro: recado.erro,
         aviso: recado.aviso,
-        midias,
+        resumo: lista.resumo("Nenhuma imagem", "imagem", "imagens"),
+        lista,
         alt: recado.alt,
     }
     .render()?;
     Ok(html_privado(status, corpo))
 }
 
-pub async fn abrir(estado: &Estado, conta: &Conta, slug: &str) -> Result<Response, ErroWeb> {
+pub async fn abrir(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    uri: &Uri,
+) -> Result<Response, ErroWeb> {
     match ao_site(estado, conta, slug).await? {
-        Ok((site, ator)) => pagina(estado, &site, &ator, StatusCode::OK, Recado::default()).await,
+        Ok((site, ator)) => {
+            let consulta = Consulta::da(uri);
+            pagina(
+                estado,
+                &site,
+                &ator,
+                StatusCode::OK,
+                Recado::default(),
+                &consulta,
+            )
+            .await
+        }
         Err(resposta) => Ok(resposta),
     }
 }
@@ -284,7 +308,8 @@ pub async fn enviar(
             },
         ),
     };
-    pagina(estado, &site, &ator, status, recado).await
+    // Depois de um envio, correção ou remoção a lista volta para o começo.
+    pagina(estado, &site, &ator, status, recado, &Consulta::default()).await
 }
 
 /// A correção de uma imagem, como o formulário da lista a manda.
@@ -355,7 +380,8 @@ pub async fn corrigir(
                 )
             }
         };
-    pagina(estado, &site, &ator, status, recado).await
+    // Depois de um envio, correção ou remoção a lista volta para o começo.
+    pagina(estado, &site, &ator, status, recado, &Consulta::default()).await
 }
 
 /// Apaga a imagem da biblioteca e os arquivos dela no disco: o original e as
@@ -425,5 +451,6 @@ pub async fn apagar(
             )
         }
     };
-    pagina(estado, &site, &ator, status, recado).await
+    // Depois de um envio, correção ou remoção a lista volta para o começo.
+    pagina(estado, &site, &ator, status, recado, &Consulta::default()).await
 }

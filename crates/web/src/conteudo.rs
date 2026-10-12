@@ -22,6 +22,7 @@ use uuid::Uuid;
 
 use crate::acesso::ao_site;
 use crate::editor::{Acao, BlocoDigitado, Formulario, Resolvido, TIPOS_DE_BLOCO};
+use crate::lista::{Consulta, Lista};
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Estado, publico};
 
@@ -103,18 +104,26 @@ struct PaginaDoSite {
     endereco: String,
     situacao: &'static str,
     dono: bool,
-    documentos: Vec<LinhaDeDocumento>,
+    lista: Lista<LinhaDeDocumento>,
+    /// Quantos conteúdos a busca achou, por extenso.
+    resumo: String,
     modelos: &'static [Modelo],
 }
 
 /// A página do site no painel: atalhos e a lista de páginas e posts.
-pub async fn inicio(estado: &Estado, conta: &Conta, slug: &str) -> Result<Response, ErroWeb> {
+pub async fn inicio(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    uri: &Uri,
+) -> Result<Response, ErroWeb> {
     let (site, ator) = match ao_site(estado, conta, slug).await? {
         Ok(acesso) => acesso,
         Err(resposta) => return Ok(resposta),
     };
     let configuracao = &estado.configuracao;
-    let documentos = cms_dados::documentos_do_site(&estado.pool, site.id)
+    let consulta = Consulta::da(uri);
+    let documentos: Vec<LinhaDeDocumento> = cms_dados::documentos_do_site(&estado.pool, site.id)
         .await?
         .into_iter()
         .map(|documento| LinhaDeDocumento {
@@ -135,7 +144,15 @@ pub async fn inicio(estado: &Estado, conta: &Conta, slug: &str) -> Result<Respon
                 documento.em_revisao,
             ),
         })
+        // A busca olha o título, o tipo e a situação: "post rascunho" funciona.
+        .filter(|linha| {
+            consulta.casa(&format!(
+                "{} {} {}",
+                linha.titulo, linha.especie, linha.estado
+            ))
+        })
         .collect();
+    let lista = consulta.recortar(documentos, &format!("/painel/sites/{}", site.slug));
     let corpo = PaginaDoSite {
         url: origem_do_site(
             &configuracao.esquema,
@@ -155,7 +172,8 @@ pub async fn inicio(estado: &Estado, conta: &Conta, slug: &str) -> Result<Respon
         dono: pode_administrar(&ator),
         site: site.perfil.nome,
         slug: site.slug,
-        documentos,
+        resumo: lista.resumo("Nenhum conteúdo", "conteúdo", "conteúdos"),
+        lista,
         modelos: &MODELOS,
     }
     .render()?;

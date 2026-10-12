@@ -10,6 +10,7 @@ mod dominio;
 mod editor;
 mod equipe;
 mod identidade;
+mod lista;
 mod mensagens;
 mod midia;
 mod painel;
