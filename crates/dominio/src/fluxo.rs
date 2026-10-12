@@ -86,14 +86,18 @@ pub fn pode(ator: &Ator, acao: Acao, criado_por: Option<&str>) -> bool {
 
 /// Caminhos que o servidor usa para outra coisa: uma página com um destes
 /// slugs nunca seria alcançada.
-const SLUGS_RESERVADOS: [&str; 4] = ["api", "autor", "blog", "midia"];
+const SLUGS_RESERVADOS: [&str; 6] = ["api", "autor", "blog", "midia", "produtos", "recursos"];
 
-/// Onde o documento é servido. O CMS não serve produto.
+/// Onde fica o catálogo do site: a listagem e, abaixo dela, cada produto.
+pub const CAMINHO_DOS_PRODUTOS: &str = "/produtos";
+
+/// Onde o documento é servido. O CMS não serve o produto da loja.
 pub fn caminho_de(conteudo: &Conteudo) -> Option<String> {
     match conteudo {
         Conteudo::Pagina(pagina) if pagina.slug.is_empty() => Some("/".to_string()),
         Conteudo::Pagina(pagina) => Some(format!("/{}", pagina.slug)),
         Conteudo::Post(post) => Some(format!("/blog/{}", post.slug)),
+        Conteudo::Item(item) => Some(format!("{CAMINHO_DOS_PRODUTOS}/{}", item.slug)),
         Conteudo::Produto(_) => None,
     }
 }
@@ -162,6 +166,10 @@ pub fn carimbar(conteudo: &mut Conteudo, datas: Datas) {
         Conteudo::Post(post) => {
             post.publicado_em = datas.publicado_em;
             post.atualizado_em = datas.atualizado_em;
+        }
+        Conteudo::Item(item) => {
+            item.publicado_em = datas.publicado_em;
+            item.atualizado_em = datas.atualizado_em;
         }
         Conteudo::Produto(produto) => produto.atualizado_em = datas.atualizado_em,
     }
@@ -242,6 +250,10 @@ mod testes {
             .find(|d| matches!(d.conteudo, Conteudo::Produto(_)))
             .expect("o exemplo tem produto");
         assert_eq!(caminho_de(&produto.conteudo), None);
+        assert_eq!(
+            caminho_de(&demonstracao::item_de_exemplo().conteudo).as_deref(),
+            Some("/produtos/bancada-de-marceneiro")
+        );
     }
 
     #[test]

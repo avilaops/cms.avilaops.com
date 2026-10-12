@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block largura %} class="larga"{% endblock %}
+{% block conteudo %}
+<div class="produto">
+{%- include "trilha.html" %}
+<div class="produto-topo">
+<div class="produto-destaque">{{ destaque|safe }}</div>
+<div class="produto-texto">
+{%- if let Some(codigo) = codigo %}
+<p class="produto-codigo">{{ codigo }}</p>
+{%- endif %}
+<h1>{{ nome }}</h1>
+<p class="produto-resumo">{{ resumo }}</p>
+{%- if let Some(acao) = acao %}
+<p><a class="botao" href="{{ acao.url }}">{{ acao.rotulo }}</a></p>
+{%- endif %}
+{%- if !ficha.is_empty() %}
+<h2>Ficha técnica</h2>
+<dl class="ficha">
+{%- for linha in ficha %}
+<div><dt>{{ linha.nome }}</dt><dd>{% if let Some(filtro) = linha.filtro %}<a href="{{ filtro }}">{{ linha.valor }}</a>{% else %}{{ linha.valor }}{% endif %}</dd></div>
+{%- endfor %}
+</dl>
+{%- endif %}
+</div>
+</div>
+{%- if !fotos.is_empty() %}
+<div class="produto-fotos">
+{%- for foto in fotos %}
+{{ foto|safe }}
+{%- endfor %}
+</div>
+{%- endif %}
+</div>
+{%- if !corpo.is_empty() %}
+<article>
+{{ corpo|safe }}
+</article>
+{%- endif %}
+{%- if let Some(visualizador) = visualizador_3d %}
+<script type="module" src="{{ visualizador }}"></script>
+{%- endif %}
+{% endblock %}

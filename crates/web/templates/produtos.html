@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block largura %} class="larga"{% endblock %}
+{% block conteudo %}
+<h1>{{ titulo }}</h1>
+{%- if !filtros.is_empty() %}
+<nav class="filtros" aria-label="Filtrar os produtos">
+{%- for filtro in filtros %}
+<div>
+<h2>{{ filtro.nome }}</h2>
+<ul>
+<li><a href="{{ filtro.todos }}"{% if filtro.livre %} aria-current="true"{% endif %}>Todos</a></li>
+{%- for opcao in filtro.opcoes %}
+<li><a href="{{ opcao.url }}"{% if opcao.escolhida %} aria-current="true"{% endif %}>{{ opcao.rotulo }} <span>{{ opcao.total }}</span></a></li>
+{%- endfor %}
+</ul>
+</div>
+{%- endfor %}
+</nav>
+{%- endif %}
+<p class="datas" role="status">{{ resumo }}{% if filtrado %} · <a href="/produtos">limpar os filtros</a>{% endif %}</p>
+<div class="catalogo">
+{%- for cartao in cartoes %}
+<article>
+<a href="{{ cartao.url }}">
+{%- if !cartao.foto.is_empty() %}
+{{ cartao.foto|safe }}
+{%- endif %}
+<h2>{{ cartao.nome }}</h2>
+</a>
+{%- if let Some(codigo) = cartao.codigo %}
+<p class="produto-codigo">{{ codigo }}</p>
+{%- endif %}
+<p>{{ cartao.resumo }}</p>
+{%- if !cartao.marcas.is_empty() %}
+<p class="meta">{% for marca in cartao.marcas %}{% if !loop.first %} · {% endif %}{{ marca }}{% endfor %}</p>
+{%- endif %}
+</article>
+{%- endfor %}
+</div>
+{% endblock %}

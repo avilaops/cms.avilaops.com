@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::CampoRecebido;
 use cms_dominio::eventos::origem_do_site;
+use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
 use cms_dominio::site::{
     CAMINHO_DA_LICENCA_DE_IMAGENS, aparece_na_busca, conferir_cor, conferir_tag_do_google,
 };
@@ -20,7 +21,7 @@ use motor_web::descoberta::{
 };
 use motor_web::seo::montar_cabecalho;
 use motor_web::tipos::{
-    Bloco, Conteudo, Documento, ItemTrilha, Pagina, Post, Seo, Site, TipoDeCampo, Trecho,
+    Bloco, Conteudo, Documento, Item, ItemTrilha, Pagina, Post, Seo, Site, TipoDeCampo, Trecho,
 };
 use motor_web::validacao::normalizar_slug;
 
@@ -33,7 +34,8 @@ use crate::resposta::{
 };
 use crate::visao::logo_do_cabecalho;
 use crate::visao::{
-    CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog, TagDoGoogle,
+    CaixaDoAutor, Cartao, CartaoDeItem, Filtro, Moldura, OpcaoDeFiltro, PaginaDeAviso,
+    PaginaDeDocumento, PaginaDeItem, PaginaDoBlog, PaginaDoCatalogo, TagDoGoogle,
     caminho_da_categoria, caminho_do_autor,
 };
 
@@ -232,6 +234,9 @@ async fn responder(
             }
             (None, None) => match Recorte::do_caminho(caminho) {
                 Some((recorte, pagina)) => listagem(estado, &pedido, recorte, pagina).await,
+                None if caminho == CAMINHO_DOS_PRODUTOS => {
+                    catalogo(estado, &pedido, uri.query().unwrap_or_default()).await
+                }
                 None => documento(estado, &pedido, caminho).await,
             },
         },
@@ -284,6 +289,21 @@ fn posts_em_ordem(documentos: &[Documento]) -> Vec<(&str, &Post)> {
 /// listagem, com a data do post mexido por último em cada uma.
 fn listagens(documentos: &[Documento]) -> Vec<PaginaDeCategoria> {
     let mut paginas: BTreeMap<String, PaginaDeCategoria> = BTreeMap::new();
+    // O catálogo entra uma vez, com a data do produto mexido por último.
+    let produtos = documentos.iter().filter_map(|d| match &d.conteudo {
+        Conteudo::Item(item) => Some(item.atualizado_em),
+        _ => None,
+    });
+    if let Some(atualizado_em) = produtos.max() {
+        paginas.insert(
+            CAMINHO_DOS_PRODUTOS.to_string(),
+            PaginaDeCategoria {
+                caminho: CAMINHO_DOS_PRODUTOS.to_string(),
+                nome: "Produtos".to_string(),
+                atualizado_em,
+            },
+        );
+    }
     for (_, post) in posts_em_ordem(documentos) {
         let de_listagem = [
             (CAMINHO_DO_BLOG.to_string(), "Blog"),
@@ -364,6 +384,7 @@ fn ajustar_indexacao(documento: &mut Documento, indexavel: bool) {
     match &mut documento.conteudo {
         Conteudo::Pagina(pagina) => pagina.seo.indexar = false,
         Conteudo::Post(post) => post.seo.indexar = false,
+        Conteudo::Item(item) => item.seo.indexar = false,
         Conteudo::Produto(produto) => produto.seo.indexar = false,
     }
 }
@@ -452,7 +473,10 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
     ajustar_indexacao(&mut documento, pedido.indexavel);
 
     let moldura = moldura(estado, pedido, &documento).await?;
-    let pagina = PaginaDeDocumento::nova(moldura, &documento).render()?;
+    let pagina = match &documento.conteudo {
+        Conteudo::Item(item) => PaginaDeItem::nova(moldura, &documento, item).render()?,
+        _ => PaginaDeDocumento::nova(moldura, &documento).render()?,
+    };
     let mut resposta = html(
         StatusCode::OK,
         pagina,
@@ -543,6 +567,167 @@ fn pagina_avulsa(
                 .collect(),
         }),
     }
+}
+
+/// O que a pessoa escolheu nos filtros do catálogo: pares de característica
+/// e valor, já no formato de endereço. Só o que vem escrito como o catálogo
+/// escreve; o resto da consulta é ignorado.
+fn filtros_escolhidos(consulta: &str) -> Vec<(String, String)> {
+    serde_urlencoded::from_str::<Vec<(String, String)>>(consulta)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(nome, valor)| {
+            !valor.is_empty() && normalizar_slug(nome) == *nome && normalizar_slug(valor) == *valor
+        })
+        .collect()
+}
+
+/// O catálogo com os filtros dados, na ordem em que o catálogo os mostra.
+fn caminho_do_catalogo(escolhidos: &[(String, String)]) -> String {
+    match serde_urlencoded::to_string(escolhidos) {
+        Ok(consulta) if !consulta.is_empty() => format!("{CAMINHO_DOS_PRODUTOS}?{consulta}"),
+        _ => CAMINHO_DOS_PRODUTOS.to_string(),
+    }
+}
+
+/// Os filtros que o catálogo oferece: cada característica marcada como
+/// filtro em algum produto, com os valores que ela tem e quantos produtos há
+/// em cada um, contados dentro do que os outros filtros já escolheram.
+fn filtros_do_catalogo(itens: &[(&str, &Item)], escolhidos: &[(String, String)]) -> Vec<Filtro> {
+    // O nome e os valores aparecem como foram escritos pela primeira vez.
+    let mut nomes: Vec<(String, String)> = Vec::new();
+    for linha in itens
+        .iter()
+        .flat_map(|(_, item)| &item.ficha)
+        .filter(|l| l.filtro)
+    {
+        let chave = normalizar_slug(&linha.nome);
+        if !chave.is_empty() && !nomes.iter().any(|(existente, _)| *existente == chave) {
+            nomes.push((chave, linha.nome.trim().to_string()));
+        }
+    }
+    nomes
+        .into_iter()
+        .map(|(chave, nome)| {
+            let outros: Vec<(String, String)> = escolhidos
+                .iter()
+                .filter(|(escolhido, _)| *escolhido != chave)
+                .cloned()
+                .collect();
+            let atual = escolhidos
+                .iter()
+                .find(|(escolhido, _)| *escolhido == chave)
+                .map(|(_, valor)| valor.as_str());
+            let mut valores: BTreeMap<String, (String, usize)> = BTreeMap::new();
+            for (_, item) in itens.iter().filter(|(_, item)| passa(item, &outros)) {
+                for linha in item
+                    .ficha
+                    .iter()
+                    .filter(|l| l.filtro && normalizar_slug(&l.nome) == chave)
+                {
+                    let valor = normalizar_slug(&linha.valor);
+                    if !valor.is_empty() {
+                        valores
+                            .entry(valor)
+                            .or_insert_with(|| (linha.valor.trim().to_string(), 0))
+                            .1 += 1;
+                    }
+                }
+            }
+            Filtro {
+                nome,
+                todos: caminho_do_catalogo(&outros),
+                livre: atual.is_none(),
+                opcoes: valores
+                    .into_iter()
+                    .map(|(valor, (rotulo, total))| {
+                        let mut com_este = outros.clone();
+                        com_este.push((chave.clone(), valor.clone()));
+                        OpcaoDeFiltro {
+                            rotulo,
+                            url: caminho_do_catalogo(&com_este),
+                            total,
+                            escolhida: atual == Some(valor.as_str()),
+                        }
+                    })
+                    .collect(),
+            }
+        })
+        .collect()
+}
+
+/// O produto tem todas as características escolhidas.
+fn passa(item: &Item, escolhidos: &[(String, String)]) -> bool {
+    escolhidos.iter().all(|(nome, valor)| {
+        item.ficha.iter().any(|linha| {
+            linha.filtro
+                && normalizar_slug(&linha.nome) == *nome
+                && normalizar_slug(&linha.valor) == *valor
+        })
+    })
+}
+
+/// `/produtos`: o catálogo do site, com os filtros como links. Site sem
+/// produto no ar não tem catálogo, e o endereço segue como o de uma página.
+async fn catalogo(estado: &Estado, pedido: &Pedido, consulta: &str) -> Result<Response, ErroWeb> {
+    let documentos = cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
+    let mut itens: Vec<(&str, &Item)> = documentos
+        .iter()
+        .filter_map(|documento| match &documento.conteudo {
+            Conteudo::Item(item) => Some((documento.caminho.as_str(), item)),
+            _ => None,
+        })
+        .collect();
+    let (Some(primeiro), Some(ultimo)) = (
+        itens.iter().map(|(_, item)| item.publicado_em).min(),
+        itens.iter().map(|(_, item)| item.atualizado_em).max(),
+    ) else {
+        return documento(estado, pedido, CAMINHO_DOS_PRODUTOS).await;
+    };
+    // Pelo código, quando há; depois pelo nome.
+    itens.sort_by(|a, b| {
+        (a.1.codigo.as_deref().unwrap_or("~"), &a.1.nome)
+            .cmp(&(b.1.codigo.as_deref().unwrap_or("~"), &b.1.nome))
+    });
+
+    let escolhidos = filtros_escolhidos(consulta);
+    let filtros = filtros_do_catalogo(&itens, &escolhidos);
+    let achados: Vec<_> = itens
+        .iter()
+        .filter(|(_, item)| passa(item, &escolhidos))
+        .collect();
+    // O catálogo filtrado é a mesma página para a busca: a canônica é a
+    // listagem inteira.
+    let documento = pagina_avulsa(
+        pedido,
+        CAMINHO_DOS_PRODUTOS,
+        "Produtos",
+        format!(
+            "Catálogo de {}: veja os produtos, com ficha técnica e fotos de cada um.",
+            pedido.site.nome
+        ),
+        true,
+        (primeiro, ultimo),
+        None,
+    );
+    let moldura = moldura(estado, pedido, &documento).await?;
+    let pagina = PaginaDoCatalogo {
+        moldura,
+        titulo: "Produtos".to_string(),
+        filtros,
+        resumo: match achados.len() {
+            0 => "Nenhum produto com estes filtros".to_string(),
+            1 => "1 produto".to_string(),
+            n => format!("{n} produtos"),
+        },
+        filtrado: !escolhidos.is_empty(),
+        cartoes: achados
+            .iter()
+            .map(|(caminho, item)| CartaoDeItem::novo(caminho, item))
+            .collect(),
+    }
+    .render()?;
+    Ok(html(StatusCode::OK, pagina, pedido.indexavel))
 }
 
 /// Uma listagem de posts: o blog inteiro, uma categoria ou quem escreveu.

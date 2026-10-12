@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select d.id, d.especie,\n               coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as \"titulo!\",\n               d.situacao,\n               (d.versao_rascunho is not null) as \"tem_rascunho!\",\n               (d.revisao_pedida_em is not null) as \"em_revisao!\",\n               d.caminho\n        from documento d\n        left join versao v on v.id = coalesce(d.versao_rascunho, d.versao_publicada)\n        where d.site_id = $1\n        order by coalesce(v.criado_em, d.criado_em) desc, d.id\n        ",
+  "query": "\n        select d.id, d.especie,\n               coalesce(\n                   v.conteudo -> 'dados' ->> 'titulo',\n                   v.conteudo -> 'dados' ->> 'nome',\n                   ''\n               ) as \"titulo!\",\n               d.situacao,\n               (d.versao_rascunho is not null) as \"tem_rascunho!\",\n               (d.revisao_pedida_em is not null) as \"em_revisao!\",\n               d.caminho\n        from documento d\n        left join versao v on v.id = coalesce(d.versao_rascunho, d.versao_publicada)\n        where d.site_id = $1\n        order by coalesce(v.criado_em, d.criado_em) desc, d.id\n        ",
   "describe": {
     "columns": [
       {
@@ -54,5 +54,5 @@
       true
     ]
   },
-  "hash": "01010672a3519597b70b94fe1f2950d6e840a6bc83ab5a57442abc38cd162606"
+  "hash": "cc3bc1c634f43b03933cd08b72a780c3cb5a4d562113db6e84c490348f2e7338"
 }

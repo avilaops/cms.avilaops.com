@@ -8,10 +8,11 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
 use motor_web::tipos::{
-    Abertura, Acao as Botao, Autor, Bloco, Campo, Cartao, Categoria, Conteudo, Depoimento,
-    ItemTrilha, Midia, Modelo3d, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoDeCampo,
-    TipoPost, Trecho,
+    Abertura, Acao as Botao, Autor, Bloco, Campo, Caracteristica, Cartao, Categoria, Conteudo,
+    Depoimento, Item, ItemTrilha, Midia, Modelo3d, Numero, Pagina, Passo, Pergunta, Plano, Post,
+    Seo, TipoDeCampo, TipoPost, Trecho,
 };
 
 /// Os tipos de bloco, na ordem em que aparecem para escolher.
@@ -79,6 +80,19 @@ pub enum Acao {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Formulario {
     pub eh_post: bool,
+    /// Produto de catálogo. Nem post nem produto é página.
+    pub eh_item: bool,
+    /// O código do produto no catálogo da empresa.
+    pub codigo: String,
+    /// As outras fotos do produto, além da capa: um código de imagem por linha.
+    pub imagens: String,
+    /// O identificador do modelo 3D do produto na biblioteca.
+    pub modelo: String,
+    /// A ficha técnica, uma linha por característica: `Nome | Valor`, com
+    /// `| filtro` no fim nas que separam o catálogo.
+    pub ficha: String,
+    /// O botão do produto: `Rótulo | endereço`.
+    pub botao: String,
     pub acao: String,
     pub titulo: String,
     /// O nome curto da página no menu do site.
@@ -121,6 +135,14 @@ impl Formulario {
         }
     }
 
+    /// Um produto de catálogo novo, vazio.
+    pub fn novo_item() -> Self {
+        Self {
+            eh_item: true,
+            ..Self::novo(false)
+        }
+    }
+
     /// Lê os pares do formulário enviado.
     pub fn ler(pares: Vec<(String, String)>) -> Self {
         // O navegador manda quebra de linha como `\r\n`; aqui é sempre `\n`.
@@ -155,6 +177,12 @@ impl Formulario {
             .collect();
         Self {
             eh_post: campo("especie") == "post",
+            eh_item: campo("especie") == "item",
+            codigo: campo("codigo"),
+            imagens: campo("imagens"),
+            modelo: campo("modelo"),
+            ficha: campo("ficha"),
+            botao: campo("botao"),
             acao: campo("acao"),
             titulo: campo("titulo"),
             menu: campo("menu"),
@@ -281,24 +309,60 @@ impl Formulario {
                     &post.corpo,
                 )
             },
-            // O CMS não guarda produto: não há o que editar.
+            Conteudo::Item(item) => Self {
+                eh_item: true,
+                codigo: item.codigo.clone().unwrap_or_default(),
+                resumo: item.resumo.clone(),
+                imagens: item
+                    .imagens
+                    .iter()
+                    .skip(1)
+                    .map(|imagem| imagem.id.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                modelo: item
+                    .modelo
+                    .as_ref()
+                    .map(|modelo| modelo.id.clone())
+                    .unwrap_or_default(),
+                ficha: item
+                    .ficha
+                    .iter()
+                    .map(|linha| {
+                        let filtro = if linha.filtro { "filtro" } else { "" };
+                        escrever_linha(&[&linha.nome, &linha.valor, filtro])
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                botao: escrever_botoes(item.acao.as_slice()),
+                ..comum(
+                    &item.nome,
+                    &item.slug,
+                    &item.seo,
+                    item.imagens.first(),
+                    &item.corpo,
+                )
+            },
+            // O CMS não guarda o produto da loja: não há o que editar.
             Conteudo::Produto(_) => Self::default(),
         }
     }
 
-    /// Os identificadores das imagens escolhidas: a capa e as dos blocos.
+    /// Os identificadores das imagens escolhidas: a capa, as outras fotos do
+    /// produto e as dos blocos.
     pub fn midias_escolhidas(&self) -> Vec<&str> {
         std::iter::once(self.capa.as_str())
+            .chain(self.imagens.lines().map(str::trim))
             .chain(self.blocos.iter().flat_map(imagens_citadas))
             .filter(|id| !id.is_empty())
             .collect()
     }
 
-    /// Os identificadores dos modelos 3D escolhidos nos blocos.
+    /// Os identificadores dos modelos 3D escolhidos: o do produto e os dos
+    /// blocos.
     pub fn modelos_escolhidos(&self) -> Vec<&str> {
-        self.blocos
-            .iter()
-            .map(|bloco| bloco.modelo.as_str())
+        std::iter::once(self.modelo.as_str())
+            .chain(self.blocos.iter().map(|bloco| bloco.modelo.as_str()))
             .filter(|id| !id.is_empty())
             .collect()
     }
@@ -323,6 +387,51 @@ impl Formulario {
             url: "/".to_string(),
         };
         let capa = resolvido.midias.get(&self.capa).cloned();
+        if self.eh_item {
+            return Conteudo::Item(Item {
+                trilha: vec![
+                    inicio,
+                    ItemTrilha {
+                        nome: "Produtos".to_string(),
+                        url: CAMINHO_DOS_PRODUTOS.to_string(),
+                    },
+                    ItemTrilha {
+                        nome: titulo.clone(),
+                        url: format!("{CAMINHO_DOS_PRODUTOS}/{}", self.slug),
+                    },
+                ],
+                slug: self.slug.clone(),
+                nome: titulo,
+                codigo: opcional(&self.codigo),
+                resumo: self.resumo.trim().to_string(),
+                // A capa é a primeira foto; as outras vêm na ordem das linhas.
+                imagens: capa
+                    .into_iter()
+                    .chain(
+                        linhas(&self.imagens)
+                            .iter()
+                            .filter_map(|id| imagem(resolvido, id)),
+                    )
+                    .collect(),
+                modelo: opcional(&self.modelo).map(|id| modelo_citado(resolvido, &id)),
+                ficha: linhas(&self.ficha)
+                    .iter()
+                    .map(|linha| {
+                        let celulas = celulas(linha);
+                        Caracteristica {
+                            nome: celula(&celulas, 0).to_string(),
+                            valor: celula(&celulas, 1).to_string(),
+                            filtro: celula(&celulas, 2).eq_ignore_ascii_case("filtro"),
+                        }
+                    })
+                    .collect(),
+                corpo,
+                acao: ler_botoes(&self.botao).into_iter().next(),
+                publicado_em: agora,
+                atualizado_em: agora,
+                seo,
+            });
+        }
         if self.eh_post {
             Conteudo::Post(Post {
                 tipo: if self.tipo_do_post == "guia-tecnico" {
@@ -518,6 +627,21 @@ fn imagens_citadas(bloco: &BlocoDigitado) -> Vec<&str> {
     std::iter::once(bloco.midia.as_str())
         .chain(nas_linhas)
         .collect()
+}
+
+/// O modelo 3D citado. Modelo que a biblioteca não tem fica sem arquivo, e a
+/// validação pede para escolher outro.
+fn modelo_citado(resolvido: &Resolvido, id: &str) -> Modelo3d {
+    resolvido
+        .modelos
+        .get(id)
+        .cloned()
+        .unwrap_or_else(|| Modelo3d {
+            id: id.to_string(),
+            glb: String::new(),
+            usdz: None,
+            descricao: String::new(),
+        })
 }
 
 /// A imagem citada. Identificador que a biblioteca não tem vira imagem vazia,
@@ -934,19 +1058,8 @@ fn montar(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Bloco {
             url: bloco.url.trim().to_string(),
             titulo: texto.to_string(),
         },
-        // Modelo que a biblioteca não tem fica sem arquivo, e a validação
-        // pede para escolher outro.
         "modelo-3d" => Bloco::Modelo3d {
-            modelo: resolvido
-                .modelos
-                .get(&bloco.modelo)
-                .cloned()
-                .unwrap_or_else(|| Modelo3d {
-                    id: bloco.modelo.clone(),
-                    glb: String::new(),
-                    usdz: None,
-                    descricao: String::new(),
-                }),
+            modelo: modelo_citado(resolvido, &bloco.modelo),
             capa: imagem(resolvido, &bloco.midia),
             legenda: Some(texto.to_string()).filter(|legenda| !legenda.is_empty()),
         },
@@ -1481,7 +1594,7 @@ mod testes {
                     Some(post.autor.clone()),
                     Some(post.categoria.clone()),
                 ),
-                Conteudo::Produto(_) => continue,
+                Conteudo::Produto(_) | Conteudo::Item(_) => continue,
             };
             let mut resolvido = Resolvido {
                 autor,
@@ -1503,7 +1616,7 @@ mod testes {
             let (corpo_refeito, titulo) = match &refeito {
                 Conteudo::Pagina(pagina) => (&pagina.corpo, &pagina.titulo),
                 Conteudo::Post(post) => (&post.corpo, &post.titulo),
-                Conteudo::Produto(_) => continue,
+                Conteudo::Produto(_) | Conteudo::Item(_) => continue,
             };
             assert_eq!(corpo_refeito, corpo, "{}", documento.caminho);
             assert_eq!(titulo, documento.titulo(), "{}", documento.caminho);
@@ -1516,6 +1629,7 @@ mod testes {
         match conteudo {
             Conteudo::Pagina(pagina) => &pagina.slug,
             Conteudo::Post(post) => &post.slug,
+            Conteudo::Item(item) => &item.slug,
             Conteudo::Produto(produto) => &produto.slug,
         }
     }
@@ -1524,7 +1638,35 @@ mod testes {
         match conteudo {
             Conteudo::Pagina(pagina) => &pagina.seo,
             Conteudo::Post(post) => &post.seo,
+            Conteudo::Item(item) => &item.seo,
             Conteudo::Produto(produto) => &produto.seo,
         }
+    }
+
+    #[test]
+    fn produto_de_catalogo_vai_ao_formulario_e_volta_igual() {
+        let exemplo = motor_web::demonstracao::item_de_exemplo();
+        let Conteudo::Item(item) = &exemplo.conteudo else {
+            panic!("o exemplo é um produto de catálogo");
+        };
+        let mut resolvido = Resolvido::default();
+        for foto in &item.imagens {
+            resolvido.midias.insert(foto.id.clone(), foto.clone());
+        }
+        if let Some(modelo) = &item.modelo {
+            resolvido.modelos.insert(modelo.id.clone(), modelo.clone());
+        }
+        let formulario = Formulario::do_conteudo(&exemplo.conteudo);
+        assert!(formulario.eh_item);
+        assert!(formulario.ficha.contains("Linha | Oficina | filtro"));
+        assert!(formulario.ficha.contains("Peso | 74 kg"));
+        assert_eq!(formulario.botao, "Pedir orçamento | /contato");
+        assert_eq!(
+            formulario.para_conteudo(&resolvido, item.publicado_em),
+            Conteudo::Item(Item {
+                atualizado_em: item.publicado_em,
+                ..item.clone()
+            })
+        );
     }
 }

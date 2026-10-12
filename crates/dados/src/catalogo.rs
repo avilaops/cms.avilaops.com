@@ -351,7 +351,11 @@ pub async fn documentos_do_site(
         DocumentoDoSite,
         r#"
         select d.id, d.especie,
-               coalesce(v.conteudo -> 'dados' ->> 'titulo', '') as "titulo!",
+               coalesce(
+                   v.conteudo -> 'dados' ->> 'titulo',
+                   v.conteudo -> 'dados' ->> 'nome',
+                   ''
+               ) as "titulo!",
                d.situacao,
                (d.versao_rascunho is not null) as "tem_rascunho!",
                (d.revisao_pedida_em is not null) as "em_revisao!",

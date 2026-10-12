@@ -188,15 +188,17 @@ pub(crate) async fn hidratar(
     site_id: Uuid,
     conteudo: &mut Conteudo,
 ) -> Result<(), sqlx::Error> {
-    let corpo = match conteudo {
-        Conteudo::Pagina(pagina) => &mut pagina.corpo,
-        Conteudo::Post(post) => &mut post.corpo,
+    let (do_item, corpo) = match conteudo {
+        Conteudo::Pagina(pagina) => (None, &mut pagina.corpo),
+        Conteudo::Post(post) => (None, &mut post.corpo),
+        Conteudo::Item(item) => (item.modelo.as_mut(), &mut item.corpo),
         Conteudo::Produto(_) => return Ok(()),
     };
-    for bloco in corpo {
-        let Bloco::Modelo3d { modelo, .. } = bloco else {
-            continue;
-        };
+    let do_corpo = corpo.iter_mut().filter_map(|bloco| match bloco {
+        Bloco::Modelo3d { modelo, .. } => Some(modelo),
+        _ => None,
+    });
+    for modelo in do_item.into_iter().chain(do_corpo) {
         let gravado = match Uuid::parse_str(&modelo.id) {
             Ok(id) => modelo_gravado(&mut *conexao, site_id, id).await?,
             Err(_) => None,

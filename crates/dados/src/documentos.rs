@@ -61,6 +61,9 @@ pub struct ItemDeNavegacao {
     pub caminho: String,
     pub titulo: String,
     pub eh_post: bool,
+    /// Produto de catálogo: não entra no menu, mas faz o menu ganhar
+    /// "Produtos".
+    pub eh_item: bool,
 }
 
 /// Caminho e nome no menu do que está no ar e entra no menu, sem carregar o
@@ -72,6 +75,7 @@ pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegac
                coalesce(
                    nullif(btrim(v.conteudo -> 'dados' ->> 'menu'), ''),
                    v.conteudo -> 'dados' ->> 'titulo',
+                   v.conteudo -> 'dados' ->> 'nome',
                    ''
                ) as "titulo!"
         from documento d
@@ -79,7 +83,7 @@ pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegac
         where d.site_id = $1 and d.situacao = 'publicado'
           -- Página filha (com outra acima dela na trilha, além do início)
           -- fica fora do menu principal: chega-se a ela pela página de cima.
-          and (d.especie = 'post'
+          and (d.especie in ('post', 'item')
                or jsonb_array_length(coalesce(v.conteudo -> 'dados' -> 'trilha', '[]'::jsonb)) <= 2)
         order by d.caminho
         "#,
@@ -93,6 +97,7 @@ pub async fn navegacao(pool: &PgPool, site_id: Uuid) -> Result<Vec<ItemDeNavegac
             caminho: l.caminho,
             titulo: l.titulo,
             eh_post: l.especie == "post",
+            eh_item: l.especie == "item",
         })
         .collect())
 }
@@ -138,7 +143,8 @@ pub(crate) fn especie_e_slug(conteudo: &Conteudo) -> Result<(&'static str, &str)
     match conteudo {
         Conteudo::Pagina(pagina) => Ok(("pagina", &pagina.slug)),
         Conteudo::Post(post) => Ok(("post", &post.slug)),
-        // Catálogo e checkout são do Lojas.
+        Conteudo::Item(item) => Ok(("item", &item.slug)),
+        // Preço e checkout são do Lojas.
         Conteudo::Produto(_) => Err(ErroDeDados::DadoInvalido("o CMS não guarda produto".into())),
     }
 }

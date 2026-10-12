@@ -159,10 +159,10 @@ pub async fn inicio(
             } else {
                 documento.titulo
             },
-            especie: if documento.especie == "post" {
-                "Post"
-            } else {
-                "Página"
+            especie: match documento.especie.as_str() {
+                "post" => "Post",
+                "item" => "Produto",
+                _ => "Página",
             },
             estado: estado_de(
                 &documento.situacao,
@@ -383,6 +383,10 @@ struct PaginaDoEditor {
     autores: Vec<Opcao>,
     categorias: Vec<Opcao>,
     capas: Vec<Opcao>,
+    /// Os modelos 3D da biblioteca, para o produto de catálogo.
+    modelos_do_item: Vec<Opcao>,
+    /// Os códigos das imagens, para as outras fotos do produto.
+    codigos_das_imagens: Vec<Opcao>,
     pode_revisar: bool,
     pode_devolver: bool,
     pode_publicar: bool,
@@ -458,11 +462,13 @@ async fn editor(
     let corpo = PaginaDoEditor {
         site: site.perfil.nome.clone(),
         slug: site.slug.clone(),
-        cabecalho: match (formulario.eh_post, aberto.is_some()) {
-            (true, true) => "Post",
-            (true, false) => "Novo post",
-            (false, true) => "Página",
-            (false, false) => "Nova página",
+        cabecalho: match (formulario.eh_post, formulario.eh_item, aberto.is_some()) {
+            (true, _, true) => "Post",
+            (true, _, false) => "Novo post",
+            (_, true, true) => "Produto",
+            (_, true, false) => "Novo produto",
+            (_, _, true) => "Página",
+            (_, _, false) => "Nova página",
         },
         estado: match aberto {
             Some(aberto) => {
@@ -505,6 +511,18 @@ async fn editor(
             .iter()
             .map(|(id, rotulo)| opcao(id, rotulo, &formulario.capa))
             .collect(),
+        modelos_do_item: modelos
+            .iter()
+            .map(|(id, rotulo)| opcao(id, rotulo, &formulario.modelo))
+            .collect(),
+        codigos_das_imagens: if formulario.eh_item {
+            biblioteca
+                .iter()
+                .map(|(id, rotulo)| opcao(id, rotulo, ""))
+                .collect()
+        } else {
+            Vec::new()
+        },
         pode_revisar: tem_rascunho && !em_revisao && permite(Permissao::EnviarParaRevisao),
         pode_devolver: em_revisao && permite(Permissao::Devolver),
         pode_publicar: (tem_rascunho || situacao == "despublicado" || aberto.is_none())
@@ -530,6 +548,7 @@ pub async fn novo(
     let formulario = match especie {
         "post" => Formulario::novo(true),
         "pagina" => Formulario::novo(false),
+        "produto" => Formulario::novo_item(),
         modelo => match conteudo_do_modelo(modelo, Utc::now()) {
             Some(conteudo) => Formulario::do_conteudo(&conteudo),
             None => return Ok(nao_encontrado()),

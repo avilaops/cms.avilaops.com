@@ -68,7 +68,7 @@ fn para_cada_midia(conteudo: &mut Conteudo, visitar: &mut dyn FnMut(&mut Midia))
                 Some(&mut post.autor.foto),
                 &mut post.corpo,
             ),
-            Conteudo::Produto(_) => return,
+            Conteudo::Produto(_) | Conteudo::Item(_) => return,
         };
     capa.into_iter().chain(autor).for_each(&mut *visitar);
     for bloco in corpo {
@@ -227,6 +227,7 @@ fn data_de_publicacao(documento: &Documento) -> DateTime<Utc> {
     match &documento.conteudo {
         Conteudo::Pagina(pagina) => pagina.publicado_em,
         Conteudo::Post(post) => post.publicado_em,
+        Conteudo::Item(item) => item.publicado_em,
         Conteudo::Produto(produto) => produto.atualizado_em,
     }
 }

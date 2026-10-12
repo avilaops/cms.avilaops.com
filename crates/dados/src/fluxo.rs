@@ -128,6 +128,7 @@ fn titulo_de(conteudo: &Conteudo) -> &str {
     match conteudo {
         Conteudo::Pagina(pagina) => &pagina.titulo,
         Conteudo::Post(post) => &post.titulo,
+        Conteudo::Item(item) => &item.nome,
         Conteudo::Produto(produto) => &produto.nome,
     }
 }

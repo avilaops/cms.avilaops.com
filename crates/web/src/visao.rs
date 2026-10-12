@@ -4,10 +4,12 @@
 use askama::Template;
 use cms_dados::ItemDeNavegacao;
 use cms_dominio::datas;
+use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
 use motor_web::conteudo::renderizar_corpo;
 use motor_web::midia::{Papel, renderizar_midia, url_principal};
 use motor_web::secoes::{ESTILO_DAS_SECOES, renderizar_abertura};
-use motor_web::tipos::{Autor, Conteudo, Documento, ItemTrilha, Post, Site};
+use motor_web::tipos::{Autor, Bloco, Conteudo, Documento, Item, ItemTrilha, Post, Site};
+use motor_web::validacao::normalizar_slug;
 
 pub struct Link {
     pub rotulo: String,
@@ -111,13 +113,21 @@ impl Moldura {
         navegacao.extend(
             itens
                 .iter()
-                .filter(|item| !item.eh_post && item.caminho != "/")
+                .filter(|item| !item.eh_post && !item.eh_item && item.caminho != "/")
                 .map(|item| Link {
                     rotulo: item.titulo.clone(),
                     url: item.caminho.clone(),
                     atual: item.caminho == caminho_atual,
                 }),
         );
+        // Site com produto no ar ganha o catálogo no menu, antes do blog.
+        if itens.iter().any(|item| item.eh_item) {
+            navegacao.push(Link {
+                rotulo: "Produtos".into(),
+                url: CAMINHO_DOS_PRODUTOS.into(),
+                atual: caminho_atual.starts_with(CAMINHO_DOS_PRODUTOS),
+            });
+        }
         if itens.iter().any(|item| item.eh_post) {
             navegacao.push(Link {
                 rotulo: "Blog".into(),
@@ -275,6 +285,178 @@ impl PaginaDeDocumento {
                 .then(crate::modelos::caminho_do_visualizador),
         }
     }
+}
+
+/// O endereço do catálogo já filtrado por uma característica, como
+/// `/produtos?linha=peso-livre`.
+pub fn caminho_do_filtro(nome: &str, valor: &str) -> String {
+    format!(
+        "{CAMINHO_DOS_PRODUTOS}?{}={}",
+        normalizar_slug(nome),
+        normalizar_slug(valor)
+    )
+}
+
+/// Uma linha da ficha técnica na página do produto.
+pub struct LinhaDaFicha {
+    pub nome: String,
+    pub valor: String,
+    /// Na característica que separa o catálogo, os outros produtos iguais.
+    pub filtro: Option<String>,
+}
+
+/// A página de um produto de catálogo.
+#[derive(Template)]
+#[template(path = "item.html")]
+pub struct PaginaDeItem {
+    pub moldura: Moldura,
+    pub trilha: Vec<ItemTrilha>,
+    pub nome: String,
+    pub codigo: Option<String>,
+    pub resumo: String,
+    /// O que fica em destaque ao lado do texto: o modelo 3D ou, sem ele, a
+    /// foto principal.
+    pub destaque: String,
+    /// As outras fotos, já em HTML.
+    pub fotos: Vec<String>,
+    pub ficha: Vec<LinhaDaFicha>,
+    pub acao: Option<Link>,
+    pub corpo: String,
+    pub visualizador_3d: Option<&'static str>,
+}
+
+impl PaginaDeItem {
+    pub fn nova(moldura: Moldura, documento: &Documento, item: &Item) -> Self {
+        let sizes = "(min-width: 60rem) 36rem, 100vw";
+        let destaque = match &item.modelo {
+            // Com modelo, a primeira foto é a capa dele: aparece até o modelo
+            // carregar.
+            Some(modelo) => renderizar_corpo(&[Bloco::Modelo3d {
+                modelo: modelo.clone(),
+                capa: item.imagens.first().cloned(),
+                legenda: None,
+            }]),
+            None => item
+                .imagens
+                .first()
+                .map(|foto| renderizar_midia(foto, Papel::Principal, sizes))
+                .unwrap_or_default(),
+        };
+        Self {
+            moldura,
+            trilha: documento.trilha().to_vec(),
+            nome: item.nome.clone(),
+            codigo: item
+                .codigo
+                .clone()
+                .filter(|codigo| !codigo.trim().is_empty()),
+            resumo: item.resumo.clone(),
+            destaque,
+            fotos: item
+                .imagens
+                .iter()
+                .skip(1)
+                .map(|foto| {
+                    renderizar_midia(foto, Papel::Conteudo, "(min-width: 60rem) 18rem, 50vw")
+                })
+                .collect(),
+            ficha: item
+                .ficha
+                .iter()
+                .map(|linha| LinhaDaFicha {
+                    nome: linha.nome.clone(),
+                    valor: linha.valor.clone(),
+                    filtro: linha
+                        .filtro
+                        .then(|| caminho_do_filtro(&linha.nome, &linha.valor)),
+                })
+                .collect(),
+            acao: item.acao.as_ref().map(|acao| Link {
+                rotulo: acao.rotulo.clone(),
+                url: acao.url.clone(),
+                atual: false,
+            }),
+            corpo: renderizar_corpo(&item.corpo),
+            visualizador_3d: documento
+                .tem_modelo_3d()
+                .then(crate::modelos::caminho_do_visualizador),
+        }
+    }
+}
+
+/// Um produto na listagem do catálogo.
+pub struct CartaoDeItem {
+    pub url: String,
+    pub nome: String,
+    pub codigo: Option<String>,
+    pub resumo: String,
+    /// A foto principal, já em HTML. Vazia quando o produto não tem foto.
+    pub foto: String,
+    /// Os valores das características que separam o catálogo.
+    pub marcas: Vec<String>,
+}
+
+impl CartaoDeItem {
+    pub fn novo(caminho: &str, item: &Item) -> Self {
+        Self {
+            url: caminho.to_string(),
+            nome: item.nome.clone(),
+            codigo: item
+                .codigo
+                .clone()
+                .filter(|codigo| !codigo.trim().is_empty()),
+            resumo: item.resumo.clone(),
+            foto: item
+                .imagens
+                .first()
+                .map(|foto| {
+                    renderizar_midia(
+                        foto,
+                        Papel::Conteudo,
+                        "(min-width: 60rem) 22rem, (min-width: 36rem) 50vw, 100vw",
+                    )
+                })
+                .unwrap_or_default(),
+            marcas: item
+                .ficha
+                .iter()
+                .filter(|linha| linha.filtro)
+                .map(|linha| linha.valor.clone())
+                .collect(),
+        }
+    }
+}
+
+/// Uma opção de um filtro do catálogo.
+pub struct OpcaoDeFiltro {
+    pub rotulo: String,
+    pub url: String,
+    pub total: usize,
+    pub escolhida: bool,
+}
+
+/// Um filtro do catálogo: a característica e os valores que ela tem.
+pub struct Filtro {
+    pub nome: String,
+    /// O catálogo sem este filtro (os outros continuam).
+    pub todos: String,
+    /// Nenhum valor deste filtro está escolhido.
+    pub livre: bool,
+    pub opcoes: Vec<OpcaoDeFiltro>,
+}
+
+/// A listagem do catálogo.
+#[derive(Template)]
+#[template(path = "produtos.html")]
+pub struct PaginaDoCatalogo {
+    pub moldura: Moldura,
+    pub titulo: String,
+    pub filtros: Vec<Filtro>,
+    /// Quantos produtos a escolha achou, por extenso.
+    pub resumo: String,
+    /// Há filtro escolhido: a página oferece "limpar".
+    pub filtrado: bool,
+    pub cartoes: Vec<CartaoDeItem>,
 }
 
 pub struct Cartao {

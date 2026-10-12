@@ -463,13 +463,32 @@ fn esquema_do_conteudo() -> Value {
         "description": DESCRICAO_DO_CONTEUDO,
         "required": ["especie", "dados"],
         "properties": {
-            "especie": { "type": "string", "enum": ["pagina", "post"] },
+            "especie": { "type": "string", "enum": ["pagina", "post", "item"] },
             "dados": {
                 "type": "object",
-                "required": ["slug", "titulo", "seo"],
+                "required": ["slug", "seo"],
                 "properties": {
+                    "nome": { "type": "string", "description": "Só no item (produto de catálogo), obrigatório, no lugar de titulo." },
+                    "codigo": { "type": "string", "description": "Só no item: o código do produto no catálogo da empresa." },
+                    "imagens": { "type": "array", "description": "Só no item: as fotos, cada uma pelo id da biblioteca (listar_midia). A primeira é a principal.", "items": { "type": ["string", "object"] } },
+                    "modelo": referencia("Só no item: o modelo 3D do produto, pelo id da biblioteca (listar_modelos_3d)."),
+                    "ficha": {
+                        "type": "array",
+                        "description": "Só no item: a ficha técnica, na ordem em que aparece. A linha com filtro = true separa o catálogo em /produtos (por exemplo Linha ou Categoria).",
+                        "items": {
+                            "type": "object",
+                            "required": ["nome", "valor"],
+                            "properties": { "nome": { "type": "string" }, "valor": { "type": "string" }, "filtro": { "type": "boolean" } },
+                        },
+                    },
+                    "acao": {
+                        "type": "object",
+                        "description": "Só no item: o botão da página, como pedir orçamento.",
+                        "required": ["rotulo", "url"],
+                        "properties": { "rotulo": { "type": "string" }, "url": { "type": "string" } },
+                    },
                     "slug": { "type": "string", "description": "O endereço, sem barra no começo. Vazio só na página inicial." },
-                    "titulo": { "type": "string" },
+                    "titulo": { "type": "string", "description": "Na página e no post, obrigatório." },
                     "menu": { "type": "string", "description": "Só na página: o nome curto no menu do site, com até 24 letras." },
                     "abertura": {
                         "type": "object",
@@ -482,7 +501,7 @@ fn esquema_do_conteudo() -> Value {
                         },
                     },
                     "tipo": { "type": "string", "description": "Só no post, obrigatório: o tipo de artigo, como em ver_modelo." },
-                    "resumo": { "type": "string", "description": "Só no post, obrigatório." },
+                    "resumo": { "type": "string", "description": "No post e no item, obrigatório: uma ou duas frases." },
                     "capa": referencia("A imagem de capa: o id da biblioteca (listar_midia). Obrigatória no post."),
                     "autor": referencia("Só no post, obrigatório: o slug do autor (listar_autores)."),
                     "categoria": referencia("Só no post, obrigatório: o slug da categoria (listar_categorias)."),
@@ -534,7 +553,7 @@ struct Ferramenta {
 
 const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (slug).");
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
-const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, modelo-3d, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato, formulario); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. O bloco de modelo 3D é { tipo: \"modelo-3d\", modelo: id do modelo (listar_modelos_3d), capa: id da imagem mostrada até o modelo carregar (opcional), legenda (opcional) }. As datas são do servidor.";
+const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\" | \"item\", dados: { ... } }. O item é o produto de catálogo, sem preço: sai em /produtos/<slug>, e a listagem /produtos filtra pelas linhas da ficha marcadas como filtro. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, modelo-3d, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato, formulario); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. O bloco de modelo 3D é { tipo: \"modelo-3d\", modelo: id do modelo (listar_modelos_3d), capa: id da imagem mostrada até o modelo carregar (opcional), legenda (opcional) }. As datas são do servidor.";
 
 const LEGENDA: (&str, &str) = ("legenda", "A legenda, que aparece embaixo da imagem.");
 const CREDITO: (&str, &str) = ("credito", "Quem leva o crédito, como aparece em \"Foto:\".");
@@ -1214,6 +1233,14 @@ impl Chamada<'_> {
         if let Some(capa) = dados.get_mut("capa") {
             self.imagem(site_id, capa).await?;
         }
+        // No produto de catálogo, as fotos e o modelo 3D também vão pelo id.
+        let fotos = dados.get_mut("imagens").and_then(Value::as_array_mut);
+        for foto in fotos.into_iter().flatten() {
+            self.imagem(site_id, foto).await?;
+        }
+        if let Some(modelo) = dados.get_mut("modelo") {
+            self.modelo_3d(site_id, modelo).await?;
+        }
         // A imagem de compartilhamento também pode vir só pelo id.
         let social = dados
             .get_mut("seo")
@@ -1271,7 +1298,7 @@ impl Chamada<'_> {
             .map_err(|erro| recusa(format!("O conteúdo não segue o contrato: {erro}")))?;
         if matches!(conteudo, Conteudo::Produto(_)) {
             return Err(recusa(
-                "O CMS não guarda produto: use \"pagina\" ou \"post\".",
+                "O CMS não guarda o produto da loja: use \"pagina\", \"post\" ou \"item\" (produto de catálogo, sem preço).",
             ));
         }
         Ok(conteudo)
@@ -1835,6 +1862,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     let (titulo, seo, corpo) = match &aberto.conteudo {
                         Conteudo::Pagina(pagina) => (&pagina.titulo, &pagina.seo, &pagina.corpo),
                         Conteudo::Post(post) => (&post.titulo, &post.seo, &post.corpo),
+                        Conteudo::Item(item) => (&item.nome, &item.seo, &item.corpo),
                         Conteudo::Produto(_) => {
                             return Err(recusa("O CMS não guarda produto."));
                         }

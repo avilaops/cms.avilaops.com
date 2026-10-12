@@ -912,9 +912,16 @@ async fn escrever_rever_e_publicar_uma_pagina_pelo_painel(pool: PgPool) {
         .abrir(Some("ana"), &format!("{SITE}/novo/pagina"))
         .await;
     assert!(novo.corpo.contains("Nova página"));
-    assert_eq!(
+    assert!(
         painel
             .abrir(Some("ana"), &format!("{SITE}/novo/produto"))
+            .await
+            .corpo
+            .contains("Novo produto")
+    );
+    assert_eq!(
+        painel
+            .abrir(Some("ana"), &format!("{SITE}/novo/loja"))
             .await
             .status,
         StatusCode::NOT_FOUND
@@ -1698,7 +1705,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let conteudo = &esquema("criar_rascunho")["conteudo"];
     assert_eq!(
         conteudo["properties"]["especie"]["enum"],
-        json!(["pagina", "post"])
+        json!(["pagina", "post", "item"])
     );
     let tipos = &conteudo["properties"]["dados"]["properties"]["corpo"]["items"]["properties"]["tipo"]
         ["enum"];
@@ -3523,4 +3530,159 @@ async fn modelo_3d_vai_da_biblioteca_para_a_pagina_com_o_visualizador(pool: PgPo
         StatusCode::NOT_FOUND
     );
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+/// Um produto de catálogo, como o formulário do painel o manda.
+fn produto_com(nome: &str, slug: &str, linha: &str, extras: &[(&str, &str)]) -> String {
+    let ficha = format!("Linha | {linha} | filtro\nPeso | 12 kg");
+    let descricao = format!(
+        "{nome} da Padaria da Ana: veja a ficha técnica, as medidas e como pedir um orçamento para a sua cozinha."
+    );
+    let mut campos = vec![
+        ("especie", "item"),
+        ("titulo", nome),
+        ("slug", slug),
+        ("resumo", "Feito sob encomenda, com entrega na região."),
+        ("ficha", ficha.as_str()),
+        ("botao", "Pedir orçamento | /contato"),
+        ("seo_titulo", nome),
+        ("seo_descricao", descricao.as_str()),
+        ("indexar", "1"),
+        ("n", "0"),
+        ("acao", "publicar"),
+    ];
+    campos.extend_from_slice(extras);
+    formulario(&campos)
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn produto_de_catalogo_sai_com_ficha_listagem_e_filtro(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const SITE: &str = "/painel/sites/padaria";
+
+    // Sem produto no ar, o site não tem catálogo nem o item no menu.
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/produtos").await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    let forno = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/doc"),
+            &produto_com(
+                "Forno de lastro",
+                "forno-de-lastro",
+                "Fornos",
+                &[("codigo", "PA-002")],
+            ),
+        )
+        .await;
+    let documento = documento_de(&forno);
+    for (nome, slug, linha) in [
+        ("Forno turbo", "forno-turbo", "Fornos"),
+        ("Amassadeira espiral", "amassadeira-espiral", "Massas"),
+    ] {
+        let salvo = painel
+            .postar(
+                "ana",
+                &format!("{SITE}/doc"),
+                &produto_com(nome, slug, linha, &[]),
+            )
+            .await;
+        assert!(
+            salvo.cabecalho("location").ends_with("?r=publicado"),
+            "{nome}"
+        );
+    }
+
+    // O editor reabre o produto com o que foi digitado.
+    let editor = painel.abrir(Some("ana"), &documento).await;
+    assert!(editor.corpo.contains(r#"name="especie" value="item""#));
+    assert!(editor.corpo.contains("Linha | Fornos | filtro"));
+    assert!(editor.corpo.contains(r#"value="PA-002""#));
+    assert!(
+        painel
+            .abrir(Some("ana"), SITE)
+            .await
+            .corpo
+            .contains("Produto · No ar")
+    );
+
+    // A página do produto: código, resumo, ficha e botão, sem preço.
+    let pagina = pedir(&pool, &host("padaria"), "/produtos/forno-de-lastro").await;
+    assert_eq!(pagina.status, StatusCode::OK, "{}", pagina.corpo);
+    assert!(pagina.corpo.contains("<h1>Forno de lastro</h1>"));
+    assert!(pagina.corpo.contains("PA-002"));
+    assert!(pagina.corpo.contains("<dt>Peso</dt><dd>12 kg</dd>"));
+    assert!(
+        pagina
+            .corpo
+            .contains(r#"<dt>Linha</dt><dd><a href="/produtos?linha=fornos">Fornos</a></dd>"#)
+    );
+    assert!(
+        pagina
+            .corpo
+            .contains(r#"<a class="botao" href="/contato">Pedir orçamento</a>"#)
+    );
+    assert!(pagina.corpo.contains(r#""@type":"ItemPage""#));
+    assert!(!pagina.corpo.contains(r#""offers""#));
+    // O menu ganha o catálogo, e o produto não vira item de menu.
+    assert!(pagina.corpo.contains(r#"href="/produtos""#));
+    assert!(!pagina.corpo.contains(r#"<a href="/produtos/forno-turbo""#));
+
+    // A listagem: todos, pelo código e pelo nome, com os filtros como links.
+    let todos = pedir(&pool, &host("padaria"), "/produtos").await;
+    assert_eq!(todos.status, StatusCode::OK, "{}", todos.corpo);
+    assert!(todos.corpo.contains("3 produtos"));
+    assert!(
+        todos
+            .corpo
+            .contains(r#"<a href="/produtos?linha=fornos">Fornos <span>2</span></a>"#)
+    );
+    assert!(
+        todos
+            .corpo
+            .contains(r#"<a href="/produtos?linha=massas">Massas <span>1</span></a>"#)
+    );
+    let posicao = |texto: &str| todos.corpo.find(texto).expect(texto);
+    assert!(posicao("Forno de lastro") < posicao("Amassadeira espiral"));
+
+    let fornos = pedir(&pool, &host("padaria"), "/produtos?linha=fornos").await;
+    assert!(fornos.corpo.contains("2 produtos"));
+    assert!(fornos.corpo.contains("Forno turbo"));
+    assert!(!fornos.corpo.contains("Amassadeira espiral"));
+    assert!(fornos.corpo.contains("limpar os filtros"));
+    assert!(
+        fornos
+            .corpo
+            .contains(r#"<a href="/produtos?linha=fornos" aria-current="true">"#)
+    );
+    // A listagem filtrada aponta a canônica para o catálogo inteiro.
+    assert!(
+        fornos
+            .corpo
+            .contains(r#"<link rel="canonical" href="https://padaria.sites.teste/produtos">"#)
+    );
+    let nenhum = pedir(&pool, &host("padaria"), "/produtos?linha=doces").await;
+    assert!(nenhum.corpo.contains("Nenhum produto com estes filtros"));
+
+    // Página não toma o endereço do catálogo.
+    let tomada = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/doc"),
+            &pagina_com(&[("slug", "produtos"), ("acao", "publicar")]),
+        )
+        .await;
+    assert!(!tomada.cabecalho("location").ends_with("?r=publicado"));
+    assert!(
+        pedir(&pool, &host("padaria"), "/produtos")
+            .await
+            .corpo
+            .contains("3 produtos")
+    );
+
+    std::fs::remove_dir_all(&painel.diretorio).ok();
 }

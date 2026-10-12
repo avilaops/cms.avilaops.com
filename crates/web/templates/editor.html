@@ -19,13 +19,30 @@
 {%- endif %}
 <form method="post" action="{{ destino }}">
 <button class="oculto" name="acao" value="salvar" tabindex="-1" aria-hidden="true">Salvar</button>
-<input type="hidden" name="especie" value="{% if f.eh_post %}post{% else %}pagina{% endif %}">
+<input type="hidden" name="especie" value="{% if f.eh_post %}post{% else if f.eh_item %}item{% else %}pagina{% endif %}">
 <input type="hidden" name="n" value="{{ blocos.len() }}">
-<label for="titulo">Título</label>
+<label for="titulo">{% if f.eh_item %}Nome do produto{% else %}Título{% endif %}</label>
 <input id="titulo" name="titulo" maxlength="160" value="{{ f.titulo }}">
-<label for="slug">Endereço{% if !f.eh_post %} (em branco é a página inicial){% endif %}</label>
+<label for="slug">Endereço{% if f.eh_item %} (depois de /produtos/){% else if !f.eh_post %} (em branco é a página inicial){% endif %}</label>
 <input id="slug" name="slug" maxlength="80" autocapitalize="none" spellcheck="false" value="{{ f.slug }}">
-{%- if !f.eh_post %}
+{%- if f.eh_item %}
+<label for="codigo">Código do produto (opcional)</label>
+<input id="codigo" name="codigo" maxlength="40" value="{{ f.codigo }}">
+<label for="resumo">Resumo: uma ou duas frases, para o topo da página e a listagem</label>
+<textarea id="resumo" name="resumo" maxlength="300">{{ f.resumo }}</textarea>
+<label for="ficha">Ficha técnica, uma linha por característica: Nome | Valor. Acrescente | filtro nas que separam o catálogo, como Linha | Peso livre | filtro</label>
+<textarea id="ficha" name="ficha">{{ f.ficha }}</textarea>
+<label for="modelo">Modelo 3D do produto</label>
+<select id="modelo" name="modelo">
+<option value="">Sem modelo 3D</option>
+{%- for opcao in modelos_do_item %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+<label for="botao">Botão do produto: Texto do botão | Endereço (como Pedir orçamento | /contato)</label>
+<input id="botao" name="botao" maxlength="200" autocapitalize="none" value="{{ f.botao }}">
+{%- endif %}
+{%- if !f.eh_post && !f.eh_item %}
 <label for="menu">Nome no menu (em branco usa o título)</label>
 <input id="menu" name="menu" maxlength="24" value="{{ f.menu }}">
 <label for="acima">Fica abaixo de qual página? Nome | endereço (em branco entra no menu)</label>
@@ -57,14 +74,26 @@
 <label for="tags">Marcadores, separados por vírgula</label>
 <input id="tags" name="tags" value="{{ f.tags }}">
 {%- endif %}
-<label for="capa">Imagem de capa</label>
+<label for="capa">{% if f.eh_item %}Foto principal{% else %}Imagem de capa{% endif %}</label>
 <select id="capa" name="capa">
 <option value="">Sem capa</option>
 {%- for opcao in capas %}
 <option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
 {%- endfor %}
 </select>
-{%- if !f.eh_post %}
+{%- if f.eh_item %}
+<label for="imagens">Outras fotos: um código de imagem por linha</label>
+<textarea id="imagens" name="imagens">{{ f.imagens }}</textarea>
+<details>
+<summary>Códigos das imagens</summary>
+<ul>
+{%- for opcao in codigos_das_imagens %}
+<li>{{ opcao.rotulo }}<code class="etiquetas">{{ opcao.valor }}</code></li>
+{%- endfor %}
+</ul>
+</details>
+{%- endif %}
+{%- if !f.eh_post && !f.eh_item %}
 <details{% if !f.abertura_texto.is_empty() %} open{% endif %}>
 <summary>Abertura da página (para página de apresentação)</summary>
 <label for="abertura_sobretitulo">Linha acima do título</label>

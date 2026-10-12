@@ -467,6 +467,11 @@ fn para_cada_midia(conteudo: &mut Conteudo, mut visitar: impl FnMut(&mut Midia))
             post.seo.imagem_social.iter_mut().for_each(&mut visitar);
             no_corpo(&mut post.corpo, &mut visitar);
         }
+        Conteudo::Item(item) => {
+            item.imagens.iter_mut().for_each(&mut visitar);
+            item.seo.imagem_social.iter_mut().for_each(&mut visitar);
+            no_corpo(&mut item.corpo, &mut visitar);
+        }
         Conteudo::Produto(_) => {}
     }
 }

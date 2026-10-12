@@ -78,6 +78,29 @@ modelo-3d .no-espaco img{display:none}
 .cartao{padding:1.5rem 0;border-bottom:1px solid var(--linha)}
 .cartao h2{margin:0 0 .25rem}
 .cartao p{margin:.25rem 0}
+.produto-topo{display:grid;gap:1.5rem;margin:1rem 0 2rem}
+.produto-destaque figure{margin:0}
+.produto-texto h1{margin:.25rem 0 .5rem}
+.produto-codigo{margin:0;font-size:.875rem;letter-spacing:.04em;color:var(--suave)}
+.produto-resumo{font-size:1.125rem}
+.ficha{margin:.5rem 0 0}
+.ficha div{display:flex;justify-content:space-between;gap:1rem;padding:.5rem 0;border-bottom:1px solid var(--linha)}
+.ficha dt{color:var(--suave)}
+.ficha dd{margin:0;text-align:right;font-weight:600}
+.produto-fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(14rem,1fr));gap:1rem;margin:0 0 2rem}
+.filtros{display:grid;gap:.75rem;margin:1rem 0}
+.filtros h2{margin:0 0 .35rem;font-size:.875rem;font-weight:600;color:var(--suave)}
+.filtros ul{display:flex;flex-wrap:wrap;gap:.4rem;list-style:none;margin:0;padding:0}
+.filtros a{display:block;padding:.3rem .7rem;border:1px solid var(--linha);border-radius:999px;font-size:.9375rem;color:var(--texto);text-decoration:none}
+.filtros a[aria-current]{border-color:var(--destaque);background:var(--destaque);color:#fff}
+.filtros a span{opacity:.65;font-size:.8125rem}
+.catalogo{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1.5rem;margin:1rem 0 2.5rem}
+.catalogo article>a{display:block;color:var(--texto);text-decoration:none}
+.catalogo img{aspect-ratio:4/3;width:100%;object-fit:contain;background:#f5f5f4}
+.catalogo h2{margin:.6rem 0 .15rem;font-size:1.125rem;line-height:1.3}
+.catalogo p{margin:.2rem 0;font-size:.9375rem}
+.catalogo .meta{color:var(--suave)}
+@media (min-width:60rem){.produto-topo{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:2.5rem;align-items:start}}
 .paginas{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:center;padding:1.5rem 0;color:var(--suave)}
 footer.rodape{border-top:1px solid var(--linha);padding:1.5rem 0;font-size:.9375rem;color:var(--suave)}
 footer.rodape p{margin:.15rem 0}

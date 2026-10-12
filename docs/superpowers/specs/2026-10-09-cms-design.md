@@ -316,6 +316,18 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   aspereza e a hierarquia de nós; não toca animação. O visitante gira com o
   dedo, o mouse ou as setas, e no celular abre o modelo na câmera (USDZ no
   iPhone, o próprio GLB no Android). Modelo em uso não é apagado.
+- Produto de catálogo (pedido do Nicolas em 12/10/2026): a terceira espécie de
+  documento, `item`, para o que a empresa oferece sem vender pelo site. Tem
+  nome, código, resumo, fotos (a primeira é a principal), modelo 3D, ficha
+  técnica, corpo de blocos e um botão (pedir orçamento, WhatsApp). Não tem
+  preço, estoque nem carrinho: isso continua no Lojas, no contrato `produto`,
+  que o CMS não guarda. Sai em `/produtos/<slug>`, como `ItemPage` nos dados
+  estruturados (sem oferta). A linha da ficha marcada como filtro separa o
+  catálogo: `/produtos` lista os produtos no ar, pelo código e pelo nome, e
+  oferece cada valor como link (`/produtos?linha=peso-livre`), com a canônica
+  sempre na listagem inteira. Site com produto no ar ganha "Produtos" no menu
+  e a listagem no sitemap; `produtos` e `recursos` passam a ser endereços
+  reservados.
 - Formulário: a seção `formulario` tem até oito campos (texto, e-mail,
   telefone, mensagem), botão e agradecimento. Sai sem script; o envio vai ao
   endereço da própria página, e o CMS o confere contra a definição do bloco
