@@ -36,8 +36,14 @@ echo "Publicando $commit"
 echo "1/4 Imagem do GitHub"
 # A imagem é construída pela validação do próprio commit. Sem validação verde
 # não há imagem, e sem imagem não há publicação.
-execucao=$(gh run list -R "$repo_github" --workflow Validar --commit "$commit" \
-  --json databaseId -q '.[0].databaseId')
+# Logo depois do push a validação ainda não aparece na lista: espera um pouco.
+execucao=
+for _ in $(seq 1 12); do
+  execucao=$(gh run list -R "$repo_github" --workflow Validar --commit "$commit" \
+    --json databaseId -q '.[0].databaseId')
+  [ -n "$execucao" ] && break
+  sleep 10
+done
 [ -n "$execucao" ] || { echo "FALHA: o commit $commit não tem validação no GitHub"; exit 1; }
 gh run watch "$execucao" -R "$repo_github" --exit-status >/dev/null 2>&1 \
   || { echo "FALHA: a validação do commit não passou (execução $execucao)"; exit 1; }
