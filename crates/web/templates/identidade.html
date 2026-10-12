@@ -39,6 +39,8 @@
 </fieldset>
 <label for="cor">Cor da marca, como #225cf2 (em branco usa a cor do tema)</label>
 <input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
+<label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567 (em branco, o site não carrega script nenhum)</label>
+<input id="tag" name="tag" maxlength="20" autocapitalize="characters" spellcheck="false" value="{{ d.tag }}">
 <label for="menu">Menu do topo: um endereço por linha, como /servicos. O que não estiver na lista vai para o rodapé (em branco, todas as páginas ficam no topo)</label>
 <textarea id="menu" name="menu">{{ d.menu }}</textarea>
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>

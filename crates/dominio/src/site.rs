@@ -30,6 +30,33 @@ pub struct PerfilDoSite {
     /// páginas ficam no topo, em ordem de endereço.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub menu: Vec<String>,
+    /// A tag do Google do site, como `GTM-ABC1234` ou `G-ABC1234567`. Com
+    /// ela, as páginas carregam o script do Google para medir visitas; sem
+    /// ela, o site não carrega script nenhum.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_do_google: Option<String>,
+}
+
+/// A tag do Google não tem o formato de um contêiner nem de uma propriedade.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error(
+    "A tag do Google começa com GTM- (Tag Manager) ou G- (Analytics), seguida de letras e números, como GTM-ABC1234."
+)]
+pub struct TagRecusada;
+
+/// Confere a tag do Google e a devolve em maiúsculas. Ela vai dentro de um
+/// script da página: só passa o formato exato, letras, números e o hífen.
+pub fn conferir_tag_do_google(tag: &str) -> Result<String, TagRecusada> {
+    let tag = tag.trim().to_ascii_uppercase();
+    let codigo = tag
+        .strip_prefix("GTM-")
+        .or_else(|| tag.strip_prefix("G-"))
+        .ok_or(TagRecusada)?;
+    let valido = (4..=16).contains(&codigo.len())
+        && codigo
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
+    if valido { Ok(tag) } else { Err(TagRecusada) }
 }
 
 /// O contraste mínimo de texto normal contra o fundo, pela WCAG.
@@ -99,6 +126,7 @@ impl PerfilDoSite {
             orcamento_peso_kb: ORCAMENTO_DE_PESO_PADRAO_KB,
             cor_de_destaque: None,
             menu: Vec::new(),
+            tag_do_google: None,
         }
     }
 
@@ -128,6 +156,7 @@ impl From<Site> for PerfilDoSite {
             orcamento_peso_kb: site.orcamento_peso_kb,
             cor_de_destaque: None,
             menu: Vec::new(),
+            tag_do_google: None,
         }
     }
 }
@@ -189,6 +218,29 @@ pub fn aparece_na_busca(
 #[cfg(test)]
 mod testes {
     use super::*;
+
+    #[test]
+    fn tag_do_google_so_passa_no_formato_exato() {
+        assert_eq!(
+            conferir_tag_do_google(" gtm-mtg7chvv "),
+            Ok("GTM-MTG7CHVV".to_string())
+        );
+        assert_eq!(
+            conferir_tag_do_google("G-T7DZ51MVZK"),
+            Ok("G-T7DZ51MVZK".to_string())
+        );
+        for torta in [
+            "",
+            "GTM-",
+            "UA-12345-1",
+            "GTM-ABC'><script>",
+            "G-AB",
+            "GTM-ABC 123",
+            "AW-123456789",
+        ] {
+            assert_eq!(conferir_tag_do_google(torta), Err(TagRecusada), "{torta}");
+        }
+    }
 
     #[test]
     fn cor_de_destaque_precisa_ser_legivel() {

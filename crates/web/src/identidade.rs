@@ -6,7 +6,7 @@ use axum::http::{StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
-use cms_dominio::site::conferir_cor;
+use cms_dominio::site::{conferir_cor, conferir_tag_do_google};
 use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
@@ -38,6 +38,8 @@ pub(crate) struct DadosDaIdentidade {
     cor: String,
     /// A ordem das páginas no menu: um caminho por linha, como `/servicos`.
     menu: String,
+    /// A tag do Google, como `GTM-ABC1234`; vazio deixa o site sem script.
+    tag: String,
 }
 
 impl DadosDaIdentidade {
@@ -66,6 +68,7 @@ impl DadosDaIdentidade {
             diretrizes: perfil.diretrizes_ia.join("\n"),
             cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
             menu: perfil.menu.join("\n"),
+            tag: perfil.tag_do_google.clone().unwrap_or_default(),
         }
     }
 
@@ -86,6 +89,7 @@ impl DadosDaIdentidade {
             "diretrizes" => &mut self.diretrizes,
             "corDeDestaque" => &mut self.cor,
             "menu" => &mut self.menu,
+            "tagDoGoogle" => &mut self.tag,
             _ => return None,
         })
     }
@@ -177,6 +181,14 @@ pub(crate) async fn aplicar(
     };
     // Quem chamou recebe de volta a cor como ficou gravada.
     dados.cor = cor_de_destaque.clone().unwrap_or_default();
+    let tag_do_google = match opcional(&dados.tag) {
+        Some(tag) => match conferir_tag_do_google(&tag) {
+            Ok(tag) => Some(tag),
+            Err(recusa) => return Ok(Err(recusa.to_string())),
+        },
+        None => None,
+    };
+    dados.tag = tag_do_google.clone().unwrap_or_default();
     // A logo é da biblioteca do site; qualquer outra coisa fica sem logo.
     let logo = match Uuid::parse_str(dados.logo.trim()) {
         Ok(id) => cms_dados::midia_para_conteudo(&estado.pool, site.id, id).await?,
@@ -213,6 +225,7 @@ pub(crate) async fn aplicar(
         },
         diretrizes_ia: linhas(&dados.diretrizes),
         cor_de_destaque,
+        tag_do_google,
         // Só caminho do site entra na ordem do menu.
         menu: linhas(&dados.menu)
             .into_iter()

@@ -12,6 +12,14 @@
 <link rel="icon" href="data:,">
 {%- endif %}
 {{ moldura.head|safe }}
+{%- if let Some(tag) = moldura.tag_do_google %}
+{%- if tag.eh_gtm %}
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s);j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ tag.id }}');</script>
+{%- else %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ tag.id }}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ tag.id }}');</script>
+{%- endif %}
+{%- endif %}
 <style>
 :root{--texto:#1c1917;--suave:#57534e;--linha:#e7e5e4;--fundo:#fff;--destaque:#9a3412;--largura:46rem}
 *{box-sizing:border-box}

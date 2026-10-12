@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::CampoRecebido;
 use cms_dominio::eventos::origem_do_site;
-use cms_dominio::site::{aparece_na_busca, conferir_cor};
+use cms_dominio::site::{aparece_na_busca, conferir_cor, conferir_tag_do_google};
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
     ItensDoSite, OpcoesRobots, PaginaDeCategoria, gerar_llms, gerar_llms_completo, gerar_robots,
@@ -25,10 +25,10 @@ use motor_web::validacao::normalizar_slug;
 use crate::Estado;
 use crate::icone::{self, Icone};
 use crate::midia;
-use crate::resposta::{ErroWeb, html, redirecionar, simples, texto};
+use crate::resposta::{ErroWeb, html, liberar_tag_do_google, redirecionar, simples, texto};
 use crate::visao::logo_do_cabecalho;
 use crate::visao::{
-    CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog,
+    CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog, TagDoGoogle,
     caminho_da_categoria, caminho_do_autor,
 };
 
@@ -185,7 +185,12 @@ async fn responder(
     if let Some(corpo) = envio {
         return receber_formulario(estado, &pedido, cabecalhos, caminho, corpo).await;
     }
-    if let Some(resposta) = agradecer(estado, &pedido, uri).await? {
+    let tem_tag = pedido.gravado.perfil.tag_do_google.is_some();
+    if let Some(mut resposta) = agradecer(estado, &pedido, uri).await? {
+        // A página de agradecimento é onde a tag conta o formulário enviado.
+        if tem_tag {
+            liberar_tag_do_google(&mut resposta);
+        }
         return Ok(resposta);
     }
     let mut resposta = match caminho {
@@ -220,6 +225,9 @@ async fn responder(
             },
         },
     }?;
+    if tem_tag {
+        liberar_tag_do_google(&mut resposta);
+    }
     resposta
         .extensions_mut()
         .insert(SiteDoPedido(pedido.gravado.id));
@@ -361,6 +369,14 @@ async fn moldura(
     // pode ser de antes de a regra existir.
     moldura.ordenar_menu(&pedido.gravado.perfil.menu);
     moldura.logo = logo_do_cabecalho(&pedido.site);
+    // Só entra na página a tag que passa na conferência, como a cor.
+    moldura.tag_do_google = pedido
+        .gravado
+        .perfil
+        .tag_do_google
+        .as_deref()
+        .and_then(|tag| conferir_tag_do_google(tag).ok())
+        .map(TagDoGoogle::nova);
     // Com logo, o site tem ícone. A versão no endereço troca junto com a logo.
     moldura.icone = uuid::Uuid::parse_str(&pedido.site.logo.id)
         .ok()
@@ -648,7 +664,9 @@ pub(crate) async fn previa(
         indexavel: false,
     };
     ajustar_indexacao(&mut documento, false);
-    let moldura = moldura(estado, &pedido, &documento).await?;
+    let mut moldura = moldura(estado, &pedido, &documento).await?;
+    // Prévia não é visita: não carrega a tag de medição.
+    moldura.tag_do_google = None;
     Ok(PaginaDeDocumento::nova(moldura, &documento).render()?)
 }
 

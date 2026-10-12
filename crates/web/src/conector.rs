@@ -585,6 +585,10 @@ const IDENTIDADE: &[(&str, &str)] = &[
         "A cor da marca, como #225cf2: pinta links, botões e destaques. Precisa ser escura o bastante para ler sobre branco. Vazio volta à cor do tema.",
     ),
     (
+        "tagDoGoogle",
+        "A tag do Google do site, como GTM-ABC1234 (Tag Manager) ou G-ABC1234567 (Analytics). Com ela, as páginas carregam o script do Google para medir visitas. Vazio tira o script.",
+    ),
+    (
         "menu",
         "A ordem das páginas no menu do site: um caminho por linha, como /servicos e /blog. Com a lista, só o que está nela aparece no menu do topo; as outras páginas vão para o rodapé. Vazio põe todas no topo, em ordem de endereço.",
     ),

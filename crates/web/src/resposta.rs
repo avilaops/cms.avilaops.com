@@ -22,6 +22,33 @@ const POLITICA_DE_CONTEUDO: &str = "default-src 'self'; script-src 'none'; style
     img-src 'self' data:; frame-src https://www.youtube-nocookie.com https://player.vimeo.com; \
     base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
+/// A mesma política, para o site que informou a tag do Google: libera o
+/// script da tag e os endereços para onde ela manda a medição. Só o Google
+/// entra; o conteúdo do site continua sem HTML livre.
+const POLITICA_COM_TAG_DO_GOOGLE: &str = "default-src 'self'; \
+    script-src 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; \
+    img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com; \
+    connect-src 'self' https://www.googletagmanager.com https://*.googletagmanager.com \
+    https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; \
+    frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.googletagmanager.com; \
+    base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+
+/// Troca a política de uma página de site pela que aceita a tag do Google.
+/// O que não é página (imagem, sitemap, redirecionamento) fica como está.
+pub fn liberar_tag_do_google(resposta: &mut Response) {
+    let eh_pagina = resposta
+        .headers()
+        .get(CONTENT_TYPE)
+        .and_then(|tipo| tipo.to_str().ok())
+        .is_some_and(|tipo| tipo.starts_with("text/html"));
+    if eh_pagina {
+        resposta.headers_mut().insert(
+            "content-security-policy",
+            HeaderValue::from_static(POLITICA_COM_TAG_DO_GOOGLE),
+        );
+    }
+}
+
 /// Página pública sem sessão: a borda pode guardar por um minuto e servir a
 /// antiga enquanto busca a nova.
 const CACHE_DE_PAGINA: &str = "public, max-age=0, s-maxage=60, stale-while-revalidate=600";

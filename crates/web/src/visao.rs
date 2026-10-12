@@ -34,6 +34,26 @@ pub struct Moldura {
     /// A versão do ícone do site, quando ele tem logo. Vai no endereço do
     /// ícone, para o navegador buscar de novo quando a logo muda.
     pub icone: Option<String>,
+    /// A tag do Google do site, já conferida. É o único script que uma página
+    /// carrega, e só quando o site informou a tag.
+    pub tag_do_google: Option<TagDoGoogle>,
+}
+
+/// A tag do Google como a página a carrega.
+pub struct TagDoGoogle {
+    pub id: String,
+    /// Contêiner do Tag Manager (`GTM-`); o contrário é propriedade do
+    /// Analytics (`G-`), que tem outro script.
+    pub eh_gtm: bool,
+}
+
+impl TagDoGoogle {
+    pub fn nova(id: String) -> Self {
+        Self {
+            eh_gtm: id.starts_with("GTM-"),
+            id,
+        }
+    }
 }
 
 /// A logo do site como o cabeçalho a mostra.
@@ -137,6 +157,7 @@ impl Moldura {
             cor_de_destaque: None,
             logo: None,
             icone: None,
+            tag_do_google: None,
         }
     }
 }
@@ -333,6 +354,7 @@ mod testes {
             cor_de_destaque: None,
             logo: None,
             icone: None,
+            tag_do_google: None,
         };
         moldura.ordenar_menu(&["/servicos/".to_string(), "/blog".to_string()]);
         let ordem: Vec<&str> = moldura.navegacao.iter().map(|l| l.url.as_str()).collect();
