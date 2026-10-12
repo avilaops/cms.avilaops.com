@@ -1,0 +1,54 @@
+name: Consultas
+# Regera o `.sqlx`, os dados com que as consultas são conferidas sem banco.
+# Roda à mão, no ramo em que a consulta ou a migração mudou; o resultado sai
+# como artefato, para quem pediu conferir e versionar.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: public.ecr.aws/docker/library/postgres:18-alpine
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CARGO_TERM_COLOR: always
+      DATABASE_URL: postgres://postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: consultas-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: consultas-${{ runner.os }}-
+      - name: sqlx-cli
+        run: command -v sqlx || cargo install sqlx-cli --version 0.8.6 --no-default-features --features postgres,rustls --locked
+      - name: Migrar
+        run: sqlx migrate run --source crates/dados/migrations
+      - name: Preparar
+        run: cargo sqlx prepare --workspace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sqlx
+          path: .sqlx
+          include-hidden-files: true
+          retention-days: 3

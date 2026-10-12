@@ -94,6 +94,9 @@ pub struct Formulario {
     pub abertura_sobretitulo: String,
     pub abertura_texto: String,
     pub abertura_acoes: String,
+    /// As páginas acima desta na trilha, depois do início: uma por linha,
+    /// como `Nome | endereço`. Página com alguma acima fica fora do menu.
+    pub acima: String,
     pub blocos: Vec<BlocoDigitado>,
 }
 
@@ -161,6 +164,7 @@ impl Formulario {
             abertura_sobretitulo: campo("abertura_sobretitulo"),
             abertura_texto: campo("abertura_texto"),
             abertura_acoes: campo("abertura_acoes"),
+            acima: campo("acima"),
             blocos,
         }
     }
@@ -231,6 +235,15 @@ impl Formulario {
                     abertura_sobretitulo: abertura.sobretitulo.unwrap_or_default(),
                     abertura_texto: abertura.texto,
                     abertura_acoes: escrever_botoes(&abertura.acoes),
+                    // Do início até a própria página, o que fica no meio.
+                    acima: pagina
+                        .trilha
+                        .iter()
+                        .skip(1)
+                        .take(pagina.trilha.len().saturating_sub(2))
+                        .map(|item| escrever_linha(&[&item.nome, &item.url]))
+                        .collect::<Vec<_>>()
+                        .join("\n"),
                     ..comum(
                         &pagina.titulo,
                         &pagina.slug,
@@ -345,13 +358,17 @@ impl Formulario {
                 trilha: if self.slug.is_empty() {
                     Vec::new()
                 } else {
-                    vec![
-                        inicio,
-                        ItemTrilha {
+                    let acima = ler_botoes(&self.acima).into_iter().map(|pagina| ItemTrilha {
+                        nome: pagina.rotulo,
+                        url: pagina.url,
+                    });
+                    std::iter::once(inicio)
+                        .chain(acima)
+                        .chain([ItemTrilha {
                             nome: titulo.clone(),
                             url: format!("/{}", self.slug),
-                        },
-                    ]
+                        }])
+                        .collect()
                 },
                 slug: self.slug.clone(),
                 titulo,
@@ -1234,6 +1251,21 @@ mod testes {
         let abertura = pagina.abertura.expect("abertura");
         assert_eq!(abertura.acoes.len(), 2);
         assert_eq!(abertura.acoes[1].url, "/paes");
+        // A página acima entra na trilha, entre o início e a própria página.
+        let filha = Formulario::ler(pares(&[
+            ("n", "0"),
+            ("titulo", "CRM"),
+            ("slug", "crm"),
+            ("acima", "Serviços | /servicos"),
+        ]));
+        let conteudo = filha.para_conteudo(&Resolvido::default(), Utc::now());
+        let Conteudo::Pagina(pagina) = &conteudo else {
+            panic!("página");
+        };
+        let caminho: Vec<&str> = pagina.trilha.iter().map(|item| item.url.as_str()).collect();
+        assert_eq!(caminho, ["/", "/servicos", "/crm"]);
+        // E volta igual para o formulário: salvar pelo painel não a desfaz.
+        assert_eq!(Formulario::do_conteudo(&conteudo).acima, "Serviços | /servicos");
         // Página sem nada na abertura não ganha uma vazia.
         let sem = Formulario::ler(pares(&[("n", "0")]));
         let Conteudo::Pagina(pagina) = sem.para_conteudo(&Resolvido::default(), Utc::now()) else {

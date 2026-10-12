@@ -40,10 +40,16 @@ demonstração publicado.
 scripts/publicar.sh
 ```
 
-Publica o commit de `origin/main`: build no `apps-noclient`, imagem levada ao
-servidor de aplicações, dump do banco antes de migrar quando há migração
-pendente, troca do contêiner e volta à imagem anterior se o novo não ficar
-saudável. Precisa de `apps-noclient` e `applications` no `~/.ssh/config`.
+Publica o commit de `origin/main`. A imagem não é construída em servidor da
+casa: a validação do commit no GitHub Actions a constrói (job `imagem`) e a
+deixa como artefato. O script espera essa validação, baixa a imagem, leva ao
+servidor de aplicações, faz o dump do banco se houver migração pendente, migra,
+troca o contêiner e volta à imagem anterior se a nova não ficar saudável.
+Precisa do `gh` autenticado e de `applications` no `~/.ssh/config`.
+
+Mudou consulta ou migração: rode o workflow `Consultas` no ramo
+(`gh workflow run consultas.yml`), baixe o artefato `sqlx` e versione o
+diretório `.sqlx`.
 
 ## Como validar
 

@@ -1,24 +1,25 @@
 #!/usr/bin/env bash
 # Publica o commit de origin/main do CMS em produção.
 #
-# Build no apps-noclient, que não atende cliente; o servidor de aplicações só
-# recebe a imagem pronta. É o mesmo desenho do build manual do avilaops/infra,
-# com a migração do próprio binário no lugar do Prisma:
+# A imagem vem do GitHub Actions: a validação do commit a constrói e a deixa
+# como artefato. O servidor de aplicações só recebe a imagem pronta, e nenhum
+# servidor da casa compila:
 #
-#   1. constrói ghcr.io/avilaops/cms.avilaops.com:sha-<commit>;
+#   1. espera a validação do commit e baixa a imagem
+#      ghcr.io/avilaops/cms.avilaops.com:sha-<commit>;
 #   2. leva a imagem ao servidor de aplicações;
 #   3. se há migração pendente, faz o dump do banco e migra; falhou, para aqui
 #      e o serviço não é tocado;
 #   4. troca o contêiner e espera a saúde; se não ficar saudável em 90 s, volta
 #      à imagem anterior. Voltar de versão não desfaz migração.
 #
-# Uso, na máquina com `apps-noclient` e `applications` no ~/.ssh/config:
+# Uso, na máquina com o `gh` autenticado e `applications` no ~/.ssh/config:
 #   scripts/publicar.sh
 set -euo pipefail
 
 repositorio=$(cd "$(dirname "$0")/.." && pwd)
 imagem=ghcr.io/avilaops/cms.avilaops.com
-build=apps-noclient
+repo_github=avilaops/cms.avilaops.com
 producao=applications
 pasta=/opt/cms-avilaops-com
 conteiner=cms-avilaops-com-web
@@ -32,19 +33,20 @@ commit=$(git -C "$repositorio" rev-parse origin/main)
 marca="$imagem:sha-$commit"
 echo "Publicando $commit"
 
-echo "1/4 Build no $build"
-git -C "$repositorio" archive --format=tar "$commit" | ssh "$build" "
-  set -e
-  dir=\$(mktemp -d /root/build-cms-publicar.XXXXXX)
-  trap 'rm -rf \$dir' EXIT
-  tar -x -C \$dir
-  DOCKER_BUILDKIT=1 docker build --quiet --build-arg GIT_SHA=$commit -t $marca \$dir >/dev/null
-" 2>&1 | quieto
+echo "1/4 Imagem do GitHub"
+# A imagem é construída pela validação do próprio commit. Sem validação verde
+# não há imagem, e sem imagem não há publicação.
+execucao=$(gh run list -R "$repo_github" --workflow Validar --commit "$commit" \
+  --json databaseId -q '.[0].databaseId')
+[ -n "$execucao" ] || { echo "FALHA: o commit $commit não tem validação no GitHub"; exit 1; }
+gh run watch "$execucao" -R "$repo_github" --exit-status >/dev/null 2>&1 \
+  || { echo "FALHA: a validação do commit não passou (execução $execucao)"; exit 1; }
+pasta_da_imagem=$(mktemp -d)
+trap 'rm -rf "$pasta_da_imagem"' EXIT
+gh run download "$execucao" -R "$repo_github" -n imagem -D "$pasta_da_imagem"
 
 echo "2/4 Imagem para o $producao"
-ssh "$build" "docker save $marca | gzip -1" 2>/dev/null | ssh "$producao" "gunzip | docker load" 2>&1 | quieto
-# O disco do build é pequeno: a imagem e o cache de mais de um dia saem.
-ssh "$build" "docker rmi $marca >/dev/null 2>&1; docker builder prune -af --filter until=24h >/dev/null 2>&1" 2>&1 | quieto
+ssh "$producao" "gunzip | docker load" < "$pasta_da_imagem/imagem.tar.gz" 2>&1 | quieto
 
 echo "3/4 Migração"
 ssh "$producao" "

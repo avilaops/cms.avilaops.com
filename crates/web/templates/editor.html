@@ -28,6 +28,8 @@
 {%- if !f.eh_post %}
 <label for="menu">Nome no menu (em branco usa o título)</label>
 <input id="menu" name="menu" maxlength="24" value="{{ f.menu }}">
+<label for="acima">Fica abaixo de qual página? Nome | endereço (em branco entra no menu)</label>
+<input id="acima" name="acima" maxlength="200" autocapitalize="none" value="{{ f.acima }}">
 {%- endif %}
 {%- if f.eh_post %}
 <label for="tipo_do_post">Tipo</label>
