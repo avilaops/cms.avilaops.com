@@ -33,20 +33,54 @@ const POLITICA_COM_TAG_DO_GOOGLE: &str = "default-src 'self'; \
     frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.googletagmanager.com; \
     base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
+/// O que a página com modelo 3D acrescenta à política: o script do próprio
+/// site, que é o visualizador do CMS. Script de fora continua barrado.
+const SCRIPT_DO_SITE: &str = "script-src 'self'";
+
+fn politica_de(resposta: &Response) -> &str {
+    resposta
+        .headers()
+        .get("content-security-policy")
+        .and_then(|politica| politica.to_str().ok())
+        .unwrap_or_default()
+}
+
+fn trocar_politica(resposta: &mut Response, politica: &str) {
+    if let Ok(politica) = HeaderValue::from_str(politica) {
+        resposta
+            .headers_mut()
+            .insert("content-security-policy", politica);
+    }
+}
+
+/// Deixa a página carregar o visualizador de modelo 3D. Vale só para a
+/// página que tem o bloco.
+pub fn liberar_visualizador_3d(resposta: &mut Response) {
+    let politica = politica_de(resposta).replace("script-src 'none'", SCRIPT_DO_SITE);
+    trocar_politica(resposta, &politica);
+}
+
 /// Troca a política de uma página de site pela que aceita a tag do Google.
-/// O que não é página (imagem, sitemap, redirecionamento) fica como está.
+/// O que não é página (imagem, sitemap, redirecionamento) fica como está, e
+/// a página com modelo 3D continua carregando o visualizador.
 pub fn liberar_tag_do_google(resposta: &mut Response) {
     let eh_pagina = resposta
         .headers()
         .get(CONTENT_TYPE)
         .and_then(|tipo| tipo.to_str().ok())
         .is_some_and(|tipo| tipo.starts_with("text/html"));
-    if eh_pagina {
-        resposta.headers_mut().insert(
-            "content-security-policy",
-            HeaderValue::from_static(POLITICA_COM_TAG_DO_GOOGLE),
-        );
+    if !eh_pagina {
+        return;
     }
+    let politica = if politica_de(resposta).contains(SCRIPT_DO_SITE) {
+        POLITICA_COM_TAG_DO_GOOGLE.replace(
+            "script-src 'unsafe-inline'",
+            &format!("{SCRIPT_DO_SITE} 'unsafe-inline'"),
+        )
+    } else {
+        POLITICA_COM_TAG_DO_GOOGLE.to_string()
+    };
+    trocar_politica(resposta, &politica);
 }
 
 /// Página pública sem sessão: a borda pode guardar por um minuto e servir a
@@ -177,6 +211,25 @@ mod testes {
         assert_eq!(origem_de("https://a.example;script-src *"), None);
         assert_eq!(origem_de("https:///caminho"), None);
         assert_eq!(origem_de("sem-esquema"), None);
+    }
+
+    #[test]
+    fn pagina_com_modelo_3d_carrega_so_o_script_do_proprio_site() {
+        let mut pagina = html(StatusCode::OK, String::new(), true);
+        liberar_visualizador_3d(&mut pagina);
+        let politica = politica_de(&pagina).to_string();
+        assert!(politica.contains("script-src 'self';"));
+        assert!(!politica.contains("unsafe-inline' https"));
+        // Com a tag do Google, o visualizador continua liberado.
+        liberar_tag_do_google(&mut pagina);
+        assert!(
+            politica_de(&pagina)
+                .contains("script-src 'self' 'unsafe-inline' https://www.googletagmanager.com;")
+        );
+        // Sem modelo 3D, a tag não libera script do site.
+        let mut comum = html(StatusCode::OK, String::new(), true);
+        liberar_tag_do_google(&mut comum);
+        assert!(!politica_de(&comum).contains("script-src 'self'"));
     }
 
     #[test]

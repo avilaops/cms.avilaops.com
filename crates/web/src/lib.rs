@@ -14,6 +14,7 @@ mod identidade;
 mod lista;
 mod mensagens;
 mod midia;
+mod modelos;
 mod painel;
 mod publico;
 mod resposta;
@@ -64,9 +65,13 @@ pub struct Configuracao {
     pub ips_do_servidor: Vec<IpAddr>,
 }
 
-/// O maior corpo de pedido aceito: o limite de envio do motor e a folga do
-/// formulário em volta.
-const CORPO_MAXIMO: usize = motor_web::validacao::UPLOAD_MAXIMO_BYTES + 1024 * 1024;
+/// O maior corpo de pedido que um site recebe: o limite de envio do motor e a
+/// folga do formulário em volta.
+const CORPO_MAXIMO_DO_SITE: usize = motor_web::validacao::UPLOAD_MAXIMO_BYTES + 1024 * 1024;
+
+/// O maior corpo de pedido aceito, que é o do painel: um modelo 3D com o GLB
+/// e o USDZ no mesmo formulário.
+const CORPO_MAXIMO: usize = 2 * motor_web::validacao::MODELO_MAXIMO_BYTES + 1024 * 1024;
 
 /// Um segredo de configuração. Não aparece em registro nem em `Debug`.
 #[derive(Clone)]
@@ -153,6 +158,11 @@ async fn despachar(
         Some(host) if Some(host.nome.as_str()) == host_do_painel => {
             painel::atender(&estado, &host.com_porta, &metodo, &cabecalhos, &uri, &corpo).await
         }
+        // Só o painel recebe arquivo grande: o site fica com o limite de antes.
+        _ if corpo.len() > CORPO_MAXIMO_DO_SITE => resposta::simples(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "O pedido passa do tamanho aceito.",
+        ),
         _ => publico::atender(&estado, &metodo, &cabecalhos, &uri, &corpo).await,
     }
 }

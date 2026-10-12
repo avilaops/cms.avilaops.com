@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select exists(\n            select 1\n            from documento d\n            join versao v on v.id in (d.versao_rascunho, d.versao_publicada)\n            where d.site_id = $1 and v.conteudo::text like '%' || $2 || '%'\n        ) as \"em_uso!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "em_uso!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b13e403ccdcd6adfc5bbdb560e31f229b2a6f9c9a3e9b101acc2052aa0fa8996"
+}

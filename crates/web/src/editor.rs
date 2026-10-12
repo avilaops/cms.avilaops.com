@@ -10,12 +10,12 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use motor_web::tipos::{
     Abertura, Acao as Botao, Autor, Bloco, Campo, Cartao, Categoria, Conteudo, Depoimento,
-    ItemTrilha, Midia, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoDeCampo, TipoPost,
-    Trecho,
+    ItemTrilha, Midia, Modelo3d, Numero, Pagina, Passo, Pergunta, Plano, Post, Seo, TipoDeCampo,
+    TipoPost, Trecho,
 };
 
 /// Os tipos de bloco, na ordem em que aparecem para escolher.
-pub const TIPOS_DE_BLOCO: [(&str, &str); 20] = [
+pub const TIPOS_DE_BLOCO: [(&str, &str); 21] = [
     ("paragrafo", "Parágrafo"),
     ("titulo", "Título"),
     ("lista", "Lista"),
@@ -24,6 +24,7 @@ pub const TIPOS_DE_BLOCO: [(&str, &str); 20] = [
     ("perguntas", "Perguntas e respostas"),
     ("tabela", "Tabela"),
     ("video", "Vídeo"),
+    ("modelo-3d", "Modelo 3D"),
     ("chamada", "Chamada com botão"),
     ("cartoes", "Seção: cartões"),
     ("destaque", "Seção: imagem e texto"),
@@ -50,6 +51,8 @@ pub struct BlocoDigitado {
     pub rotulo: String,
     /// O identificador da imagem na biblioteca.
     pub midia: String,
+    /// O identificador do modelo 3D na biblioteca.
+    pub modelo: String,
     /// O título de uma seção.
     pub titulo: String,
     /// O texto de apresentação de uma seção, abaixo do título.
@@ -142,6 +145,7 @@ impl Formulario {
                     url: do_bloco("url"),
                     rotulo: do_bloco("rotulo"),
                     midia: do_bloco("midia"),
+                    modelo: do_bloco("modelo"),
                     titulo: do_bloco("titulo"),
                     resumo: do_bloco("resumo"),
                     invertido: do_bloco("invertido") == "1",
@@ -290,6 +294,15 @@ impl Formulario {
             .collect()
     }
 
+    /// Os identificadores dos modelos 3D escolhidos nos blocos.
+    pub fn modelos_escolhidos(&self) -> Vec<&str> {
+        self.blocos
+            .iter()
+            .map(|bloco| bloco.modelo.as_str())
+            .filter(|id| !id.is_empty())
+            .collect()
+    }
+
     /// Monta o conteúdo no contrato do motor. As datas são provisórias: quem
     /// as grava de verdade é a publicação.
     pub fn para_conteudo(&self, resolvido: &Resolvido, agora: DateTime<Utc>) -> Conteudo {
@@ -407,6 +420,7 @@ impl Formulario {
 #[derive(Debug, Clone, Default)]
 pub struct Resolvido {
     pub midias: HashMap<String, Midia>,
+    pub modelos: HashMap<String, Modelo3d>,
     pub autor: Option<Autor>,
     pub categoria: Option<Categoria>,
 }
@@ -920,6 +934,22 @@ fn montar(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Bloco {
             url: bloco.url.trim().to_string(),
             titulo: texto.to_string(),
         },
+        // Modelo que a biblioteca não tem fica sem arquivo, e a validação
+        // pede para escolher outro.
+        "modelo-3d" => Bloco::Modelo3d {
+            modelo: resolvido
+                .modelos
+                .get(&bloco.modelo)
+                .cloned()
+                .unwrap_or_else(|| Modelo3d {
+                    id: bloco.modelo.clone(),
+                    glb: String::new(),
+                    usdz: None,
+                    descricao: String::new(),
+                }),
+            capa: imagem(resolvido, &bloco.midia),
+            legenda: Some(texto.to_string()).filter(|legenda| !legenda.is_empty()),
+        },
         "chamada" => Bloco::Chamada {
             texto: texto.to_string(),
             rotulo: bloco.rotulo.trim().to_string(),
@@ -979,6 +1009,15 @@ fn digitar(bloco: &Bloco) -> BlocoDigitado {
         Bloco::Video { url, titulo } => BlocoDigitado {
             url: url.clone(),
             ..base("video", titulo.clone())
+        },
+        Bloco::Modelo3d {
+            modelo,
+            capa,
+            legenda,
+        } => BlocoDigitado {
+            modelo: modelo.id.clone(),
+            midia: id(capa).to_string(),
+            ..base("modelo-3d", legenda.clone().unwrap_or_default())
         },
         Bloco::Chamada { texto, rotulo, url } => BlocoDigitado {
             rotulo: rotulo.clone(),

@@ -212,6 +212,11 @@ struct BlocoNaTela {
     texto: String,
     niveis: Vec<Opcao>,
     usa_midia: bool,
+    /// O que a imagem escolhida é neste bloco.
+    rotulo_da_midia: &'static str,
+    /// O bloco escolhe um modelo 3D da biblioteca.
+    usa_modelo: bool,
+    modelos: Vec<Opcao>,
     usa_texto: bool,
     /// A seção cita imagens pelo código, nas linhas: a tela lista os códigos.
     lista_codigos: bool,
@@ -234,7 +239,12 @@ struct BlocoNaTela {
     agradecimento: String,
 }
 
-fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)]) -> BlocoNaTela {
+fn bloco_na_tela(
+    i: usize,
+    bloco: &BlocoDigitado,
+    biblioteca: &[(String, String)],
+    modelos: &[(String, String)],
+) -> BlocoNaTela {
     let tipo = bloco.tipo.as_str();
     let nome = TIPOS_DE_BLOCO
         .iter()
@@ -266,6 +276,7 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
             "Uma linha por linha da tabela, colunas separadas por |; a primeira é o cabeçalho"
         }
         "video" => "Título do vídeo",
+        "modelo-3d" => "Legenda, embaixo do modelo (opcional)",
         "chamada" => "Texto da chamada",
         "cartoes" => {
             "Um cartão por linha: Título | Texto | Texto do link | Endereço | Código da imagem. Os três últimos são opcionais"
@@ -303,10 +314,24 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         } else {
             Vec::new()
         },
-        usa_midia: tipo == "imagem" || tipo == "destaque",
+        usa_midia: matches!(tipo, "imagem" | "destaque" | "modelo-3d"),
+        rotulo_da_midia: if tipo == "modelo-3d" {
+            "Imagem de capa, mostrada até o modelo carregar (opcional)"
+        } else {
+            "Imagem da biblioteca"
+        },
+        usa_modelo: tipo == "modelo-3d",
+        modelos: if tipo == "modelo-3d" {
+            modelos
+                .iter()
+                .map(|(id, rotulo)| opcao(id, rotulo, &bloco.modelo))
+                .collect()
+        } else {
+            Vec::new()
+        },
         usa_texto: tipo != "imagem",
         lista_codigos,
-        midias: if tipo == "imagem" || tipo == "destaque" || lista_codigos {
+        midias: if matches!(tipo, "imagem" | "destaque" | "modelo-3d") || lista_codigos {
             biblioteca
                 .iter()
                 .map(|(id, rotulo)| opcao(id, rotulo, &bloco.midia))
@@ -388,6 +413,11 @@ async fn editor(
             (midia.id.to_string(), rotulo)
         })
         .collect();
+    let modelos: Vec<(String, String)> = cms_dados::modelos_do_site(&estado.pool, site.id)
+        .await?
+        .into_iter()
+        .map(|modelo| (modelo.id.to_string(), modelo.descricao))
+        .collect();
     let (autores, categorias) = if formulario.eh_post {
         (
             cms_dados::autores_do_site(&estado.pool, site.id)
@@ -459,7 +489,7 @@ async fn editor(
             .blocos
             .iter()
             .enumerate()
-            .map(|(i, bloco)| bloco_na_tela(i, bloco, &biblioteca))
+            .map(|(i, bloco)| bloco_na_tela(i, bloco, &biblioteca, &modelos))
             .collect(),
         tipos_de_bloco: TIPOS_DE_BLOCO
             .iter()
@@ -595,6 +625,16 @@ async fn resolver(
         if let Some(midia) = cms_dados::midia_para_conteudo(&estado.pool, site_id, midia_id).await?
         {
             resolvido.midias.insert(id.to_string(), midia);
+        }
+    }
+    for id in formulario.modelos_escolhidos() {
+        let Ok(modelo_id) = Uuid::parse_str(id) else {
+            continue;
+        };
+        if let Some(modelo) =
+            cms_dados::modelo_para_conteudo(&estado.pool, site_id, modelo_id).await?
+        {
+            resolvido.modelos.insert(id.to_string(), modelo);
         }
     }
     if formulario.eh_post {

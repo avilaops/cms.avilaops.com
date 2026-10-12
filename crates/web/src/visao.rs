@@ -238,6 +238,8 @@ pub struct PaginaDeDocumento {
     pub capa: String,
     pub corpo: String,
     pub autor: Option<CaixaDoAutor>,
+    /// O endereço do visualizador de modelo 3D, só na página que tem o bloco.
+    pub visualizador_3d: Option<&'static str>,
 }
 
 impl PaginaDeDocumento {
@@ -268,6 +270,9 @@ impl PaginaDeDocumento {
                 .unwrap_or_default(),
             corpo: renderizar_corpo(documento.corpo()),
             autor: post.map(|post| CaixaDoAutor::nova(&post.autor)),
+            visualizador_3d: documento
+                .tem_modelo_3d()
+                .then(crate::modelos::caminho_do_visualizador),
         }
     }
 }

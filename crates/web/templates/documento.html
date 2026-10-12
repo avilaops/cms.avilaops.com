@@ -27,4 +27,7 @@
 </aside>
 {%- endif %}
 </article>
+{%- if let Some(visualizador) = visualizador_3d %}
+<script type="module" src="{{ visualizador }}"></script>
+{%- endif %}
 {% endblock %}

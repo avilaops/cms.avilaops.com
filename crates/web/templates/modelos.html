@@ -1,0 +1,46 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Modelos 3D de {{ site }}{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<h1>Modelos 3D</h1>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<form method="post" action="/painel/sites/{{ slug }}/modelos" enctype="multipart/form-data">
+<label for="glb">Modelo (GLB, até 30 MB)</label>
+<input id="glb" name="glb" type="file" accept=".glb,model/gltf-binary" required>
+<label for="descricao">O que o modelo mostra, para quem não o enxerga</label>
+<input id="descricao" name="descricao" required maxlength="300" value="{{ descricao }}">
+<details>
+<summary>Arquivo para iPhone (opcional)</summary>
+<p class="dica">Com o USDZ, quem abre a página no iPhone põe o modelo no próprio espaço pela câmera. Sem ele, o iPhone só gira o modelo na página.</p>
+<label for="usdz">Modelo para iPhone (USDZ, até 30 MB)</label>
+<input id="usdz" name="usdz" type="file" accept=".usdz,model/vnd.usdz+zip">
+</details>
+<button type="submit">Enviar modelo</button>
+</form>
+<h2 id="biblioteca">Biblioteca</h2>
+{%- if lista.total == 0 && lista.busca.is_empty() %}
+<p>Nenhum modelo ainda. O modelo enviado entra em uma página ou post pelo bloco "Modelo 3D".</p>
+{%- else %}
+{%- include "lista_busca.html" %}
+<ul>
+{%- for modelo in lista.itens %}
+<li class="midia">
+<div>
+<strong>{{ modelo.descricao }}</strong>
+<span class="etiquetas">{{ modelo.nome }} · {{ modelo.arquivos }}</span>
+<p class="dica">Identificador para o conector: <code>{{ modelo.id }}</code></p>
+{%- if modelo.pode_apagar %}
+<form class="discreto" method="post" action="/painel/sites/{{ slug }}/modelos/{{ modelo.id }}/apagar"><button type="submit">Apagar</button></form>
+{%- endif %}
+</div>
+</li>
+{%- endfor %}
+</ul>
+{%- include "lista_paginas.html" %}
+{%- endif %}
+{% endblock %}

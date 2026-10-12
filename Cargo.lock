@@ -1471,7 +1471,7 @@ dependencies = [
 [[package]]
 name = "motor-web"
 version = "0.1.0"
-source = "git+https://github.com/avilaops/motor-web?rev=e40ee577889f19ec6b8729acb6c9e3816ab2670a#e40ee577889f19ec6b8729acb6c9e3816ab2670a"
+source = "git+https://github.com/avilaops/motor-web?rev=7cdfba9a0488286dbd7975eacf56f34a21888f9e#7cdfba9a0488286dbd7975eacf56f34a21888f9e"
 dependencies = [
  "chrono",
  "image",

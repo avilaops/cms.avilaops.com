@@ -95,8 +95,17 @@
 <label for="b{{ bloco.i }}_resumo">Texto de apresentação</label>
 <textarea id="b{{ bloco.i }}_resumo" name="b{{ bloco.i }}_resumo" maxlength="400">{{ bloco.resumo }}</textarea>
 {%- endif %}
+{%- if bloco.usa_modelo %}
+<label for="b{{ bloco.i }}_modelo">Modelo 3D da biblioteca</label>
+<select id="b{{ bloco.i }}_modelo" name="b{{ bloco.i }}_modelo">
+<option value="">Escolha</option>
+{%- for opcao in bloco.modelos %}
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
+{%- endfor %}
+</select>
+{%- endif %}
 {%- if bloco.usa_midia %}
-<label for="b{{ bloco.i }}_midia">Imagem da biblioteca</label>
+<label for="b{{ bloco.i }}_midia">{{ bloco.rotulo_da_midia }}</label>
 <select id="b{{ bloco.i }}_midia" name="b{{ bloco.i }}_midia">
 <option value="">Escolha</option>
 {%- for opcao in bloco.midias %}

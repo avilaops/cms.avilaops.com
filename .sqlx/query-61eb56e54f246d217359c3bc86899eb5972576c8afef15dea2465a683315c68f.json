@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select (\n            (select coalesce(sum(bytes), 0) from midia where site_id = $1)\n            + (select coalesce(sum(glb_bytes + coalesce(usdz_bytes, 0)), 0)\n               from modelo_3d where site_id = $1)\n        )::bigint as \"total!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "total!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "61eb56e54f246d217359c3bc86899eb5972576c8afef15dea2465a683315c68f"
+}

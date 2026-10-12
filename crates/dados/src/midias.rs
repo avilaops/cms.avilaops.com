@@ -109,12 +109,7 @@ pub async fn registrar_midia(
     }
     let direitos = direitos_conferidos(&nova.direitos)?;
     let mut transacao = pool.begin().await?;
-    let em_uso = sqlx::query_scalar!(
-        r#"select coalesce(sum(bytes), 0)::bigint as "total!" from midia where site_id = $1"#,
-        site_id
-    )
-    .fetch_one(&mut *transacao)
-    .await?;
+    let em_uso = crate::modelos::espaco_em_uso(&mut transacao, site_id).await?;
     if em_uso.saturating_add(inteiro(nova.bytes)) > inteiro(limite_de_bytes_do_site) {
         return Err(ErroDeMidia::SemEspaco);
     }
@@ -556,7 +551,7 @@ pub(crate) async fn hidratar(
             }
         });
     }
-    Ok(())
+    crate::modelos::hidratar(conexao, site_id, conteudo).await
 }
 
 /// O mesmo que a publicação faz, para quem recebe conteúdo de fora: o que o

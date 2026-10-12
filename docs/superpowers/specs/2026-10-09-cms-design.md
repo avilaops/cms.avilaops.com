@@ -189,7 +189,12 @@ maneira dos templates do Lojas, e não como `if` no template.
   embutido no `<head>`.
 - Fontes servidas pelo próprio servidor, com `font-display: swap`. Nenhuma
   requisição a terceiros na página padrão.
-- Nenhum JavaScript na página pública padrão.
+- Nenhum JavaScript na página pública padrão. A exceção é a página com o
+  bloco de modelo 3D (pedido do Nicolas em 12/10/2026): ela carrega o
+  visualizador do próprio CMS, um script só, servido pelo site
+  (`/recursos/modelo-3d-<resumo>.js`), sem biblioteca de terceiros. A política
+  de conteúdo dessa página passa de `script-src 'none'` para
+  `script-src 'self'`; as outras páginas do site continuam sem script.
 
 ### Sinais de confiança
 
@@ -299,6 +304,18 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   age como equipe, com os escopos informados e token que não vence. O token
   sai uma vez na saída do comando e o banco guarda só o hash; criar de novo
   com o mesmo nome revoga o anterior. As chamadas ficam no mesmo registro.
+- Modelo 3D: o site tem uma biblioteca de modelos (`/painel/sites/<slug>/modelos`
+  e as ferramentas `listar_modelos_3d`, `enviar_modelo_3d` e
+  `apagar_modelo_3d`). O arquivo é GLB (glTF 2.0 binário, até 30 MB, sem
+  extensão obrigatória e com tudo dentro do arquivo) e, opcional, o USDZ do
+  mesmo modelo para o iPhone. Os arquivos saem em
+  `/midia/modelos/<id>.glb|.usdz`, só para o site dono deles, e contam no
+  mesmo limite de espaço das imagens. O bloco `modelo-3d` cita o modelo pelo
+  identificador, com capa e legenda opcionais; a descrição é a da biblioteca.
+  O visualizador abre malha de triângulos, cor e textura de base, metal e
+  aspereza e a hierarquia de nós; não toca animação. O visitante gira com o
+  dedo, o mouse ou as setas, e no celular abre o modelo na câmera (USDZ no
+  iPhone, o próprio GLB no Android). Modelo em uso não é apagado.
 - Formulário: a seção `formulario` tem até oito campos (texto, e-mail,
   telefone, mensagem), botão e agradecimento. Sai sem script; o envio vai ao
   endereço da própria página, e o CMS o confere contra a definição do bloco

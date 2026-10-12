@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select descricao, usdz_bytes from modelo_3d where id = $1 and site_id = $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "descricao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "usdz_bytes",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "9ba09d2ac8bfc8796e6758c0620a1af6ae607ca055c4554d69ecc92b276d72c5"
+}

@@ -1683,7 +1683,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        33
+        36
     );
     // O formato do conteúdo vai no esquema: a espécie e os tipos de bloco.
     let esquema = |nome: &str| {
@@ -3355,6 +3355,172 @@ async fn imagem_propria_leva_a_licenca_do_site_e_a_pagina_dela_existe(pool: PgPo
     assert_eq!(
         site["identidade"]["licencaDeImagens"],
         "Uso livre com crédito.\r\nSem uso comercial."
+    );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+/// Um GLB mínimo: o cabeçalho e o JSON, sem geometria. É o bastante para o
+/// CMS aceitar o arquivo.
+fn glb(nome: &str) -> Vec<u8> {
+    let mut json = format!(r#"{{"asset":{{"version":"2.0","generator":"{nome}"}}}}"#).into_bytes();
+    while json.len() % 4 != 0 {
+        json.push(b' ');
+    }
+    let mut bytes = b"glTF".to_vec();
+    bytes.extend(2u32.to_le_bytes());
+    bytes.extend((20 + json.len() as u32).to_le_bytes());
+    bytes.extend((json.len() as u32).to_le_bytes());
+    bytes.extend(0x4E4F_534Au32.to_le_bytes());
+    bytes.extend(json);
+    bytes
+}
+
+impl Painel {
+    async fn enviar_modelo(&self, quem: &str, slug: &str, glb: &[u8], descricao: &str) -> Resposta {
+        let campo = |nome: &str, extra: &str| {
+            format!("--{LIMITE}\r\ncontent-disposition: form-data; name=\"{nome}\"{extra}\r\n\r\n")
+        };
+        let mut corpo = campo("glb", "; filename=\"forno.glb\"").into_bytes();
+        corpo.extend_from_slice(glb);
+        corpo.extend(format!("\r\n{}{descricao}\r\n", campo("descricao", "")).into_bytes());
+        corpo.extend(
+            format!("{}PK\x03\x04usdz\r\n--{LIMITE}--\r\n", campo("usdz", "")).into_bytes(),
+        );
+        let pedido = Request::builder()
+            .method("POST")
+            .uri(format!("/painel/sites/{slug}/modelos"))
+            .header("host", HOST_DO_PAINEL)
+            .header("origin", ORIGEM)
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={LIMITE}"),
+            )
+            .header("cookie", format!("avila_sso={}", token(quem)));
+        self.enviar(pedido, Body::from(corpo)).await
+    }
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn modelo_3d_vai_da_biblioteca_para_a_pagina_com_o_visualizador(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    const SITE: &str = "/painel/sites/padaria";
+    const MODELOS: &str = "/painel/sites/padaria/modelos";
+
+    // O que não é GLB, ou que o visualizador não abre, não entra.
+    let recusado = painel
+        .enviar_modelo("ana", "padaria", b"<html>", "Forno de lastro")
+        .await;
+    assert_eq!(recusado.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(recusado.corpo.contains("não é um modelo GLB"));
+    assert!(recusado.corpo.contains(r#"value="Forno de lastro""#));
+
+    let enviado = painel
+        .enviar_modelo("ana", "padaria", &glb("forno"), "Forno de lastro")
+        .await;
+    assert_eq!(enviado.status, StatusCode::OK, "{}", enviado.corpo);
+    assert!(enviado.corpo.contains("Modelo 3D enviado."));
+    assert!(enviado.corpo.contains("USDZ"));
+    let repetido = painel
+        .enviar_modelo("ana", "padaria", &glb("forno"), "Forno de lastro")
+        .await;
+    assert!(repetido.corpo.contains("já está na biblioteca"));
+    let (modelo,): (Uuid,) = sqlx::query_as("select id from modelo_3d")
+        .fetch_one(&pool)
+        .await
+        .expect("modelo gravado");
+    let modelo = modelo.to_string();
+
+    // O editor oferece o modelo, e a página sai com o visualizador.
+    let publicado = painel
+        .postar(
+            "ana",
+            &format!("{SITE}/doc"),
+            &pagina_com(&[
+                ("b0_tipo", "modelo-3d"),
+                ("b0_modelo", &modelo),
+                ("b0_texto", "Gire para ver o forno por dentro."),
+                ("acao", "publicar"),
+            ]),
+        )
+        .await;
+    let documento = documento_de(&publicado);
+    let editor = painel.abrir(Some("ana"), &documento).await;
+    assert!(editor.corpo.contains(&format!(
+        r#"<option value="{modelo}" selected>Forno de lastro</option>"#
+    )));
+
+    let no_site = || estado(&pool, painel.diretorio.clone());
+    let pagina = comum::pedir_em(no_site(), &host("padaria"), "/sobre").await;
+    assert_eq!(pagina.status, StatusCode::OK, "{}", pagina.corpo);
+    assert!(pagina.corpo.contains(&format!(
+        r#"<modelo-3d src="/midia/modelos/{modelo}.glb" ios-src="/midia/modelos/{modelo}.usdz" alt="Forno de lastro">"#
+    )));
+    assert!(pagina.corpo.contains("Gire para ver o forno por dentro."));
+    // Só esta página carrega script, e só o do próprio site.
+    assert!(
+        pagina
+            .cabecalho("content-security-policy")
+            .contains("script-src 'self';")
+    );
+    let script = pagina
+        .corpo
+        .split(r#"<script type="module" src=""#)
+        .nth(1)
+        .and_then(|resto| resto.split('"').next())
+        .expect("a página carrega o visualizador")
+        .to_string();
+    let visualizador = comum::pedir_em(no_site(), &host("padaria"), &script).await;
+    assert_eq!(visualizador.status, StatusCode::OK);
+    assert!(
+        visualizador
+            .cabecalho("content-type")
+            .starts_with("text/javascript")
+    );
+    assert!(
+        visualizador
+            .corpo
+            .contains(r#"customElements.define("modelo-3d""#)
+    );
+    let inicio = comum::pedir_em(no_site(), &host("padaria"), "/").await;
+    assert!(
+        !inicio
+            .cabecalho("content-security-policy")
+            .contains("script-src 'self'")
+    );
+
+    // Os arquivos saem com o tipo certo e cache longo.
+    for (extensao, tipo) in [("glb", "model/gltf-binary"), ("usdz", "model/vnd.usdz+zip")] {
+        let caminho = format!("/midia/modelos/{modelo}.{extensao}");
+        let arquivo = comum::pedir_em(no_site(), &host("padaria"), &caminho).await;
+        assert_eq!(arquivo.status, StatusCode::OK, "{caminho}");
+        assert_eq!(arquivo.cabecalho("content-type"), tipo);
+        assert!(arquivo.cabecalho("cache-control").contains("immutable"));
+    }
+    // Em uso, o modelo não é apagado; fora de uso, sai com os arquivos.
+    let apagar = format!("{MODELOS}/{modelo}/apagar");
+    let em_uso = painel.postar("ana", &apagar, "").await;
+    assert_eq!(em_uso.status, StatusCode::CONFLICT);
+    assert!(em_uso.corpo.contains("está em uso"));
+    painel
+        .postar(
+            "ana",
+            &documento,
+            &pagina_com(&[("b0_texto", "Sem modelo."), ("acao", "publicar")]),
+        )
+        .await;
+    let apagado = painel.postar("ana", &apagar, "").await;
+    assert_eq!(apagado.status, StatusCode::OK, "{}", apagado.corpo);
+    assert!(apagado.corpo.contains("Modelo 3D apagado."));
+    assert_eq!(
+        comum::pedir_em(
+            no_site(),
+            &host("padaria"),
+            &format!("/midia/modelos/{modelo}.glb")
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
     );
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }

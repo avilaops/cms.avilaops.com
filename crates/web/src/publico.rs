@@ -27,7 +27,10 @@ use motor_web::validacao::normalizar_slug;
 use crate::Estado;
 use crate::icone::{self, Icone};
 use crate::midia;
-use crate::resposta::{ErroWeb, html, liberar_tag_do_google, redirecionar, simples, texto};
+use crate::modelos;
+use crate::resposta::{
+    ErroWeb, html, liberar_tag_do_google, liberar_visualizador_3d, redirecionar, simples, texto,
+};
 use crate::visao::logo_do_cabecalho;
 use crate::visao::{
     CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog, TagDoGoogle,
@@ -208,9 +211,15 @@ async fn responder(
         _ if caminho.starts_with("/sitemap") && caminho.ends_with(".xml") => {
             sitemap(estado, &pedido, caminho).await
         }
+        _ if caminho.starts_with("/recursos/") => Ok(modelos::visualizador(caminho)
+            .unwrap_or_else(|| simples(StatusCode::NOT_FOUND, "Não encontrado."))),
         _ => match (caminho.strip_prefix("/midia/"), Icone::do_caminho(caminho)) {
             (Some(arquivo), _) => {
-                midia::servir(&configuracao.diretorio_de_midia, pedido.gravado.id, arquivo).await
+                let diretorio = &configuracao.diretorio_de_midia;
+                match arquivo.strip_prefix("modelos/") {
+                    Some(modelo) => modelos::servir(diretorio, pedido.gravado.id, modelo).await,
+                    None => midia::servir(diretorio, pedido.gravado.id, arquivo).await,
+                }
             }
             (None, Some(icone_pedido)) => {
                 icone::servir(
@@ -444,11 +453,15 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
 
     let moldura = moldura(estado, pedido, &documento).await?;
     let pagina = PaginaDeDocumento::nova(moldura, &documento).render()?;
-    Ok(html(
+    let mut resposta = html(
         StatusCode::OK,
         pagina,
         pedido.indexavel && documento.seo().indexar,
-    ))
+    );
+    if documento.tem_modelo_3d() {
+        liberar_visualizador_3d(&mut resposta);
+    }
+    Ok(resposta)
 }
 
 /// A página que diz em que termos as imagens do site podem ser usadas e como

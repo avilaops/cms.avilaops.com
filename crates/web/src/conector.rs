@@ -22,14 +22,14 @@ use cms_dominio::{Ator, Conta};
 use cms_integracoes::busca;
 use motor_web::conteudo::{contar_palavras, texto_do_corpo};
 use motor_web::tipos::{Conteudo, Direitos};
-use motor_web::validacao::{Problema, UPLOAD_MAXIMO_BYTES};
+use motor_web::validacao::{MODELO_MAXIMO_BYTES, Problema, UPLOAD_MAXIMO_BYTES};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::identidade::{self, DadosDaIdentidade};
 use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
-use crate::{Estado, biblioteca, mensagens};
+use crate::{Estado, biblioteca, mensagens, modelos};
 
 const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
 
@@ -426,7 +426,7 @@ enum Entrada {
 const LOTE_MAXIMO: usize = 25;
 
 /// Os blocos e as seções que o corpo aceita, pelo `tipo`.
-const TIPOS_DE_BLOCO: [&str; 20] = [
+const TIPOS_DE_BLOCO: [&str; 21] = [
     "paragrafo",
     "titulo",
     "imagem",
@@ -435,6 +435,7 @@ const TIPOS_DE_BLOCO: [&str; 20] = [
     "tabela",
     "perguntas",
     "video",
+    "modelo-3d",
     "chamada",
     "cartoes",
     "destaque",
@@ -533,7 +534,7 @@ struct Ferramenta {
 
 const SITE: (&str, &str) = ("site", "O endereço do site, como em listar_sites (slug).");
 const DOCUMENTO: (&str, &str) = ("documento", "O identificador do documento.");
-const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato, formulario); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. As datas são do servidor.";
+const DESCRICAO_DO_CONTEUDO: &str = "O documento no contrato do CMS: { especie: \"pagina\" | \"post\", dados: { ... } }. Use ver_documento em um documento que já existe para ver o formato. Imagem (capa e bloco de imagem) pode ir só com o id da biblioteca, em texto (listar_midia). No post, autor e categoria podem ir só com o slug do cadastro (listar_autores, listar_categorias). O corpo aceita blocos de texto (paragrafo, titulo, lista, imagem, citacao, tabela, perguntas, video, modelo-3d, chamada) e seções de página inteira (cartoes, destaque, depoimentos, numeros, passos, planos, galeria, logos, faixa, contato, formulario); a página aceita também \"abertura\" (o topo com texto e botões). Para ver o formato de cada um, use listar_modelos e ver_modelo. O bloco de modelo 3D é { tipo: \"modelo-3d\", modelo: id do modelo (listar_modelos_3d), capa: id da imagem mostrada até o modelo carregar (opcional), legenda (opcional) }. As datas são do servidor.";
 
 const LEGENDA: (&str, &str) = ("legenda", "A legenda, que aparece embaixo da imagem.");
 const CREDITO: (&str, &str) = ("credito", "Quem leva o crédito, como aparece em \"Foto:\".");
@@ -602,7 +603,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 33] = [
+const FERRAMENTAS: [Ferramenta; 36] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -811,6 +812,50 @@ const FERRAMENTAS: [Ferramenta; 33] = [
         opcionais: &[],
     },
     Ferramenta {
+        nome: "listar_modelos_3d",
+        escopo: "midia:escrever",
+        descricao: "Lista os modelos 3D da biblioteca do site, com o id para usar no bloco modelo-3d, a descrição e se há arquivo para iPhone (USDZ).",
+        argumentos: &[SITE],
+        entrada: Entrada::Nenhuma,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "enviar_modelo_3d",
+        escopo: "midia:escrever",
+        descricao: "Envia um modelo 3D em GLB (glTF binário, até 30 MB, sem compressão Draco ou meshopt e com as texturas dentro do arquivo) para a biblioteca, pelo endereço dele (url) ou pelo arquivo (base64). O visitante gira o modelo na página; com o USDZ, quem está no iPhone também o põe no próprio espaço pela câmera.",
+        argumentos: &[
+            SITE,
+            ("nome", "O nome do arquivo, como supino-reto.glb."),
+            (
+                "descricao",
+                "O que o modelo mostra, para quem não o enxerga. Obrigatória.",
+            ),
+        ],
+        entrada: Entrada::Nenhuma,
+        opcionais: &[
+            (
+                "url",
+                "O endereço https do GLB, público e que abra direto no arquivo, sem redirecionar.",
+            ),
+            (
+                "base64",
+                "O GLB, em base64. Só para modelo pequeno, quando não há endereço.",
+            ),
+            (
+                "usdz_url",
+                "O endereço https do mesmo modelo em USDZ, para iPhone.",
+            ),
+        ],
+    },
+    Ferramenta {
+        nome: "apagar_modelo_3d",
+        escopo: "midia:escrever",
+        descricao: "Apaga um modelo 3D da biblioteca, com os arquivos. Modelo em uso em página ou post não é apagado. Não tem volta.",
+        argumentos: &[SITE, ("id", "O id do modelo, como em listar_modelos_3d.")],
+        entrada: Entrada::Nenhuma,
+        opcionais: &[],
+    },
+    Ferramenta {
         nome: "editar_midia",
         escopo: "midia:escrever",
         descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Imagem feita pela empresa do site: propria = sim. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
@@ -950,7 +995,12 @@ const FERRAMENTAS: [Ferramenta; 33] = [
 
 /// As ferramentas que tiram algo do ar ou apagam: o assistente confirma com a
 /// pessoa antes de chamar.
-const DESFAZEM: [&str; 3] = ["despublicar", "apagar_midia", "remover_redirecionamento"];
+const DESFAZEM: [&str; 4] = [
+    "despublicar",
+    "apagar_midia",
+    "apagar_modelo_3d",
+    "remover_redirecionamento",
+];
 
 fn descrever(ferramenta: &Ferramenta) -> Value {
     let mut propriedades = serde_json::Map::new();
@@ -1113,8 +1163,26 @@ impl Chamada<'_> {
         Ok(())
     }
 
+    /// Um modelo 3D citado só pelo id vira o modelo da biblioteca.
+    async fn modelo_3d(&self, site_id: Uuid, valor: &mut Value) -> Result<(), Recusa> {
+        let Some(id) = valor.as_str() else {
+            return Ok(());
+        };
+        let nao_achado = || {
+            recusa(format!(
+                "Modelo 3D \"{id}\" não está na biblioteca do site. Use listar_modelos_3d."
+            ))
+        };
+        let modelo_id = Uuid::parse_str(id.trim()).map_err(|_| nao_achado())?;
+        let modelo = cms_dados::modelo_para_conteudo(&self.estado.pool, site_id, modelo_id)
+            .await?
+            .ok_or_else(nao_achado)?;
+        *valor = json!(modelo);
+        Ok(())
+    }
+
     /// O que veio só como referência (slug de autor ou de categoria, id de
-    /// imagem) é trocado pelo cadastro do site.
+    /// imagem ou de modelo 3D) é trocado pelo cadastro do site.
     async fn resolver_referencias(
         &self,
         site_id: Uuid,
@@ -1158,6 +1226,14 @@ impl Chamada<'_> {
         for bloco in blocos.into_iter().flatten() {
             if let Some(midia) = bloco.get_mut("midia") {
                 self.imagem(site_id, midia).await?;
+            }
+            if bloco.get("tipo").and_then(Value::as_str) == Some("modelo-3d") {
+                if let Some(modelo) = bloco.get_mut("modelo") {
+                    self.modelo_3d(site_id, modelo).await?;
+                }
+                if let Some(capa) = bloco.get_mut("capa") {
+                    self.imagem(site_id, capa).await?;
+                }
             }
             // Nas seções, a imagem está em cada item: o item inteiro na
             // galeria e nos logos, a imagem do cartão ou a foto do depoimento.
@@ -1562,6 +1638,71 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             match biblioteca::registrar(chamada.estado, &site, &ator, envio).await? {
                 Ok(id) => Ok(do_site(json!({ "id": id, "situacao": "pendente" }), None)),
                 Err(mensagem) => Err(recusa(mensagem)),
+            }
+        }
+        "listar_modelos_3d" => {
+            let lista: Vec<Value> = cms_dados::modelos_do_site(pool, site.id)
+                .await?
+                .into_iter()
+                .map(|modelo| {
+                    json!({
+                        "id": modelo.id,
+                        "nome": modelo.nome,
+                        "descricao": modelo.descricao,
+                        "glbBytes": modelo.glb_bytes,
+                        "temUsdz": modelo.usdz_bytes.is_some(),
+                    })
+                })
+                .collect();
+            Ok(do_site(json!({ "modelos": lista }), None))
+        }
+        "enviar_modelo_3d" => {
+            let endereco = |nome: &str| {
+                chamada
+                    .opcional(nome)
+                    .map(str::trim)
+                    .filter(|url| !url.is_empty())
+            };
+            let baixar = |url: &str| {
+                let url = url.to_string();
+                async move {
+                    busca::baixar(&url, MODELO_MAXIMO_BYTES)
+                        .await
+                        .map_err(|erro| recusa(erro.to_string()))
+                }
+            };
+            let glb = match (endereco("url"), chamada.opcional("base64")) {
+                (Some(url), _) => baixar(url).await?,
+                (None, Some(arquivo)) => base64::engine::general_purpose::STANDARD
+                    .decode(arquivo.trim())
+                    .map_err(|_| recusa("O argumento \"base64\" não é base64 válido."))?,
+                (None, None) => {
+                    return Err(recusa(
+                        "Informe \"url\", o endereço https do GLB, ou \"base64\", o arquivo.",
+                    ));
+                }
+            };
+            let usdz = match endereco("usdz_url") {
+                Some(url) => Some(baixar(url).await?.into()),
+                None => None,
+            };
+            let envio = modelos::Envio {
+                nome: chamada.texto("nome")?.to_string(),
+                descricao: chamada.texto("descricao")?.to_string(),
+                glb: glb.into(),
+                usdz,
+            };
+            match modelos::registrar(chamada.estado, &site, &ator, envio).await? {
+                Ok(id) => Ok(do_site(json!({ "id": id }), None)),
+                Err(mensagem) => Err(recusa(mensagem)),
+            }
+        }
+        "apagar_modelo_3d" => {
+            let nao_achado = || recusa("Modelo 3D não encontrado na biblioteca do site.");
+            let id = Uuid::parse_str(chamada.texto("id")?).map_err(|_| nao_achado())?;
+            match modelos::remover(chamada.estado, &site, &ator, id).await? {
+                Ok(()) => Ok(do_site(json!({ "apagado": true }), None)),
+                Err(erro) => Err(recusa(erro.to_string())),
             }
         }
         "apagar_midia" => {

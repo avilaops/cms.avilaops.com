@@ -10,6 +10,7 @@ mod eventos;
 pub mod fluxo;
 mod mensagens;
 mod midias;
+mod modelos;
 mod redirecionamentos;
 mod rotinas;
 mod sites;
@@ -50,6 +51,10 @@ pub use midias::{
     DescricaoDaMidia, ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada,
     apagar_midia, atualizar_midia, concluir_midia, falhar_midia, hash_de_conteudo,
     hidratar_conteudo, midia_para_conteudo, midias_do_site, registrar_midia, reivindicar_midia,
+};
+pub use modelos::{
+    ErroDeModelo, ModeloDoSite, NovoModelo, apagar_modelo, modelo_para_conteudo, modelos_do_site,
+    registrar_modelo,
 };
 pub use redirecionamentos::{
     ErroDeRedirecionamento, Redirecionamento, redirecionamentos_do_site, remover_redirecionamento,

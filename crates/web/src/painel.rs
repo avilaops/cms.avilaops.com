@@ -17,7 +17,7 @@ use serde::Deserialize;
 
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
 use crate::{Configuracao, Estado};
-use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens};
+use crate::{biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens, modelos};
 
 const CAMINHO: &str = "/painel";
 
@@ -341,6 +341,9 @@ enum Rota<'a> {
     ArquivoDeMidia(&'a str, &'a str),
     ApagarMidia(&'a str, &'a str),
     CorrigirMidia(&'a str, &'a str),
+    Modelos(&'a str),
+    EnviarModelo(&'a str),
+    ApagarModelo(&'a str, &'a str),
     Mensagens(&'a str),
     Site(&'a str),
     NovoDocumento(&'a str, &'a str),
@@ -388,6 +391,11 @@ impl<'a> Rota<'a> {
                 Some(Rota::ApagarMidia(slug, id))
             }
             (false, ["painel", "sites", slug, "midia", id]) => Some(Rota::CorrigirMidia(slug, id)),
+            (true, ["painel", "sites", slug, "modelos"]) => Some(Rota::Modelos(slug)),
+            (false, ["painel", "sites", slug, "modelos"]) => Some(Rota::EnviarModelo(slug)),
+            (false, ["painel", "sites", slug, "modelos", id, "apagar"]) => {
+                Some(Rota::ApagarModelo(slug, id))
+            }
             (true, ["painel", "sites", slug, "dominio"]) => Some(Rota::Dominio(slug)),
             (false, ["painel", "sites", slug, "dominio"]) => {
                 Some(Rota::GravarDominio(slug, dominio::Pedido::Apontar))
@@ -435,6 +443,8 @@ impl<'a> Rota<'a> {
                 | Rota::EnviarMidia(_)
                 | Rota::ApagarMidia(..)
                 | Rota::CorrigirMidia(..)
+                | Rota::EnviarModelo(_)
+                | Rota::ApagarModelo(..)
                 | Rota::GravarNovo(_)
                 | Rota::Gravar(..)
                 | Rota::SalvarAutor(_)
@@ -531,6 +541,9 @@ async fn responder(
         Rota::CorrigirMidia(slug, id) => {
             biblioteca::corrigir(estado, &conta, slug, id, corpo).await
         }
+        Rota::Modelos(slug) => modelos::abrir(estado, &conta, slug, uri).await,
+        Rota::EnviarModelo(slug) => modelos::enviar(estado, &conta, slug, cabecalhos, corpo).await,
+        Rota::ApagarModelo(slug, id) => modelos::apagar(estado, &conta, slug, id).await,
         Rota::Site(slug) => conteudo::inicio(estado, &conta, slug, uri).await,
         Rota::NovoDocumento(slug, especie) => {
             conteudo::novo(estado, &conta, slug, especie, uri).await
