@@ -227,6 +227,7 @@ fn campo(rotulo: &str, tipo: TipoDeCampo, obrigatorio: bool) -> Campo {
         rotulo: rotulo.into(),
         tipo,
         obrigatorio,
+        opcoes: Vec::new(),
     }
 }
 

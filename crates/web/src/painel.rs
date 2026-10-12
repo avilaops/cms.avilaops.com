@@ -180,7 +180,7 @@ async fn pagina(
     status: StatusCode,
     recado: Recado,
 ) -> Result<Response, ErroWeb> {
-    let sites = cms_dados::sites_da_conta(&estado.pool, &conta.sub)
+    let sites = cms_dados::sites_da_conta(&estado.pool, conta)
         .await?
         .into_iter()
         .map(|site| LinhaDeSite::nova(site, &estado.configuracao))

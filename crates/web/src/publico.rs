@@ -719,7 +719,11 @@ async fn receber_formulario(
             && !digitado
                 .split_once('@')
                 .is_some_and(|(nome, dominio)| !nome.is_empty() && dominio.contains('.'));
-        if (digitado.is_empty() && campo.obrigatorio) || email_torto {
+        // Em campo de escolha só vale uma das alternativas do formulário.
+        let fora_das_opcoes = campo.tipo == TipoDeCampo::Escolha
+            && !digitado.is_empty()
+            && !campo.opcoes.iter().any(|opcao| opcao.trim() == digitado);
+        if (digitado.is_empty() && campo.obrigatorio) || email_torto || fora_das_opcoes {
             faltas.push(&campo.rotulo);
         } else if !digitado.is_empty() {
             recebidos.push(CampoRecebido {

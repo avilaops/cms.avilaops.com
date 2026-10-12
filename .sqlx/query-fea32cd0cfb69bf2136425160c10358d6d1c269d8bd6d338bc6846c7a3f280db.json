@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as \"nome!\", s.situacao, p.papel\n        from participacao p\n        join site s on s.id = p.site_id\n        where p.conta = $1\n        order by 3, s.slug\n        ",
+  "query": "\n        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as \"nome!\", s.situacao,\n               coalesce(p.papel, 'dono') as \"papel!\"\n        from site s\n        left join participacao p on p.site_id = s.id and p.conta = $1\n        where p.conta is not null or $2\n        order by 3, s.slug\n        ",
   "describe": {
     "columns": [
       {
@@ -25,13 +25,14 @@
       },
       {
         "ordinal": 4,
-        "name": "papel",
+        "name": "papel!",
         "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Text",
+        "Bool"
       ]
     },
     "nullable": [
@@ -39,8 +40,8 @@
       false,
       null,
       false,
-      false
+      null
     ]
   },
-  "hash": "721babe3bd95d68f27d2236e17c02d4ce32736d85a43c965b6333f420a6b047f"
+  "hash": "fea32cd0cfb69bf2136425160c10358d6d1c269d8bd6d338bc6846c7a3f280db"
 }

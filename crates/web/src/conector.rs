@@ -1126,7 +1126,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
         documento_id: None,
     };
     if ferramenta == "listar_sites" {
-        let sites: Vec<Value> = cms_dados::sites_da_conta(pool, &conta.sub)
+        let sites: Vec<Value> = cms_dados::sites_da_conta(pool, conta)
             .await?
             .into_iter()
             .map(|site| {

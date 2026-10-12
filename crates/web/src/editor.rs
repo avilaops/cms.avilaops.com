@@ -623,15 +623,29 @@ fn montar_secao(bloco: &BlocoDigitado, resolvido: &Resolvido) -> Option<Bloco> {
             titulo,
             texto: opcional(&bloco.resumo),
             campos: por_linha()
-                .map(|c| Campo {
-                    rotulo: celula(&c, 0).to_string(),
-                    tipo: match celula(&c, 1).to_lowercase().as_str() {
-                        "email" | "e-mail" => TipoDeCampo::Email,
-                        "telefone" | "whatsapp" => TipoDeCampo::Telefone,
-                        "mensagem" => TipoDeCampo::Mensagem,
-                        _ => TipoDeCampo::Texto,
-                    },
-                    obrigatorio: !celula(&c, 2).is_empty(),
+                .map(|c| {
+                    // `escolha: A; B; C` traz as alternativas junto do tipo.
+                    let (tipo, alternativas) = match celula(&c, 1).split_once(':') {
+                        Some((tipo, alternativas)) => (tipo, alternativas),
+                        None => (celula(&c, 1), ""),
+                    };
+                    Campo {
+                        rotulo: celula(&c, 0).to_string(),
+                        tipo: match tipo.trim().to_lowercase().as_str() {
+                            "email" | "e-mail" => TipoDeCampo::Email,
+                            "telefone" | "whatsapp" => TipoDeCampo::Telefone,
+                            "mensagem" => TipoDeCampo::Mensagem,
+                            "escolha" => TipoDeCampo::Escolha,
+                            _ => TipoDeCampo::Texto,
+                        },
+                        obrigatorio: !celula(&c, 2).is_empty(),
+                        opcoes: alternativas
+                            .split(';')
+                            .map(str::trim)
+                            .filter(|opcao| !opcao.is_empty())
+                            .map(str::to_string)
+                            .collect(),
+                    }
                 })
                 .collect(),
             botao: bloco.rotulo.trim().to_string(),
@@ -813,17 +827,18 @@ fn digitar_secao(bloco: &Bloco) -> Option<BlocoDigitado> {
                     .iter()
                     .map(|campo| {
                         let tipo = match campo.tipo {
-                            TipoDeCampo::Texto => "texto",
-                            TipoDeCampo::Email => "email",
-                            TipoDeCampo::Telefone => "telefone",
-                            TipoDeCampo::Mensagem => "mensagem",
+                            TipoDeCampo::Texto => "texto".to_string(),
+                            TipoDeCampo::Email => "email".to_string(),
+                            TipoDeCampo::Telefone => "telefone".to_string(),
+                            TipoDeCampo::Mensagem => "mensagem".to_string(),
+                            TipoDeCampo::Escolha => format!("escolha: {}", campo.opcoes.join("; ")),
                         };
                         let obrigatorio = if campo.obrigatorio {
                             "obrigatório"
                         } else {
                             ""
                         };
-                        escrever_linha(&[&campo.rotulo, tipo, obrigatorio])
+                        escrever_linha(&[&campo.rotulo, &tipo, obrigatorio])
                     })
                     .collect(),
             )
@@ -1245,7 +1260,7 @@ mod testes {
                 ..secao(
                     "formulario",
                     "Peça um orçamento",
-                    "Seu nome | texto | obrigatório\nE-mail | email\nO que você precisa | mensagem | obrigatório",
+                    "Seu nome | texto | obrigatório\nE-mail | email\nMomento | escolha: Começando; Crescendo | obrigatório\nO que você precisa | mensagem | obrigatório",
                 )
             },
             BlocoDigitado {

@@ -167,17 +167,21 @@ pub struct SiteDaConta {
     pub papel: Papel,
 }
 
-/// Os sites de que a conta participa, em ordem de nome.
-pub async fn sites_da_conta(pool: &PgPool, conta: &str) -> Result<Vec<SiteDaConta>, ErroDeDados> {
+/// Os sites que a conta alcança, em ordem de nome: aqueles de que participa
+/// e, se for da equipe da Ávila Ops, todos os outros, em que ela entra com o
+/// poder de dono.
+pub async fn sites_da_conta(pool: &PgPool, conta: &Conta) -> Result<Vec<SiteDaConta>, ErroDeDados> {
     let linhas = sqlx::query!(
         r#"
-        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as "nome!", s.situacao, p.papel
-        from participacao p
-        join site s on s.id = p.site_id
-        where p.conta = $1
+        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as "nome!", s.situacao,
+               coalesce(p.papel, 'dono') as "papel!"
+        from site s
+        left join participacao p on p.site_id = s.id and p.conta = $1
+        where p.conta is not null or $2
         order by 3, s.slug
         "#,
-        conta
+        conta.sub,
+        conta.equipe
     )
     .fetch_all(pool)
     .await?;

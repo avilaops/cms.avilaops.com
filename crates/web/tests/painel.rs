@@ -2436,7 +2436,8 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
                 "campos": [
                     { "rotulo": "Seu nome", "tipo": "texto", "obrigatorio": true },
                     { "rotulo": "E-mail", "tipo": "email" },
-                    { "rotulo": "Mensagem", "tipo": "mensagem", "obrigatorio": true }
+                    { "rotulo": "Mensagem", "tipo": "mensagem", "obrigatorio": true },
+                    { "rotulo": "Assunto", "tipo": "escolha", "opcoes": ["Encomenda", "Dúvida"] }
                 ],
                 "botao": "Enviar",
                 "agradecimento": "Recebemos a sua mensagem. A Ana responde ainda hoje."
@@ -2499,6 +2500,8 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
             ("c0", " "),
             ("c1", "ana-sem-arroba"),
             ("c2", "Oi"),
+            // Alternativa que o formulário não oferece.
+            ("c3", "Reclamação"),
         ],
         None,
     )
@@ -2507,7 +2510,7 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
     assert!(
         incompleto
             .corpo
-            .contains("Volte e confira: Seu nome, E-mail.")
+            .contains("Volte e confira: Seu nome, E-mail, Assunto.")
     );
     // Robô que preenche a isca vê o agradecimento, e nada é guardado.
     let robo = enviar(
@@ -2539,6 +2542,7 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
             ("c0", "Caio Lima"),
             ("c1", "caio@exemplo.example"),
             ("c2", "Vocês fazem pão sem glúten?\r\nPreciso para sábado."),
+            ("c3", "Encomenda"),
         ],
         Some(&format!("https://{h}")),
     )
@@ -2598,6 +2602,10 @@ async fn servico_da_casa_entra_com_token_proprio_e_so_com_o_que_foi_liberado(poo
         .ferramenta(&token, "ver_site", json!({ "site": "padaria" }))
         .await;
     assert!(!erro, "{site}");
+    // E os vê na lista, com o poder de dono com que a equipe entra.
+    let (_, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
+    assert_eq!(sites["sites"][0]["site"], "padaria");
+    assert_eq!(sites["sites"][0]["papel"], "dono");
     let (erro, recusa) = painel
         .ferramenta(
             &token,
@@ -2638,7 +2646,7 @@ async fn servico_da_casa_entra_com_token_proprio_e_so_com_o_que_foi_liberado(poo
     .fetch_one(&pool)
     .await
     .expect("contagens");
-    assert_eq!((em_vigor, chamadas), (1, 3));
+    assert_eq!((em_vigor, chamadas), (1, 4));
 }
 
 impl Painel {

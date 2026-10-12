@@ -240,7 +240,7 @@ fn bloco_na_tela(i: usize, bloco: &BlocoDigitado, biblioteca: &[(String, String)
         "galeria" | "logos" => "Um código de imagem por linha. Os códigos estão logo abaixo",
         "faixa" => "Um botão por linha: Texto do botão | Endereço. No máximo dois",
         "formulario" => {
-            "Um campo por linha: Rótulo | tipo | obrigatório. O tipo é texto, email, telefone ou mensagem; deixe o terceiro em branco se o campo for opcional. Até oito campos"
+            "Um campo por linha: Rótulo | tipo | obrigatório. O tipo é texto, email, telefone, mensagem ou escolha (com as alternativas: escolha: A; B; C); deixe o terceiro em branco se o campo for opcional. Até oito campos"
         }
         "contato" => {
             "Um canal por linha, com o nome na frente: telefone: …, whatsapp: …, email: …, endereco: …, horario: …"
