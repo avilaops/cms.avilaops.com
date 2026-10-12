@@ -493,7 +493,7 @@ fn esquema_do_conteudo() -> Value {
                             "titulo": { "type": "string" },
                             "descricao": { "type": "string" },
                             "indexar": { "type": "boolean" },
-                            "imagemSocial": referencia("A imagem de compartilhamento."),
+                            "imagemSocial": referencia("A imagem que aparece quando o endereço é compartilhado: o id da biblioteca. Sem ela, vale a capa."),
                         },
                     },
                     "trilha": {
@@ -1129,6 +1129,14 @@ impl Chamada<'_> {
         }
         if let Some(capa) = dados.get_mut("capa") {
             self.imagem(site_id, capa).await?;
+        }
+        // A imagem de compartilhamento também pode vir só pelo id.
+        let social = dados
+            .get_mut("seo")
+            .and_then(Value::as_object_mut)
+            .and_then(|seo| seo.get_mut("imagemSocial"));
+        if let Some(social) = social {
+            self.imagem(site_id, social).await?;
         }
         let blocos = dados.get_mut("corpo").and_then(Value::as_array_mut);
         for bloco in blocos.into_iter().flatten() {
