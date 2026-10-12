@@ -265,7 +265,13 @@ pub struct PaginaDoBlog {
     pub titulo: String,
     /// Só na página de quem escreveu.
     pub autor: Option<CaixaDoAutor>,
+    /// Os posts desta página da lista.
     pub cartoes: Vec<Cartao>,
+    pub pagina: usize,
+    pub paginas: usize,
+    /// Os endereços das páginas vizinhas, quando existem.
+    pub anterior: Option<String>,
+    pub proxima: Option<String>,
 }
 
 #[derive(Template)]

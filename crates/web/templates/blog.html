@@ -17,4 +17,15 @@
 <p>{{ cartao.resumo }}</p>
 </article>
 {%- endfor %}
+{%- if paginas > 1 %}
+<nav class="paginas" aria-label="Páginas da lista">
+{%- if let Some(anterior) = anterior %}
+<a href="{{ anterior }}" rel="prev">← Mais recentes</a>
+{%- endif %}
+<span>Página {{ pagina }} de {{ paginas }}</span>
+{%- if let Some(proxima) = proxima %}
+<a href="{{ proxima }}" rel="next">Mais antigos →</a>
+{%- endif %}
+</nav>
+{%- endif %}
 {% endblock %}

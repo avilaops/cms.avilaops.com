@@ -205,7 +205,7 @@ async fn responder(
                 midia::servir(&configuracao.diretorio_de_midia, pedido.gravado.id, arquivo).await
             }
             None => match Recorte::do_caminho(caminho) {
-                Some(recorte) => listagem(estado, &pedido, recorte).await,
+                Some((recorte, pagina)) => listagem(estado, &pedido, recorte, pagina).await,
                 None => documento(estado, &pedido, caminho).await,
             },
         },
@@ -466,8 +466,28 @@ enum Recorte<'a> {
     Autor(&'a str),
 }
 
+/// Quantos posts cabem em uma página de listagem.
+const POSTS_POR_PAGINA: usize = 24;
+
 impl<'a> Recorte<'a> {
-    fn do_caminho(caminho: &'a str) -> Option<Self> {
+    /// A listagem e a página dela. A primeira página é o endereço sem
+    /// `/pagina/N`; `/pagina/1` não existe, para não haver dois endereços
+    /// para a mesma lista.
+    fn do_caminho(caminho: &'a str) -> Option<(Self, usize)> {
+        match caminho.rsplit_once("/pagina/") {
+            Some((base, numero)) => {
+                let pagina = numero.parse::<usize>().ok().filter(|pagina| *pagina >= 2)?;
+                // Só o número, sem zero à esquerda nem sinal.
+                (numero == pagina.to_string())
+                    .then(|| Self::da_primeira_pagina(base))
+                    .flatten()
+                    .map(|recorte| (recorte, pagina))
+            }
+            None => Self::da_primeira_pagina(caminho).map(|recorte| (recorte, 1)),
+        }
+    }
+
+    fn da_primeira_pagina(caminho: &'a str) -> Option<Self> {
         if caminho == CAMINHO_DO_BLOG {
             return Some(Self::Blog);
         }
@@ -495,6 +515,7 @@ async fn listagem(
     estado: &Estado,
     pedido: &Pedido,
     recorte: Recorte<'_>,
+    pagina: usize,
 ) -> Result<Response, ErroWeb> {
     let documentos = cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
     let posts: Vec<_> = posts_em_ordem(&documentos)
@@ -508,6 +529,10 @@ async fn listagem(
     ) else {
         return nao_encontrado(estado, pedido).await;
     };
+    let paginas = posts.len().div_ceil(POSTS_POR_PAGINA);
+    if pagina > paginas {
+        return nao_encontrado(estado, pedido).await;
+    }
 
     let site = &pedido.site.nome;
     let blog = ItemTrilha {
@@ -540,17 +565,29 @@ async fn listagem(
             Some(CaixaDoAutor::nova(&recente.autor)),
         ),
     };
+    // Cada página da lista tem o próprio endereço, título e descrição.
+    let da_pagina = |numero: usize| match numero {
+        1 => caminho.clone(),
+        _ => format!("{caminho}/pagina/{numero}"),
+    };
+    let (titulo_da_pagina, descricao) = match pagina {
+        1 => (titulo.to_string(), descricao),
+        _ => (
+            format!("{titulo}, página {pagina}"),
+            format!("{descricao} Página {pagina} de {paginas}."),
+        ),
+    };
     let documento = pagina_avulsa(
         pedido,
-        &caminho,
-        titulo,
+        &da_pagina(pagina),
+        &titulo_da_pagina,
         descricao,
         true,
         (primeiro, ultimo),
         acima,
     );
     let moldura = moldura(estado, pedido, &documento).await?;
-    let pagina = PaginaDoBlog {
+    let visao = PaginaDoBlog {
         moldura,
         // O blog é a raiz da própria trilha: só as páginas abaixo dele mostram.
         trilha: if caminho == CAMINHO_DO_BLOG {
@@ -559,13 +596,21 @@ async fn listagem(
             documento.trilha().to_vec()
         },
         titulo: titulo.to_string(),
-        autor,
+        // Quem escreveu aparece só na primeira página.
+        autor: autor.filter(|_| pagina == 1),
         cartoes: posts
             .iter()
+            .skip((pagina - 1) * POSTS_POR_PAGINA)
+            .take(POSTS_POR_PAGINA)
             .map(|(caminho, post)| Cartao::do_post(caminho, post))
             .collect(),
+        pagina,
+        paginas,
+        anterior: (pagina > 1).then(|| da_pagina(pagina - 1)),
+        proxima: (pagina < paginas).then(|| da_pagina(pagina + 1)),
     }
     .render()?;
+    let pagina = visao;
     Ok(html(StatusCode::OK, pagina, pedido.indexavel))
 }
 
@@ -800,5 +845,42 @@ async fn agradecer(
             Ok(Some(avisar(estado, pedido, aviso).await?))
         }
         None => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[test]
+    fn listagem_e_pagina_saem_do_caminho() {
+        assert!(matches!(
+            Recorte::do_caminho("/blog"),
+            Some((Recorte::Blog, 1))
+        ));
+        assert!(matches!(
+            Recorte::do_caminho("/blog/pagina/3"),
+            Some((Recorte::Blog, 3))
+        ));
+        assert!(matches!(
+            Recorte::do_caminho("/blog/categoria/vendas/pagina/12"),
+            Some((Recorte::Categoria("vendas"), 12))
+        ));
+        assert!(matches!(
+            Recorte::do_caminho("/autor/helena-prado"),
+            Some((Recorte::Autor("helena-prado"), 1))
+        ));
+        // A primeira página não tem endereço próprio, e o número vem limpo.
+        for recusado in [
+            "/blog/pagina/1",
+            "/blog/pagina/0",
+            "/blog/pagina/03",
+            "/blog/pagina/+3",
+            "/blog/pagina/",
+            "/servicos/pagina/2",
+            "/blog/categoria/pagina/2",
+        ] {
+            assert!(Recorte::do_caminho(recusado).is_none(), "{recusado}");
+        }
     }
 }

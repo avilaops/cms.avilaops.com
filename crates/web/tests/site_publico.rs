@@ -343,6 +343,20 @@ async fn blog_lista_os_posts_do_mais_novo_para_o_mais_antigo(pool: PgPool) {
     let resposta = pedir(&pool, &host("oficina"), "/blog").await;
 
     assert_eq!(resposta.status, StatusCode::OK);
+    // Com poucos posts a lista tem uma página só, sem navegação nem endereço extra.
+    assert!(!resposta.corpo.contains(r#"class="paginas""#));
+    for caminho in [
+        "/blog/pagina/1",
+        "/blog/pagina/2",
+        "/blog/pagina/02",
+        "/blog/pagina/x",
+    ] {
+        assert_eq!(
+            pedir(&pool, &host("oficina"), caminho).await.status,
+            StatusCode::NOT_FOUND,
+            "{caminho}"
+        );
+    }
     assert_eq!(
         resposta
             .corpo
