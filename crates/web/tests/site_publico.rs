@@ -586,3 +586,53 @@ async fn categoria_e_autor_tem_pagina_com_os_posts_deles(pool: PgPool) {
     assert_eq!(com_barra.status, StatusCode::PERMANENT_REDIRECT);
     assert_eq!(com_barra.cabecalho("location"), "/autor/helena-prado");
 }
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn produto_de_catalogo_entra_no_sitemap_e_no_texto_para_assistentes(pool: PgPool) {
+    let site_id = semear(&pool, "oficina", Situacao::Ativo, true).await;
+    cms_dados::publicar(&pool, site_id, &demonstracao::item_de_exemplo(), Utc::now())
+        .await
+        .expect("produto publicado");
+    let h = host("oficina");
+
+    let indice = pedir(&pool, &h, "/sitemap.xml").await;
+    assert!(indice.corpo.contains("sitemap-produtos.xml"));
+    let produtos = pedir(&pool, &h, "/sitemap-produtos.xml").await;
+    assert!(
+        produtos
+            .corpo
+            .contains(&format!("https://{h}/produtos/bancada-de-marceneiro"))
+    );
+    // A listagem do catálogo entra junto com as outras listagens.
+    let listagens = pedir(&pool, &h, "/sitemap-categorias.xml").await;
+    assert!(
+        listagens
+            .corpo
+            .contains(&format!("<loc>https://{h}/produtos</loc>"))
+    );
+
+    let completo = pedir(&pool, &h, "/llms-full.txt").await;
+    assert!(completo.corpo.contains("## Bancada de marceneiro"));
+    assert!(completo.corpo.contains("- Peso: 74 kg"));
+
+    // A página do produto carrega o visualizador; a listagem, não.
+    let pagina = pedir(&pool, &h, "/produtos/bancada-de-marceneiro").await;
+    assert_eq!(pagina.status, StatusCode::OK, "{}", pagina.corpo);
+    assert!(
+        pagina
+            .corpo
+            .contains(r#"<modelo-3d src="/midia/modelos/m1.glb""#)
+    );
+    assert!(
+        pagina
+            .cabecalho("content-security-policy")
+            .contains("script-src 'self';")
+    );
+    let catalogo = pedir(&pool, &h, "/produtos?madeira=tauari").await;
+    assert!(catalogo.corpo.contains("1 produto"));
+    assert!(
+        catalogo
+            .cabecalho("content-security-policy")
+            .contains("script-src 'none';")
+    );
+}
