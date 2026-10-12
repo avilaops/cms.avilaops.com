@@ -11,11 +11,11 @@ use axum::http::header::{
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use cms_dados::fluxo::{self, ErroDeFluxo};
 use cms_dados::{
     Autorizacao, Conexao, DadosDoAutor, DescricaoDaMidia, ESCOPO_DE_PUBLICAR, ESCOPOS,
-    ErroDeCatalogo, ErroDeConector, ErroDeMidia, Tokens,
+    ErroDeCatalogo, ErroDeConector, ErroDeDominio, ErroDeMidia, ErroDeRedirecionamento, Tokens,
 };
 use cms_dominio::modelos::{MODELOS, conteudo_do_modelo};
 use cms_dominio::{Ator, Conta};
@@ -477,9 +477,13 @@ const IDENTIDADE: &[(&str, &str)] = &[
         "corDeDestaque",
         "A cor da marca, como #225cf2: pinta links, botões e destaques. Precisa ser escura o bastante para ler sobre branco. Vazio volta à cor do tema.",
     ),
+    (
+        "menu",
+        "A ordem das páginas no menu do site: um caminho por linha, como /servicos e /blog. O que não estiver na lista vem depois. Vazio volta à ordem de endereço.",
+    ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 21] = [
+const FERRAMENTAS: [Ferramenta; 26] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -580,7 +584,10 @@ const FERRAMENTAS: [Ferramenta; 21] = [
         descricao: "Põe o rascunho no ar. Exige papel de editor ou dono no site.",
         argumentos: &[SITE, DOCUMENTO],
         com_conteudo: false,
-        opcionais: &[],
+        opcionais: &[(
+            "data",
+            "Só para a equipe da Ávila Ops, ao trazer conteúdo de outro site: a data original de publicação, em ISO 8601 (2026-09-01T12:00:00Z), no passado. Sem ela, vale a data de agora.",
+        )],
     },
     Ferramenta {
         nome: "despublicar",
@@ -646,6 +653,62 @@ const FERRAMENTAS: [Ferramenta; 21] = [
             LICENCA,
             AQUISICAO,
         ],
+    },
+    Ferramenta {
+        nome: "listar_redirecionamentos",
+        escopo: "sites:ler",
+        descricao: "Lista os redirecionamentos do site: de qual endereço antigo para qual destino.",
+        argumentos: &[SITE],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "salvar_redirecionamento",
+        escopo: "sites:editar",
+        descricao: "Cria um redirecionamento permanente (301) de um endereço antigo do site para outro lugar, ou troca o destino do que já existe. Página que está no ar naquele endereço continua valendo: o redirecionamento só age onde não há página. Exige papel de dono.",
+        argumentos: &[
+            SITE,
+            (
+                "de",
+                "O caminho antigo, como /guias/o-que-e-erp. Terminado em /*, como /guias/*, vale para tudo o que começa com esse trecho.",
+            ),
+            (
+                "para",
+                "O destino: um caminho do site, como /blog/o-que-e-erp, ou um endereço https:// de outro site. Com /* no fim, como /blog/*, recebe o resto do caminho antigo.",
+            ),
+        ],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "remover_redirecionamento",
+        escopo: "sites:editar",
+        descricao: "Remove um redirecionamento do site. Exige papel de dono.",
+        argumentos: &[
+            SITE,
+            (
+                "de",
+                "O caminho de origem, como em listar_redirecionamentos.",
+            ),
+        ],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "ver_dominio",
+        escopo: "sites:ler",
+        descricao: "Mostra o endereço provisório do site, os domínios próprios pedidos (ativos ou esperando o DNS) e o registro de DNS a criar.",
+        argumentos: &[SITE],
+        com_conteudo: false,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "pedir_dominio",
+        escopo: "sites:editar",
+        descricao: "Registra o domínio próprio do site, como padaria.com.br. Ele vira o endereço do site sozinho, em até dez minutos, depois que o DNS apontar para o servidor (veja ver_dominio); até lá nada muda. Exige papel de dono e a página inicial publicada.",
+        argumentos: &[SITE, ("dominio", "Só o domínio, sem http e sem barra.")],
+        com_conteudo: false,
+        opcionais: &[],
     },
     Ferramenta {
         nome: "listar_autores",
@@ -927,6 +990,66 @@ fn identidade_em_json(dados: &mut DadosDaIdentidade) -> Value {
         .into()
 }
 
+fn do_redirecionamento(erro: ErroDeRedirecionamento) -> Recusa {
+    match erro {
+        ErroDeRedirecionamento::Dados(erro) => Recusa::Interna(erro.into()),
+        outro => recusa(outro.to_string()),
+    }
+}
+
+/// O endereço provisório, os domínios pedidos e o que criar no DNS.
+async fn dominio_em_json(estado: &Estado, site: &cms_dados::SiteGravado) -> Result<Value, Recusa> {
+    let configuracao = &estado.configuracao;
+    let dominios: Vec<Value> = cms_dados::dominios_do_site(&estado.pool, site.id)
+        .await?
+        .into_iter()
+        .map(|dominio| {
+            json!({
+                "dominio": dominio.host,
+                "situacao": if dominio.ativo { "ativo" } else { "esperando o DNS" },
+            })
+        })
+        .collect();
+    let dns = match configuracao.ips_do_servidor.first() {
+        Some(ip) => format!("Crie um registro A do domínio apontando para {ip}."),
+        None => "Peça à Ávila Ops o endereço para onde apontar o domínio.".to_string(),
+    };
+    Ok(json!({
+        "provisorio": format!("{}.{}", site.slug, configuracao.dominio_base),
+        "dominios": dominios,
+        "dns": dns,
+    }))
+}
+
+/// A data com que o documento vai ao ar. Só a equipe informa outra que não a
+/// de agora, e só no passado: é para trazer conteúdo que já existia.
+fn data_de_publicacao(chamada: &Chamada<'_>) -> Result<DateTime<Utc>, Recusa> {
+    let agora = Utc::now();
+    let Some(digitada) = chamada
+        .opcional("data")
+        .map(str::trim)
+        .filter(|data| !data.is_empty())
+    else {
+        return Ok(agora);
+    };
+    if !chamada.conexao.conta.equipe {
+        return Err(recusa(
+            "Só a equipe da Ávila Ops publica com data informada. Publique sem o argumento \"data\".",
+        ));
+    }
+    let data = DateTime::parse_from_rfc3339(digitada)
+        .map_err(|_| {
+            recusa("O argumento \"data\" não é uma data ISO 8601, como 2026-09-01T12:00:00Z.")
+        })?
+        .with_timezone(&Utc);
+    if data > agora {
+        return Err(recusa(
+            "A data informada está no futuro. Para publicar depois, use o agendamento.",
+        ));
+    }
+    Ok(data)
+}
+
 fn do_catalogo(erro: ErroDeCatalogo) -> Recusa {
     match erro {
         ErroDeCatalogo::Dados(erro) => Recusa::Interna(erro.into()),
@@ -1010,6 +1133,51 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             }),
             None,
         )),
+        "listar_redirecionamentos" => {
+            let regras: Vec<Value> = cms_dados::redirecionamentos_do_site(pool, site.id)
+                .await?
+                .into_iter()
+                .map(|regra| json!({ "de": regra.de, "para": regra.para }))
+                .collect();
+            Ok(do_site(json!({ "redirecionamentos": regras }), None))
+        }
+        "salvar_redirecionamento" => {
+            let regra = cms_dados::salvar_redirecionamento(
+                pool,
+                site.id,
+                &ator,
+                chamada.texto("de")?,
+                chamada.texto("para")?,
+            )
+            .await
+            .map_err(do_redirecionamento)?;
+            Ok(do_site(json!({ "de": regra.de, "para": regra.para }), None))
+        }
+        "remover_redirecionamento" => {
+            cms_dados::remover_redirecionamento(pool, site.id, &ator, chamada.texto("de")?)
+                .await
+                .map_err(do_redirecionamento)?;
+            Ok(do_site(json!({ "removido": true }), None))
+        }
+        "ver_dominio" => Ok(do_site(dominio_em_json(chamada.estado, &site).await?, None)),
+        "pedir_dominio" => {
+            let configuracao = &chamada.estado.configuracao;
+            let mut reservados = vec![configuracao.dominio_base.as_str()];
+            reservados.extend(configuracao.host_do_painel.as_deref());
+            match cms_dados::pedir_dominio(
+                pool,
+                site.id,
+                &ator,
+                chamada.texto("dominio")?,
+                &reservados,
+            )
+            .await
+            {
+                Ok(_) => Ok(do_site(dominio_em_json(chamada.estado, &site).await?, None)),
+                Err(ErroDeDominio::Dados(erro)) => Err(Recusa::Interna(erro.into())),
+                Err(erro) => Err(recusa(erro.to_string())),
+            }
+        }
         "editar_identidade" => {
             let mut dados = DadosDaIdentidade::do_perfil(&site.perfil);
             for (nome, _) in IDENTIDADE {
@@ -1228,7 +1396,8 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     json!({ "situacao": "em revisão" })
                 }
                 "publicar" => {
-                    fluxo::publicar(pool, site.id, &ator, id, Utc::now())
+                    let quando = data_de_publicacao(chamada)?;
+                    fluxo::publicar(pool, site.id, &ator, id, quando)
                         .await
                         .map_err(do_fluxo)?;
                     chamada.estado.cache.invalidar_site(site.id);

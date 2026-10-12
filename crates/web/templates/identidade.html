@@ -39,6 +39,8 @@
 </fieldset>
 <label for="cor">Cor da marca, como #225cf2 (em branco usa a cor do tema)</label>
 <input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
+<label for="menu">Ordem do menu: um endereço por linha, como /servicos (em branco fica em ordem de endereço)</label>
+<textarea id="menu" name="menu">{{ d.menu }}</textarea>
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
 <textarea id="diretrizes" name="diretrizes">{{ d.diretrizes }}</textarea>
 <button type="submit">Salvar identidade</button>

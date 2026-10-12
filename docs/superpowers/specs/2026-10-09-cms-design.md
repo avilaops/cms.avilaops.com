@@ -284,12 +284,23 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 | `listar_autores`, `listar_categorias` | `conteudo:ler` |
 | `listar_modelos`, `ver_modelo` | `conteudo:ler` |
 | `salvar_autor`, `salvar_categoria` | `conteudo:escrever` |
+| `listar_redirecionamentos`, `ver_dominio` | `sites:ler` |
+| `salvar_redirecionamento`, `remover_redirecionamento`, `pedir_dominio` | `sites:editar` |
 | `editar_identidade` | `sites:editar` |
 
 - Em `criar_rascunho` e `editar_rascunho`, autor e categoria podem ir só com o
   slug do cadastro, e imagem (capa e bloco) só com o id da biblioteca: o CMS
   troca a referência pelo cadastro do site antes de validar.
 - `editar_identidade` muda só o que foi enviado e exige papel de dono.
+- Redirecionamento cadastrado: de um caminho antigo do site para outro caminho
+  ou para um endereço `https://` de outro site, sempre 301. `de` terminado em
+  `/*` vale para o prefixo, e `para` terminado em `/*` recebe o resto do
+  caminho. Só age onde não há página no ar; a página inicial e o site inteiro
+  não se redirecionam. É o que permite trazer um site que já existia.
+- `publicar` aceita `data` só da equipe da Ávila Ops, no passado: a data
+  original de conteúdo trazido de outro site.
+- A identidade guarda a ordem do menu (`menu`, um caminho por linha), e o
+  cabeçalho do site mostra a logo quando ela tem variante gerada.
 - Página de apresentação: a página aceita `abertura` (o topo, com o `<h1>`,
   texto, até dois botões e a capa ao lado) e o corpo aceita seções de página
   inteira: `cartoes`, `destaque`, `depoimentos`, `numeros`, `passos`, `planos`,

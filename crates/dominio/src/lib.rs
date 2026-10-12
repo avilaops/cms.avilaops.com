@@ -7,6 +7,7 @@ pub mod endereco;
 pub mod eventos;
 pub mod fluxo;
 pub mod modelos;
+pub mod redirecionamento;
 pub mod site;
 
 pub use conta::{Conta, LimitesDeCriacao};

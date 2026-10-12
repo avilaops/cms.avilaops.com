@@ -9,6 +9,7 @@ mod dominios;
 mod eventos;
 pub mod fluxo;
 mod midias;
+mod redirecionamentos;
 mod rotinas;
 mod sites;
 
@@ -46,6 +47,10 @@ pub use midias::{
     DescricaoDaMidia, ErroDeMidia, MidiaAProcessar, MidiaDoSite, NovaMidia, VarianteGravada,
     apagar_midia, atualizar_midia, concluir_midia, falhar_midia, hash_de_conteudo,
     hidratar_conteudo, midia_para_conteudo, midias_do_site, registrar_midia, reivindicar_midia,
+};
+pub use redirecionamentos::{
+    ErroDeRedirecionamento, Redirecionamento, redirecionamentos_do_site, remover_redirecionamento,
+    salvar_redirecionamento,
 };
 pub use rotinas::{Agendado, limpar_historico, reivindicar_rotina};
 pub use sites::{

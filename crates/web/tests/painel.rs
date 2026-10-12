@@ -1549,7 +1549,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        21
+        26
     );
 
     let (erro, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
@@ -1938,6 +1938,86 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
         .await;
     assert_eq!(site["identidade"]["nome"], "Padaria da Ana");
     assert_eq!(site["identidade"]["telefone"], "(11) 4000-0000");
+    // Redirecionamentos: o endereço antigo leva ao novo, por prefixo ou exato,
+    // dentro do site ou para outro endereço.
+    for (de, para) in [
+        ("/guias/*", "/blog/*"),
+        ("/login", "https://app.exemplo.example/login"),
+    ] {
+        let (erro, regra) = painel
+            .ferramenta(
+                &token,
+                "salvar_redirecionamento",
+                json!({ "site": "padaria", "de": de, "para": para }),
+            )
+            .await;
+        assert!(!erro, "{regra}");
+    }
+    for (caminho, destino) in [
+        ("/guias/pao-de-queijo", "/blog/pao-de-queijo"),
+        // Com barra no fim, um salto só até o destino.
+        ("/guias/pao-de-queijo/", "/blog/pao-de-queijo"),
+        ("/login", "https://app.exemplo.example/login"),
+    ] {
+        let resposta = pedir(&pool, &host("padaria"), caminho).await;
+        assert_eq!(resposta.status, StatusCode::MOVED_PERMANENTLY, "{caminho}");
+        assert_eq!(resposta.cabecalho("location"), destino, "{caminho}");
+    }
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "salvar_redirecionamento",
+            json!({ "site": "padaria", "de": "/*", "para": "/blog" }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.as_str().expect("frase").contains("site inteiro"));
+    let (_, regras) = painel
+        .ferramenta(
+            &token,
+            "listar_redirecionamentos",
+            json!({ "site": "padaria" }),
+        )
+        .await;
+    assert_eq!(
+        regras["redirecionamentos"].as_array().expect("lista").len(),
+        2
+    );
+    let (erro, _) = painel
+        .ferramenta(
+            &token,
+            "remover_redirecionamento",
+            json!({ "site": "padaria", "de": "/login" }),
+        )
+        .await;
+    assert!(!erro);
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/login").await.status,
+        StatusCode::NOT_FOUND
+    );
+
+    // Domínio próprio pelo conector: o estado, e o pedido com as regras da tela.
+    let (erro, dominio) = painel
+        .ferramenta(&token, "ver_dominio", json!({ "site": "padaria" }))
+        .await;
+    assert!(!erro, "{dominio}");
+    assert_eq!(dominio["dominios"], json!([]));
+    assert!(
+        dominio["provisorio"]
+            .as_str()
+            .expect("texto")
+            .starts_with("padaria.")
+    );
+    let (erro, sem_home) = painel
+        .ferramenta(
+            &token,
+            "pedir_dominio",
+            json!({ "site": "padaria", "dominio": "padariadaana.example" }),
+        )
+        .await;
+    assert!(erro, "{sem_home}");
+    assert!(sem_home.as_str().expect("frase").contains("página inicial"));
+
     // A cor da marca entra pela identidade, se der para ler.
     let (erro, clara) = painel
         .ferramenta(
@@ -2104,6 +2184,15 @@ async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgP
     assert!(faltas.contains(&"secao.imagem.falta"), "{faltas:?}");
     let (erro, _) = painel.ferramenta(&token, "publicar", alvo.clone()).await;
     assert!(erro);
+    // Data informada na publicação é só para a equipe trazer conteúdo antigo.
+    let mut com_data = alvo.clone();
+    com_data["data"] = json!("2026-09-01T12:00:00Z");
+    let (erro, recusa) = painel.ferramenta(&token, "publicar", com_data).await;
+    assert!(erro);
+    assert!(
+        recusa.as_str().expect("frase").contains("equipe"),
+        "{recusa}"
+    );
 
     // Com a imagem escolhida pelo id e a busca preenchida, publica.
     let base64 = base64::engine::general_purpose::STANDARD.encode(png(1400, 800, 90));

@@ -358,10 +358,12 @@ impl Formulario {
                 trilha: if self.slug.is_empty() {
                     Vec::new()
                 } else {
-                    let acima = ler_botoes(&self.acima).into_iter().map(|pagina| ItemTrilha {
-                        nome: pagina.rotulo,
-                        url: pagina.url,
-                    });
+                    let acima = ler_botoes(&self.acima)
+                        .into_iter()
+                        .map(|pagina| ItemTrilha {
+                            nome: pagina.rotulo,
+                            url: pagina.url,
+                        });
                     std::iter::once(inicio)
                         .chain(acima)
                         .chain([ItemTrilha {
@@ -1265,7 +1267,10 @@ mod testes {
         let caminho: Vec<&str> = pagina.trilha.iter().map(|item| item.url.as_str()).collect();
         assert_eq!(caminho, ["/", "/servicos", "/crm"]);
         // E volta igual para o formulário: salvar pelo painel não a desfaz.
-        assert_eq!(Formulario::do_conteudo(&conteudo).acima, "Serviços | /servicos");
+        assert_eq!(
+            Formulario::do_conteudo(&conteudo).acima,
+            "Serviços | /servicos"
+        );
         // Página sem nada na abertura não ganha uma vazia.
         let sem = Formulario::ler(pares(&[("n", "0")]));
         let Conteudo::Pagina(pagina) = sem.para_conteudo(&Resolvido::default(), Utc::now()) else {

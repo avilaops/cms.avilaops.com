@@ -22,6 +22,7 @@ use motor_web::validacao::normalizar_slug;
 use crate::Estado;
 use crate::midia;
 use crate::resposta::{ErroWeb, html, redirecionar, simples, texto};
+use crate::visao::logo_do_cabecalho;
 use crate::visao::{
     CaixaDoAutor, Cartao, Moldura, PaginaDeAviso, PaginaDeDocumento, PaginaDoBlog,
     caminho_da_categoria, caminho_do_autor,
@@ -327,6 +328,8 @@ async fn moldura(
     let mut moldura = Moldura::nova(&pedido.site, head, &itens, &documento.caminho);
     // Só entra na página a cor que passa na conferência: o que está gravado
     // pode ser de antes de a regra existir.
+    moldura.ordenar_menu(&pedido.gravado.perfil.menu);
+    moldura.logo = logo_do_cabecalho(&pedido.site);
     moldura.cor_de_destaque = pedido
         .gravado
         .perfil
@@ -339,10 +342,20 @@ async fn moldura(
 async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Response, ErroWeb> {
     // Um endereço só por página: a barra final redireciona para o sem barra.
     if caminho.len() > 1 && caminho.ends_with('/') {
-        return Ok(redirecionar(
-            StatusCode::PERMANENT_REDIRECT,
-            caminho.trim_end_matches('/'),
-        ));
+        let sem_barra = caminho.trim_end_matches('/');
+        // Endereço antigo com barra que tem regra de redirecionamento vai
+        // direto ao destino, em um salto só.
+        let sem_pagina = cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, sem_barra)
+            .await?
+            .is_none();
+        if sem_pagina {
+            if let Ausencia::Redirecionado(destino) =
+                cms_dados::ausencia(&estado.pool, pedido.gravado.id, caminho).await?
+            {
+                return Ok(redirecionar(StatusCode::MOVED_PERMANENTLY, &destino));
+            }
+        }
+        return Ok(redirecionar(StatusCode::PERMANENT_REDIRECT, sem_barra));
     }
     let Some(mut documento) =
         cms_dados::documento_publicado(&estado.pool, pedido.gravado.id, caminho).await?

@@ -25,6 +25,10 @@ pub struct PerfilDoSite {
     /// ela, vale a cor do tema.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cor_de_destaque: Option<String>,
+    /// A ordem das páginas no menu, pelos caminhos (`/servicos`, `/blog`). O
+    /// que não está na lista vem depois, em ordem de endereço.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub menu: Vec<String>,
 }
 
 /// O contraste mínimo de texto normal contra o fundo, pela WCAG.
@@ -93,6 +97,7 @@ impl PerfilDoSite {
             diretrizes_ia: Vec::new(),
             orcamento_peso_kb: ORCAMENTO_DE_PESO_PADRAO_KB,
             cor_de_destaque: None,
+            menu: Vec::new(),
         }
     }
 
@@ -121,6 +126,7 @@ impl From<Site> for PerfilDoSite {
             diretrizes_ia: site.diretrizes_ia,
             orcamento_peso_kb: site.orcamento_peso_kb,
             cor_de_destaque: None,
+            menu: Vec::new(),
         }
     }
 }

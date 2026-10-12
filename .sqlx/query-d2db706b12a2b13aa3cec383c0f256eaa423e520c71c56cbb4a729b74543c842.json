@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select de, para from redirecionamento\n        where site_id = $1 and right(de, 2) = '/*'\n          and starts_with($2, left(de, length(de) - 1))\n        order by length(de) desc\n        limit 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "de",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "para",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d2db706b12a2b13aa3cec383c0f256eaa423e520c71c56cbb4a729b74543c842"
+}

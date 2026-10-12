@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into redirecionamento (site_id, de, para) values ($1, $2, $3)\n        on conflict (site_id, de) do update set para = excluded.para\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "58c3e376cbe1c3b6e944dcd0e2606c1e6645bfcb641aa00437fe10d663cfea25"
+}

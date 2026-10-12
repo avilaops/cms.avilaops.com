@@ -36,6 +36,8 @@ pub(crate) struct DadosDaIdentidade {
     diretrizes: String,
     /// A cor da marca, como `#225cf2`; vazio usa a cor do tema.
     cor: String,
+    /// A ordem das páginas no menu: um caminho por linha, como `/servicos`.
+    menu: String,
 }
 
 impl DadosDaIdentidade {
@@ -63,6 +65,7 @@ impl DadosDaIdentidade {
             perfis: organizacao.perfis.join("\n"),
             diretrizes: perfil.diretrizes_ia.join("\n"),
             cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
+            menu: perfil.menu.join("\n"),
         }
     }
 
@@ -82,6 +85,7 @@ impl DadosDaIdentidade {
             "perfis" => &mut self.perfis,
             "diretrizes" => &mut self.diretrizes,
             "corDeDestaque" => &mut self.cor,
+            "menu" => &mut self.menu,
             _ => return None,
         })
     }
@@ -209,6 +213,11 @@ pub(crate) async fn aplicar(
         },
         diretrizes_ia: linhas(&dados.diretrizes),
         cor_de_destaque,
+        // Só caminho do site entra na ordem do menu.
+        menu: linhas(&dados.menu)
+            .into_iter()
+            .filter(|caminho| caminho.starts_with('/'))
+            .collect(),
         ..site.perfil.clone()
     };
     if !cms_dados::atualizar_perfil(&estado.pool, site.id, ator, &perfil).await? {

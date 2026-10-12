@@ -112,14 +112,7 @@ pub async fn ausencia(
     site_id: Uuid,
     caminho: &str,
 ) -> Result<Ausencia, ErroDeDados> {
-    let destino = sqlx::query_scalar!(
-        "select para from redirecionamento where site_id = $1 and de = $2",
-        site_id,
-        caminho
-    )
-    .fetch_optional(pool)
-    .await?;
-    if let Some(destino) = destino {
+    if let Some(destino) = crate::redirecionamentos::destino_de(pool, site_id, caminho).await? {
         return Ok(Ausencia::Redirecionado(destino));
     }
     let despublicado = sqlx::query_scalar!(

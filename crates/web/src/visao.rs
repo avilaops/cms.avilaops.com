@@ -5,7 +5,7 @@ use askama::Template;
 use cms_dados::ItemDeNavegacao;
 use cms_dominio::datas;
 use motor_web::conteudo::renderizar_corpo;
-use motor_web::midia::{Papel, renderizar_midia};
+use motor_web::midia::{Papel, renderizar_midia, url_principal};
 use motor_web::secoes::{ESTILO_DAS_SECOES, renderizar_abertura};
 use motor_web::tipos::{Autor, Conteudo, Documento, ItemTrilha, Post, Site};
 
@@ -27,6 +27,43 @@ pub struct Moldura {
     pub estilo_das_secoes: &'static str,
     /// A cor da marca do site, já conferida. Sem ela, vale a do tema.
     pub cor_de_destaque: Option<String>,
+    /// A logo no cabeçalho, quando o site tem uma pronta.
+    pub logo: Option<Logo>,
+}
+
+/// A logo do site como o cabeçalho a mostra.
+pub struct Logo {
+    pub url: String,
+    pub largura: u32,
+    pub altura: u32,
+}
+
+/// A logo do site para o cabeçalho, se ela já tem variante gerada.
+pub fn logo_do_cabecalho(site: &Site) -> Option<Logo> {
+    let logo = &site.logo;
+    let url = url_principal(logo)?;
+    (logo.largura > 0 && logo.altura > 0).then(|| Logo {
+        url: url.to_string(),
+        largura: logo.largura,
+        altura: logo.altura,
+    })
+}
+
+impl Moldura {
+    /// Põe as páginas do menu na ordem que o site definiu. "Início" fica na
+    /// frente e o que não está na lista mantém a ordem em que chegou, depois.
+    pub fn ordenar_menu(&mut self, ordem: &[String]) {
+        let posicao = |link: &Link| {
+            if link.url == "/" {
+                return 0;
+            }
+            ordem
+                .iter()
+                .position(|caminho| caminho.trim_end_matches('/') == link.url)
+                .map_or(usize::MAX, |i| i + 1)
+        };
+        self.navegacao.sort_by_key(posicao);
+    }
 }
 
 impl Moldura {
@@ -82,6 +119,7 @@ impl Moldura {
             rodape,
             estilo_das_secoes: ESTILO_DAS_SECOES,
             cor_de_destaque: None,
+            logo: None,
         }
     }
 }
@@ -236,4 +274,53 @@ pub struct PaginaDeAviso {
     pub moldura: Moldura,
     pub titulo: String,
     pub mensagem: String,
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    fn link(url: &str) -> Link {
+        Link {
+            rotulo: url.to_string(),
+            url: url.to_string(),
+            atual: false,
+        }
+    }
+
+    #[test]
+    fn menu_segue_a_ordem_do_site_e_o_resto_vem_depois() {
+        let mut moldura = Moldura {
+            idioma: String::new(),
+            head: String::new(),
+            nome_do_site: String::new(),
+            navegacao: [
+                "/",
+                "/comparativos",
+                "/contato",
+                "/segmentos",
+                "/servicos",
+                "/blog",
+            ]
+            .map(link)
+            .into(),
+            rodape: Vec::new(),
+            estilo_das_secoes: "",
+            cor_de_destaque: None,
+            logo: None,
+        };
+        moldura.ordenar_menu(&["/servicos/".to_string(), "/blog".to_string()]);
+        let ordem: Vec<&str> = moldura.navegacao.iter().map(|l| l.url.as_str()).collect();
+        assert_eq!(
+            ordem,
+            [
+                "/",
+                "/servicos",
+                "/blog",
+                "/comparativos",
+                "/contato",
+                "/segmentos"
+            ]
+        );
+    }
 }
