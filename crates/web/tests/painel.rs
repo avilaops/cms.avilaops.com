@@ -2582,7 +2582,6 @@ async fn visitante_envia_o_formulario_e_o_dono_le_a_mensagem(pool: PgPool) {
         .await;
     assert!(erro);
     assert!(recusa.as_str().expect("frase").contains("mensagens:ler"));
-    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }
 
 impl Painel {
