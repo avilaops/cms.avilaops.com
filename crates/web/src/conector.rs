@@ -1657,7 +1657,9 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                         .await
                         .map_err(do_fluxo)?;
                     json!({
-                        "caminho": aberto.caminho,
+                        // O rascunho que nunca foi ao ar ainda não tem caminho gravado:
+                        // vale o que ele terá.
+                        "caminho": cms_dominio::fluxo::caminho_de(&aberto.conteudo),
                         "situacao": aberto.situacao,
                         "titulo": titulo,
                         "naBusca": {
