@@ -46,9 +46,9 @@
 <div>
 <strong>{{ midia.alt }}</strong>
 <span class="etiquetas">{{ midia.dimensoes }} · {{ midia.situacao }} · {{ midia.uso }}</span>
-<code class="etiquetas">{{ midia.id }}</code>
 <details>
 <summary>Corrigir</summary>
+<p class="dica">Identificador para o conector: <code>{{ midia.id }}</code></p>
 <form method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}">
 <label class="marcar"><input type="checkbox" name="propria" value="1"> Autoria própria: preenche crédito, autor e aviso de direitos em nome de {{ dono }}</label>
 <label for="m{{ loop.index }}-alt">Descrição para quem não enxerga a imagem</label>

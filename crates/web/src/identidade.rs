@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 use crate::Estado;
 use crate::acesso::{Acesso, ao_site};
+use crate::painel::miniatura;
 use crate::resposta::{ErroWeb, html_privado, redirecionar, simples, texto};
 
 /// A identidade como é digitada, no formulário do painel e nos argumentos do
@@ -104,6 +105,95 @@ struct PaginaDeIdentidade {
     d: DadosDaIdentidade,
     /// Identificador, descrição e se é a logo atual.
     logos: Vec<(String, String, bool)>,
+    /// A logo de agora, para a pessoa ver qual é antes de trocar.
+    logo_atual: Option<String>,
+    /// As páginas que podem ir para o menu do topo, com a posição de cada uma.
+    paginas: Vec<PaginaDoMenu>,
+}
+
+/// Uma página na lista do menu do topo.
+struct PaginaDoMenu {
+    caminho: String,
+    nome: String,
+    /// A posição no menu, a partir de 1; vazia quando a página está no rodapé.
+    posicao: String,
+}
+
+/// As páginas publicadas que podem aparecer no menu, as do menu primeiro e na
+/// ordem dele. Os posts entram juntos, como "Blog".
+async fn paginas_do_menu(
+    estado: &Estado,
+    site: &SiteGravado,
+) -> Result<Vec<PaginaDoMenu>, ErroWeb> {
+    let itens = cms_dados::navegacao(&estado.pool, site.id).await?;
+    let mut paginas: Vec<(String, String)> = itens
+        .iter()
+        .filter(|item| !item.eh_post && item.caminho != "/")
+        .map(|item| (item.caminho.clone(), item.titulo.clone()))
+        .collect();
+    if itens.iter().any(|item| item.eh_post) {
+        paginas.push(("/blog".to_string(), "Blog".to_string()));
+    }
+    let posicao = |caminho: &str| {
+        site.perfil
+            .menu
+            .iter()
+            .position(|no_menu| no_menu.trim_end_matches('/') == caminho)
+    };
+    paginas.sort_by(|a, b| {
+        let chave = |pagina: &(String, String)| {
+            (
+                posicao(&pagina.0).unwrap_or(usize::MAX),
+                pagina.1.to_lowercase(),
+            )
+        };
+        chave(a).cmp(&chave(b))
+    });
+    Ok(paginas
+        .into_iter()
+        .map(|(caminho, nome)| PaginaDoMenu {
+            posicao: posicao(&caminho).map_or(String::new(), |i| (i + 1).to_string()),
+            caminho,
+            nome,
+        })
+        .collect())
+}
+
+/// O menu como a tela o manda: cada página com a posição digitada. Devolve os
+/// caminhos numerados, na ordem dos números; `None` se a tela não mandou
+/// página nenhuma (site sem página no ar), para o menu gravado não se perder.
+fn menu_da_tela(corpo: &[u8]) -> Option<String> {
+    let pares = serde_urlencoded::from_bytes::<Vec<(String, String)>>(corpo).unwrap_or_default();
+    // A tela manda uma `posicao` e uma `pagina` por linha, na mesma ordem.
+    let mut paginas: Vec<&str> = Vec::new();
+    let mut posicoes: Vec<&str> = Vec::new();
+    for (chave, valor) in &pares {
+        match chave.as_str() {
+            "pagina" => paginas.push(valor.trim()),
+            "posicao" => posicoes.push(valor.trim()),
+            _ => {}
+        }
+    }
+    if paginas.is_empty() {
+        return None;
+    }
+    let mut numeradas: Vec<(u32, usize, &str)> = paginas
+        .iter()
+        .zip(&posicoes)
+        .enumerate()
+        .filter(|(_, (caminho, _))| caminho.starts_with('/'))
+        .filter_map(|(ordem, (caminho, posicao))| {
+            let posicao = posicao.parse::<u32>().ok().filter(|posicao| *posicao > 0)?;
+            Some((posicao, ordem, *caminho))
+        })
+        .collect();
+    // Dois números iguais: vale a ordem em que estavam na tela.
+    numeradas.sort_unstable();
+    let caminhos: Vec<&str> = numeradas
+        .into_iter()
+        .map(|(_, _, caminho)| caminho)
+        .collect();
+    Some(caminhos.join("\n"))
 }
 
 async fn do_dono(estado: &Estado, conta: &Conta, slug: &str) -> Result<Acesso, ErroWeb> {
@@ -124,7 +214,10 @@ pub async fn abrir(
         Err(resposta) => return Ok(resposta),
     };
     let dados = DadosDaIdentidade::do_perfil(&site.perfil);
+    let paginas = paginas_do_menu(estado, &site).await?;
     let corpo = PaginaDeIdentidade {
+        logo_atual: miniatura(&site.perfil.logo, &site.slug),
+        paginas,
         site: site.perfil.nome,
         slug: site.slug,
         salvo: uri
@@ -252,6 +345,8 @@ pub async fn gravar(
         Err(resposta) => return Ok(resposta),
     };
     let mut dados = serde_urlencoded::from_bytes::<DadosDaIdentidade>(corpo).unwrap_or_default();
+    // Na tela o menu vem como posições; no conector, como lista de caminhos.
+    dados.menu = menu_da_tela(corpo).unwrap_or_else(|| site.perfil.menu.join("\n"));
     Ok(match aplicar(estado, &site, &ator, &mut dados).await? {
         Ok(()) => redirecionar(
             StatusCode::SEE_OTHER,
@@ -318,4 +413,25 @@ pub async fn historico(estado: &Estado, conta: &Conta, slug: &str) -> Result<Res
     }
     .render()?;
     Ok(html_privado(StatusCode::OK, corpo))
+}
+
+#[cfg(test)]
+mod testes {
+    use super::*;
+
+    #[test]
+    fn menu_da_tela_segue_os_numeros_e_ignora_pagina_sem_numero() {
+        let corpo = b"nome=Site&posicao=2&pagina=%2Fservicos&posicao=&pagina=%2Ffaq&posicao=1&pagina=%2Fblog&posicao=2&pagina=%2Fcontato";
+        assert_eq!(
+            menu_da_tela(corpo).as_deref(),
+            Some("/blog\n/servicos\n/contato")
+        );
+        // Sem número em nenhuma: menu vazio, e todas as páginas ficam no topo.
+        assert_eq!(
+            menu_da_tela(b"posicao=&pagina=%2Fservicos").as_deref(),
+            Some("")
+        );
+        // Site sem página no ar não manda linha: o menu gravado é mantido.
+        assert_eq!(menu_da_tela(b"nome=Site"), None);
+    }
 }

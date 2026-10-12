@@ -39,7 +39,7 @@ struct LinhaDeSite {
 
 /// A menor versão de uma imagem do site, servida pelo painel: a tela não
 /// carrega imagem de outro endereço.
-fn miniatura(midia: &Midia, slug: &str) -> Option<String> {
+pub(crate) fn miniatura(midia: &Midia, slug: &str) -> Option<String> {
     midia
         .variantes
         .iter()

@@ -12,6 +12,9 @@
 <label for="descricao">O que é o negócio, em uma ou duas frases</label>
 <textarea id="descricao" name="descricao" maxlength="400">{{ d.descricao }}</textarea>
 <label for="logo">Logo</label>
+{%- if let Some(logo_atual) = logo_atual %}
+<img class="logo-atual" src="{{ logo_atual }}" alt="Logo atual do site" width="72" height="72">
+{%- endif %}
 <select id="logo" name="logo">
 <option value="">Sem logo</option>
 {%- for opcao in logos %}
@@ -41,8 +44,17 @@
 <input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
 <label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567 (em branco, o site não carrega script nenhum)</label>
 <input id="tag" name="tag" maxlength="20" autocapitalize="characters" spellcheck="false" value="{{ d.tag }}">
-<label for="menu">Menu do topo: um endereço por linha, como /servicos. O que não estiver na lista vai para o rodapé (em branco, todas as páginas ficam no topo)</label>
-<textarea id="menu" name="menu">{{ d.menu }}</textarea>
+<fieldset>
+<legend>Menu do topo</legend>
+{%- if paginas.is_empty() %}
+<p class="dica">O site ainda não tem página no ar para pôr no menu.</p>
+{%- else %}
+<p class="dica">Dê um número às páginas que aparecem no topo, na ordem: 1, 2, 3. Página sem número vai para o rodapé. Sem nenhum número, todas ficam no topo.</p>
+{%- for pagina in paginas %}
+<label class="ordem"><input type="number" name="posicao" min="1" max="99" inputmode="numeric" value="{{ pagina.posicao }}" aria-label="Posição de {{ pagina.nome }} no menu"><input type="hidden" name="pagina" value="{{ pagina.caminho }}"><span>{{ pagina.nome }} <span class="etiquetas">{{ pagina.caminho }}</span></span></label>
+{%- endfor %}
+{%- endif %}
+</fieldset>
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
 <textarea id="diretrizes" name="diretrizes">{{ d.diretrizes }}</textarea>
 <button type="submit">Salvar identidade</button>

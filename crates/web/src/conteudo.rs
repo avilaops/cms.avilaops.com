@@ -719,10 +719,23 @@ pub async fn gravar(
 }
 
 struct AutorNaTela {
+    slug: String,
     nome: String,
     cargo: String,
     sem_foto: bool,
     sem_bio: bool,
+}
+
+/// O formulário de autor já preenchido, quando a pessoa tocou em um autor
+/// da lista para alterá-lo.
+#[derive(Default)]
+struct AutorNoFormulario {
+    nome: String,
+    cargo: String,
+    bio: String,
+    foto: String,
+    credenciais: String,
+    perfis: String,
 }
 
 #[derive(Template)]
@@ -733,6 +746,9 @@ struct PaginaDoCatalogo {
     erro: Option<String>,
     aviso: Option<String>,
     autores: Vec<AutorNaTela>,
+    /// O autor aberto para alterar; vazio para cadastrar um novo.
+    f: AutorNoFormulario,
+    alterando: bool,
     fotos: Vec<Opcao>,
     categorias: Vec<motor_web::tipos::Categoria>,
 }
@@ -748,24 +764,42 @@ pub async fn catalogo(
         Err(resposta) => return Ok(resposta),
     };
     let (erro, aviso) = recado(uri);
+    let autores = cms_dados::autores_do_site(&estado.pool, site.id).await?;
+    // `?autor=<slug>`: o formulário abre com os dados desse autor.
+    let pedido = serde_urlencoded::from_str::<Vec<(String, String)>>(uri.query().unwrap_or(""))
+        .unwrap_or_default()
+        .into_iter()
+        .find(|(chave, _)| chave == "autor")
+        .map(|(_, slug)| slug);
+    let aberto = pedido.and_then(|slug| autores.iter().find(|autor| autor.slug == slug));
+    let f = aberto.map_or_else(AutorNoFormulario::default, |autor| AutorNoFormulario {
+        nome: autor.nome.clone(),
+        cargo: autor.cargo.clone(),
+        bio: autor.bio.clone(),
+        foto: autor.foto_id.map(|id| id.to_string()).unwrap_or_default(),
+        credenciais: autor.credenciais.join("\n"),
+        perfis: autor.perfis.join("\n"),
+    });
     let corpo = PaginaDoCatalogo {
         erro,
         aviso,
-        autores: cms_dados::autores_do_site(&estado.pool, site.id)
-            .await?
-            .into_iter()
-            .map(|autor| AutorNaTela {
-                sem_foto: autor.foto_id.is_none(),
-                sem_bio: autor.bio.trim().is_empty(),
-                nome: autor.nome,
-                cargo: autor.cargo,
-            })
-            .collect(),
+        alterando: aberto.is_some(),
         fotos: cms_dados::midias_do_site(&estado.pool, site.id)
             .await?
             .iter()
             .filter(|midia| midia.situacao != "falhou")
-            .map(|midia| opcao(&midia.id.to_string(), &midia.alt, ""))
+            .map(|midia| opcao(&midia.id.to_string(), &midia.alt, &f.foto))
+            .collect(),
+        f,
+        autores: autores
+            .into_iter()
+            .map(|autor| AutorNaTela {
+                sem_foto: autor.foto_id.is_none(),
+                sem_bio: autor.bio.trim().is_empty(),
+                slug: autor.slug,
+                nome: autor.nome,
+                cargo: autor.cargo,
+            })
             .collect(),
         categorias: cms_dados::categorias_do_site(&estado.pool, site.id).await?,
         site: site.perfil.nome,

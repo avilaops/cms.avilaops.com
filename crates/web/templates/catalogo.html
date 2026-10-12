@@ -12,27 +12,31 @@
 <h2>Autores</h2>
 <ul>
 {%- for autor in autores %}
-<li><strong>{{ autor.nome }}</strong><span class="etiquetas">{{ autor.cargo }}{% if autor.sem_foto %} · sem foto{% endif %}{% if autor.sem_bio %} · sem apresentação{% endif %}</span></li>
+<li><a href="/painel/sites/{{ slug }}/catalogo?autor={{ autor.slug }}#autor"><strong>{{ autor.nome }}</strong></a><span class="etiquetas">{{ autor.cargo }}{% if autor.sem_foto %} · sem foto{% endif %}{% if autor.sem_bio %} · sem apresentação{% endif %} · toque no nome para alterar</span></li>
 {%- endfor %}
 </ul>
+<h3 id="autor">{% if alterando %}Alterar {{ f.nome }}{% else %}Novo autor{% endif %}</h3>
 <form method="post" action="/painel/sites/{{ slug }}/autores">
-<label for="nome">Nome (repita o nome de um autor para regravar)</label>
-<input id="nome" name="nome" required maxlength="80">
+<label for="nome">Nome</label>
+<input id="nome" name="nome" required maxlength="80" value="{{ f.nome }}">
+{%- if alterando %}
+<p class="dica">Mantenha o nome para alterar este autor; com outro nome, o CMS cadastra um autor novo. <a href="/painel/sites/{{ slug }}/catalogo#autor">Cadastrar outro em vez de alterar</a></p>
+{%- endif %}
 <label for="cargo">Cargo</label>
-<input id="cargo" name="cargo" maxlength="80">
+<input id="cargo" name="cargo" maxlength="80" value="{{ f.cargo }}">
 <label for="bio">Apresentação</label>
-<textarea id="bio" name="bio" maxlength="600"></textarea>
+<textarea id="bio" name="bio" maxlength="600">{{ f.bio }}</textarea>
 <label for="foto">Foto</label>
 <select id="foto" name="foto">
 <option value="">Sem foto</option>
 {%- for opcao in fotos %}
-<option value="{{ opcao.valor }}">{{ opcao.rotulo }}</option>
+<option value="{{ opcao.valor }}"{% if opcao.escolhida %} selected{% endif %}>{{ opcao.rotulo }}</option>
 {%- endfor %}
 </select>
 <label for="credenciais">Credenciais, uma por linha</label>
-<textarea id="credenciais" name="credenciais"></textarea>
+<textarea id="credenciais" name="credenciais">{{ f.credenciais }}</textarea>
 <label for="perfis">Perfis (endereços https), um por linha</label>
-<textarea id="perfis" name="perfis"></textarea>
+<textarea id="perfis" name="perfis">{{ f.perfis }}</textarea>
 <button type="submit">Salvar autor</button>
 </form>
 <h2>Categorias</h2>
