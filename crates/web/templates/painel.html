@@ -19,10 +19,14 @@
 <a href="{{ site.abrir }}"><strong>{{ site.nome }}</strong></a>
 <a href="{{ site.url }}">{{ site.endereco }}</a>
 <span class="etiquetas">{{ site.situacao }} · {{ site.papel }}</span>
-<a class="acao" href="{{ site.midia }}">Imagens</a>
+<nav class="atalhos" aria-label="Atalhos de {{ site.nome }}">
+<a href="{{ site.abrir }}">Conteúdo</a>
+<a href="{{ site.midia }}">Imagens</a>
 {%- if let Some(equipe) = site.equipe %}
-<a class="acao" href="{{ equipe }}">Equipe</a>
+<a href="{{ site.abrir }}/identidade">Identidade, logo e menu</a>
+<a href="{{ equipe }}">Equipe</a>
 {%- endif %}
+</nav>
 </li>
 {%- endfor %}
 </ul>
