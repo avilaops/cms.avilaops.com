@@ -23,6 +23,7 @@ use motor_web::tipos::{
 use motor_web::validacao::normalizar_slug;
 
 use crate::Estado;
+use crate::icone::{self, Icone};
 use crate::midia;
 use crate::resposta::{ErroWeb, html, redirecionar, simples, texto};
 use crate::visao::logo_do_cabecalho;
@@ -200,11 +201,20 @@ async fn responder(
         _ if caminho.starts_with("/sitemap") && caminho.ends_with(".xml") => {
             sitemap(estado, &pedido, caminho).await
         }
-        _ => match caminho.strip_prefix("/midia/") {
-            Some(arquivo) => {
+        _ => match (caminho.strip_prefix("/midia/"), Icone::do_caminho(caminho)) {
+            (Some(arquivo), _) => {
                 midia::servir(&configuracao.diretorio_de_midia, pedido.gravado.id, arquivo).await
             }
-            None => match Recorte::do_caminho(caminho) {
+            (None, Some(icone_pedido)) => {
+                icone::servir(
+                    &configuracao.diretorio_de_midia,
+                    pedido.gravado.id,
+                    &pedido.site.logo.id,
+                    icone_pedido,
+                )
+                .await
+            }
+            (None, None) => match Recorte::do_caminho(caminho) {
                 Some((recorte, pagina)) => listagem(estado, &pedido, recorte, pagina).await,
                 None => documento(estado, &pedido, caminho).await,
             },
@@ -351,6 +361,10 @@ async fn moldura(
     // pode ser de antes de a regra existir.
     moldura.ordenar_menu(&pedido.gravado.perfil.menu);
     moldura.logo = logo_do_cabecalho(&pedido.site);
+    // Com logo, o site tem ícone. A versão no endereço troca junto com a logo.
+    moldura.icone = uuid::Uuid::parse_str(&pedido.site.logo.id)
+        .ok()
+        .map(|id| id.simple().to_string()[..8].to_string());
     // A logo pode ter sido escolhida enquanto ainda era convertida: o que
     // ficou gravado não tem variante, e a biblioteca já tem.
     if moldura.logo.is_none() {

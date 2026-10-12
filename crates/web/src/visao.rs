@@ -29,6 +29,9 @@ pub struct Moldura {
     pub cor_de_destaque: Option<String>,
     /// A logo no cabeçalho, quando o site tem uma pronta.
     pub logo: Option<Logo>,
+    /// A versão do ícone do site, quando ele tem logo. Vai no endereço do
+    /// ícone, para o navegador buscar de novo quando a logo muda.
+    pub icone: Option<String>,
 }
 
 /// A logo do site como o cabeçalho a mostra.
@@ -120,6 +123,7 @@ impl Moldura {
             estilo_das_secoes: ESTILO_DAS_SECOES,
             cor_de_destaque: None,
             logo: None,
+            icone: None,
         }
     }
 }
@@ -314,6 +318,7 @@ mod testes {
             estilo_das_secoes: "",
             cor_de_destaque: None,
             logo: None,
+            icone: None,
         };
         moldura.ordenar_menu(&["/servicos/".to_string(), "/blog".to_string()]);
         let ordem: Vec<&str> = moldura.navegacao.iter().map(|l| l.url.as_str()).collect();

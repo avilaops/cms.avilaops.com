@@ -9,6 +9,7 @@ mod conteudo;
 mod dominio;
 mod editor;
 mod equipe;
+mod icone;
 mod identidade;
 mod lista;
 mod mensagens;

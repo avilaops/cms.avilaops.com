@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{#- Sem ícone próprio, o navegador não sai pedindo /favicon.ico para ganhar um 404. #}
+{%- if let Some(versao) = moldura.icone %}
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v={{ versao }}">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png?v={{ versao }}">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v={{ versao }}">
+{%- else %}
+{#- Sem logo não há ícone, e o navegador não sai pedindo /favicon.ico para ganhar um 404. #}
 <link rel="icon" href="data:,">
+{%- endif %}
 {{ moldura.head|safe }}
 <style>
 :root{--texto:#1c1917;--suave:#57534e;--linha:#e7e5e4;--fundo:#fff;--destaque:#9a3412;--largura:46rem}
