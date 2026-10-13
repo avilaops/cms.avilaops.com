@@ -42,6 +42,8 @@ nav.principal summary::after{content:"";display:inline-block;margin-left:.35em;b
 nav.principal summary.atual{color:var(--texto);font-weight:600}
 nav.principal summary:focus-visible{outline:3px solid var(--destaque);outline-offset:2px}
 nav.principal .grupo ul{display:block;padding:.25rem 0 .25rem .75rem}
+.abre-menu,.botao-menu{display:none}
+@media (max-width:39.99rem){header.topo .faixa{align-items:center;justify-content:space-between}.abre-menu{display:block;position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}.botao-menu{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem .75rem;border:1px solid var(--linha);border-radius:.375rem;color:var(--texto);font-weight:600;cursor:pointer;user-select:none}.botao-menu::before{content:"";width:1.1em;height:.75em;border-block:2px solid currentColor;background:linear-gradient(currentColor,currentColor) center/100% 2px no-repeat}.abre-menu:focus-visible+.botao-menu{outline:3px solid var(--destaque);outline-offset:2px}.abre-menu:checked+.botao-menu::before{height:0;border-bottom:0;background:none}nav.principal{display:none;flex-basis:100%}.abre-menu:checked~nav.principal{display:block}nav.principal ul{flex-direction:column;gap:0}}
 @media (min-width:40rem){nav.principal .grupo ul{position:absolute;z-index:2;left:-.75rem;top:100%;min-width:12rem;padding:.4rem .75rem;background:var(--fundo);border:1px solid var(--linha);border-radius:.375rem}}
 main{padding:2rem 0 3rem}
 h1{font-size:clamp(1.75rem,5vw,2.5rem);line-height:1.15;margin:.25rem 0 1rem;letter-spacing:-.01em}
@@ -131,6 +133,9 @@ footer.rodape .mais{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin-bottom
 {#- O nome do site segue escrito ao lado: a imagem vai sem descrição para o leitor de tela não ler duas vezes. #}
 {%- if let Some(logo) = moldura.logo %}<img src="{{ logo.url }}" alt="" width="{{ logo.largura }}" height="{{ logo.altura }}" decoding="async">{% endif -%}
 {{ moldura.nome_do_site }}</a>
+{#- Menu do celular sem JS (a CSP do site público barra script): a caixa abre e fecha o menu abaixo de 40rem; no computador as duas somem. #}
+<input type="checkbox" id="abre-menu" class="abre-menu" aria-label="Abrir o menu">
+<label for="abre-menu" class="botao-menu" aria-hidden="true">Menu</label>
 <nav class="principal" aria-label="Principal">
 <ul>
 {%- for link in moldura.navegacao %}

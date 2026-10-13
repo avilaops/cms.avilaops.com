@@ -111,6 +111,27 @@ async fn home_sai_com_cabecalho_e_dados_estruturados_do_motor(pool: PgPool) {
     );
     assert!(resposta.corpo.contains(r#"<a href="/blog">Blog</a>"#));
     assert!(!resposta.corpo.contains(&format!(r#"<li><a href="{POST}""#)));
+    // No celular o menu vira um botão que abre e fecha sem script: a caixa e
+    // o rótulo vêm antes do menu, que é irmão deles e responde ao `:checked`.
+    let caixa = resposta
+        .corpo
+        .find(r#"<input type="checkbox" id="abre-menu" class="abre-menu""#)
+        .expect("caixa do menu");
+    let botao = resposta
+        .corpo
+        .find(r#"<label for="abre-menu" class="botao-menu""#)
+        .expect("botão do menu");
+    let menu = resposta
+        .corpo
+        .find(r#"<nav class="principal""#)
+        .expect("menu");
+    assert!(caixa < botao && botao < menu);
+    assert!(
+        resposta
+            .corpo
+            .contains(".abre-menu:checked~nav.principal{display:block}")
+    );
+    assert!(resposta.corpo.contains("@media (max-width:39.99rem)"));
     // Rodapé com quem está por trás do site.
     assert!(resposta.corpo.contains("Oficina Exemplo Marcenaria Ltda."));
 }
