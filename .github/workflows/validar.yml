@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # O merge automático chama a validação da main à mão: merge feito com o token
+  # do workflow não gera o evento `push` (regra do GitHub).
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -60,7 +63,7 @@ jobs:
   # artefato e o carrega no servidor de aplicações.
   imagem:
     needs: validar
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
