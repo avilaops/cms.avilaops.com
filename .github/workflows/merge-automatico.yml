@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 # Um merge por vez: dois PRs abertos juntos não disputam a main.
 concurrency:
   group: merge-automatico
@@ -40,3 +41,10 @@ jobs:
             exit 0
           fi
           gh pr merge "$PR" --squash --delete-branch --match-head-commit "$SHA"
+          echo "MESCLADO=1" >> "$GITHUB_ENV"
+      # Merge feito com o token do próprio workflow não gera o evento `push`
+      # que validaria a main e construiria a imagem que o `publicar.sh` baixa.
+      # `workflow_dispatch` é a exceção, então a validação é chamada daqui.
+      - name: Validar a main
+        if: env.MESCLADO == '1'
+        run: gh workflow run validar.yml --ref "${{ github.event.repository.default_branch }}"
