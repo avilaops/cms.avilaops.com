@@ -18,6 +18,7 @@ use cms_dados::{
     ErroDeCatalogo, ErroDeConector, ErroDeDominio, ErroDeMidia, ErroDeRedirecionamento, Tokens,
 };
 use cms_dominio::modelos::{MODELOS, conteudo_do_modelo};
+use cms_dominio::site::aparece_na_busca;
 use cms_dominio::{Ator, Conta};
 use cms_integracoes::busca;
 use motor_web::conteudo::{contar_palavras, texto_do_corpo};
@@ -29,7 +30,7 @@ use uuid::Uuid;
 
 use crate::identidade::{self, DadosDaIdentidade};
 use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
-use crate::{Estado, biblioteca, mensagens, modelos};
+use crate::{Configuracao, Estado, biblioteca, mensagens, modelos};
 
 const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
 
@@ -489,7 +490,8 @@ fn esquema_do_conteudo() -> Value {
                     },
                     "slug": { "type": "string", "description": "O endereço, sem barra no começo. Vazio só na página inicial." },
                     "titulo": { "type": "string", "description": "Na página e no post, obrigatório." },
-                    "menu": { "type": "string", "description": "Só na página: o nome curto no menu do site, com até 24 letras." },
+                    "menu": { "type": "string", "description": "Só na página: o nome curto no menu e no rodapé do site, com até 24 letras. Sem ele, vale o título." },
+                    "destaque": { "type": "string", "description": "Só na página: a cor de destaque desta página, como #1d4ed8, no lugar da do site (links e botões). Precisa de contraste 4,5:1 com o branco." },
                     "abertura": {
                         "type": "object",
                         "description": "Só na página: o topo, com texto e até dois botões.",
@@ -514,6 +516,7 @@ fn esquema_do_conteudo() -> Value {
                             "descricao": { "type": "string" },
                             "indexar": { "type": "boolean" },
                             "imagemSocial": referencia("A imagem que aparece quando o endereço é compartilhado: o id da biblioteca. Sem ela, vale a capa."),
+                            "canonica": { "type": "string", "description": "O endereço oficial desta página quando ele mora em outro lugar, completo, com https://. A página sai do sitemap e os buscadores mostram o outro endereço. Vazio, a canônica é a própria página." },
                         },
                     },
                     "trilha": {
@@ -622,7 +625,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
     (
         "menu",
-        "A ordem das páginas no menu do site: um caminho por linha, como /servicos e /blog. Com a lista, só o que está nela aparece no menu do topo; as outras páginas vão para o rodapé. Vazio põe todas no topo, em ordem de endereço.",
+        "A ordem das páginas no menu do site: um caminho por linha, como /servicos e /blog. Uma linha com nome, dois-pontos e caminhos, como Produtos: /mail /crm /erp, vira um grupo com submenu (nome com até 24 letras). Com a lista, só o que está nela aparece no menu do topo; as outras páginas vão para o rodapé, com o nome curto (menu) de cada página. Vazio põe todas no topo, em ordem de endereço.",
     ),
 ];
 
@@ -630,7 +633,7 @@ const FERRAMENTAS: [Ferramenta; 36] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
-        descricao: "Lista os sites de que a conta participa, com o papel em cada um.",
+        descricao: "Lista os sites de que a conta participa, com o papel em cada um e o endereço em que cada site responde hoje.",
         argumentos: &[],
         entrada: Entrada::Nenhuma,
         opcionais: &[],
@@ -881,7 +884,7 @@ const FERRAMENTAS: [Ferramenta; 36] = [
     Ferramenta {
         nome: "editar_midia",
         escopo: "midia:escrever",
-        descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem. Imagem feita pela empresa do site: propria = sim. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
+        descricao: "Corrige a descrição, a legenda, o crédito e os direitos de uma imagem, e se o crédito aparece embaixo dela. Imagem feita pela empresa do site: propria = sim. Só o que for enviado muda. Onde a imagem já está no ar, a mudança entra na próxima publicação.",
         argumentos: &[SITE, ("id", "O id da imagem, como em listar_midia.")],
         entrada: Entrada::Nenhuma,
         opcionais: &[
@@ -896,6 +899,10 @@ const FERRAMENTAS: [Ferramenta; 36] = [
             LICENCA,
             AQUISICAO,
             PROPRIA,
+            (
+                "ocultar_credito",
+                "Escreva sim para a página não mostrar \"Foto: ...\" embaixo desta imagem, como numa logo ou num ícone; nao volta a mostrar. O crédito e os direitos continuam no dado estruturado.",
+            ),
         ],
     },
     Ferramenta {
@@ -917,12 +924,12 @@ const FERRAMENTAS: [Ferramenta; 36] = [
     Ferramenta {
         nome: "salvar_redirecionamento",
         escopo: "sites:editar",
-        descricao: "Cria um redirecionamento permanente (301) de um endereço antigo do site para outro lugar, ou troca o destino do que já existe. Página que está no ar naquele endereço continua valendo: o redirecionamento só age onde não há página. Exige papel de dono.",
+        descricao: "Cria um redirecionamento permanente (301) de um endereço antigo do site para outro lugar, ou troca o destino do que já existe. Página que está no ar naquele endereço continua valendo: o redirecionamento só age onde não há página. A exceção é o site inteiro: de /* para um endereço https:// de outro site, como https://novo.com.br/*, leva todo pedido ao endereço novo, com o caminho, antes de qualquer página; é como se aposenta um site. Exige papel de dono.",
         argumentos: &[
             SITE,
             (
                 "de",
-                "O caminho antigo, como /guias/o-que-e-erp. Terminado em /*, como /guias/*, vale para tudo o que começa com esse trecho.",
+                "O caminho antigo, como /guias/o-que-e-erp. Terminado em /*, como /guias/*, vale para tudo o que começa com esse trecho. Só /* é o site inteiro.",
             ),
             (
                 "para",
@@ -949,7 +956,7 @@ const FERRAMENTAS: [Ferramenta; 36] = [
     Ferramenta {
         nome: "ver_dominio",
         escopo: "sites:ler",
-        descricao: "Mostra o endereço provisório do site, os domínios próprios pedidos (ativos ou esperando o DNS) e o registro de DNS a criar.",
+        descricao: "Mostra o endereço em que o site responde hoje (endereco), se o provisório já é o definitivo, se o site aparece na busca, os domínios próprios pedidos (ativos ou esperando o DNS), o registro de DNS a criar e, se o site inteiro foi redirecionado, para onde.",
         argumentos: &[SITE],
         entrada: Entrada::Nenhuma,
         opcionais: &[],
@@ -1390,11 +1397,47 @@ async fn dominio_em_json(estado: &Estado, site: &cms_dados::SiteGravado) -> Resu
         Some(ip) => format!("Crie um registro A do domínio apontando para {ip}."),
         None => "Peça à Ávila Ops o endereço para onde apontar o domínio.".to_string(),
     };
-    Ok(json!({
+    let endereco = endereco_publico(configuracao, &site.slug, site.dominio_ativo.as_deref());
+    let situacao_do_endereco = match (&site.dominio_ativo, site.provisorio_definitivo) {
+        (Some(_), _) => "domínio próprio ativo: o endereço provisório redireciona para ele",
+        (None, true) => "o endereço provisório é o definitivo e aparece na busca",
+        (None, false) => {
+            "provisório: o site responde, mas fica fora da busca até ter domínio próprio ou o provisório virar definitivo"
+        }
+    };
+    let mut resposta = json!({
+        "endereco": endereco,
+        "situacao_do_endereco": situacao_do_endereco,
         "provisorio": format!("{}.{}", site.slug, configuracao.dominio_base),
+        "provisorio_definitivo": site.provisorio_definitivo,
+        "aparece_na_busca": aparece_na_busca(
+            site.situacao,
+            site.dominio_ativo.is_some(),
+            site.provisorio_definitivo,
+        ),
         "dominios": dominios,
         "dns": dns,
-    }))
+    });
+    if let Some(para) = &site.mudou_para {
+        resposta["redirecionado_para"] = json!(para);
+    }
+    Ok(resposta)
+}
+
+/// O endereço em que o site responde hoje: o domínio próprio ativo, ou o
+/// provisório.
+fn endereco_publico(
+    configuracao: &Configuracao,
+    slug: &str,
+    dominio_ativo: Option<&str>,
+) -> String {
+    match dominio_ativo {
+        Some(dominio) => format!("{}://{dominio}", configuracao.esquema),
+        None => format!(
+            "{}://{slug}.{}",
+            configuracao.esquema, configuracao.dominio_base
+        ),
+    }
 }
 
 /// A data com que o documento vai ao ar. Só a equipe informa outra que não a
@@ -1451,6 +1494,11 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     "nome": site.nome,
                     "situacao": site.situacao.como_texto(),
                     "papel": site.papel.como_texto(),
+                    "endereco": endereco_publico(
+                        &chamada.estado.configuracao,
+                        &site.slug,
+                        site.dominio_ativo.as_deref(),
+                    ),
                 })
             })
             .collect();
@@ -1545,12 +1593,15 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             )
             .await
             .map_err(do_redirecionamento)?;
+            // A regra do site inteiro vale antes das páginas guardadas.
+            chamada.estado.cache.invalidar_site(site.id);
             Ok(do_site(json!({ "de": regra.de, "para": regra.para }), None))
         }
         "remover_redirecionamento" => {
             cms_dados::remover_redirecionamento(pool, site.id, &ator, chamada.texto("de")?)
                 .await
                 .map_err(do_redirecionamento)?;
+            chamada.estado.cache.invalidar_site(site.id);
             Ok(do_site(json!({ "removido": true }), None))
         }
         "ver_dominio" => Ok(do_site(dominio_em_json(chamada.estado, &site).await?, None)),
@@ -1650,6 +1701,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                         "aviso": midia.aviso,
                         "licenca": midia.licenca,
                         "aquisicao": midia.aquisicao,
+                        "ocultar_credito": midia.ocultar_credito,
                     })
                 })
                 .collect();
@@ -1799,11 +1851,16 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     },
                 )
             };
+            let ocultar_credito = match chamada.opcional("ocultar_credito") {
+                Some(_) => chamada.sim("ocultar_credito"),
+                None => atual.ocultar_credito,
+            };
             let descricao = DescricaoDaMidia {
                 alt: novo("alt", Some(atual.alt)).unwrap_or_default(),
                 legenda: novo("legenda", atual.legenda),
                 credito,
                 direitos,
+                ocultar_credito,
             };
             match cms_dados::atualizar_midia(pool, site.id, &ator, id, &descricao).await {
                 Ok(()) => Ok(do_site(json!({ "id": id }), None)),

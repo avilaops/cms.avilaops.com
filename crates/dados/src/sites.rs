@@ -16,6 +16,8 @@ pub struct SiteGravado {
     pub perfil: PerfilDoSite,
     /// O domínio próprio em uso, se houver.
     pub dominio_ativo: Option<String>,
+    /// O destino do redirecionamento do site inteiro (`/*`), se houver.
+    pub mudou_para: Option<String>,
 }
 
 fn montar(
@@ -25,6 +27,7 @@ fn montar(
     provisorio_definitivo: bool,
     perfil: Json<PerfilDoSite>,
     dominio_ativo: Option<String>,
+    mudou_para: Option<String>,
 ) -> Result<SiteGravado, ErroDeDados> {
     let situacao = Situacao::try_from(situacao.as_str())
         .map_err(|erro| ErroDeDados::DadoInvalido(erro.to_string()))?;
@@ -35,6 +38,7 @@ fn montar(
         provisorio_definitivo,
         perfil: perfil.0,
         dominio_ativo,
+        mudou_para,
     })
 }
 
@@ -44,7 +48,8 @@ pub async fn site_por_slug(pool: &PgPool, slug: &str) -> Result<Option<SiteGrava
         r#"
         select s.id, s.slug, s.situacao, s.provisorio_definitivo,
                s.perfil as "perfil: Json<PerfilDoSite>",
-               (select d.host from dominio d where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo
+               (select d.host from dominio d where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo,
+               (select r.para from redirecionamento r where r.site_id = s.id and r.de = '/*') as mudou_para
         from site s
         where s.slug = $1
         "#,
@@ -61,6 +66,7 @@ pub async fn site_por_slug(pool: &PgPool, slug: &str) -> Result<Option<SiteGrava
                 l.provisorio_definitivo,
                 l.perfil,
                 l.dominio_ativo,
+                l.mudou_para,
             )
         })
         .transpose()
@@ -75,7 +81,8 @@ pub async fn site_por_dominio(
         r#"
         select s.id, s.slug, s.situacao, s.provisorio_definitivo,
                s.perfil as "perfil: Json<PerfilDoSite>",
-               d.host as dominio_ativo
+               d.host as dominio_ativo,
+               (select r.para from redirecionamento r where r.site_id = s.id and r.de = '/*') as mudou_para
         from dominio d
         join site s on s.id = d.site_id
         where d.host = $1 and d.situacao = 'ativo'
@@ -93,6 +100,7 @@ pub async fn site_por_dominio(
                 l.provisorio_definitivo,
                 l.perfil,
                 Some(l.dominio_ativo),
+                l.mudou_para,
             )
         })
         .transpose()

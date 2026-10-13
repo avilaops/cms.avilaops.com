@@ -356,13 +356,21 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
 - Redirecionamento cadastrado: de um caminho antigo do site para outro caminho
   ou para um endereço `https://` de outro site, sempre 301. `de` terminado em
   `/*` vale para o prefixo, e `para` terminado em `/*` recebe o resto do
-  caminho. Só age onde não há página no ar; a página inicial e o site inteiro
-  não se redirecionam. É o que permite trazer um site que já existia.
+  caminho. Só age onde não há página no ar; a página inicial sozinha não se
+  redireciona. É o que permite trazer um site que já existia. A exceção é o
+  site inteiro: `de` = `/*` para um endereço `https://` de outro site (como
+  `https://novo.com.br/*`) leva todo pedido, com caminho e consulta, antes de
+  qualquer página, `robots.txt` e sitemap incluídos. É como se aposenta um
+  site. A regra vem junto com o site no mesmo `select`, e salvar ou remover
+  redirecionamento derruba o cache do site.
 - `publicar` aceita `data` só da equipe da Ávila Ops, no passado: a data
   original de conteúdo trazido de outro site.
 - A identidade guarda o menu do topo (`menu`, um caminho por linha, na
-  ordem). Com a lista definida, só o que está nela aparece no topo e as
-  outras páginas vão para o rodapé; sem lista, todas ficam no topo. O
+  ordem). Uma linha `Nome: /a /b` é um grupo: o nome no topo e as páginas num
+  submenu (`<details>`, sem JavaScript). Com a lista definida, só o que está
+  nela aparece no topo e as outras páginas vão para o rodapé, com o nome curto
+  (`menu`) de cada uma; sem lista, todas ficam no topo. No painel, o grupo
+  aparece como uma linha e é mantido ao salvar. O
   cabeçalho do site mostra a logo quando ela tem variante gerada, e o ícone
   do site (favicon) sai da logo.
 - Página de apresentação: a página aceita `abertura` (o topo, com o `<h1>`,
@@ -383,6 +391,12 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   cabe no contexto dele.
 - A identidade aceita `corDeDestaque`, a cor da marca. Ela pinta links, botões
   e destaques do site e só entra se tiver contraste de 4,5 contra o branco.
+  A página pode ter a dela (`destaque`, no conteúdo e no editor), com a mesma
+  regra, que vem do motor.
+- `listar_sites` e `ver_dominio` dizem o endereço em que o site responde hoje
+  (`endereco`: o domínio próprio ativo ou o provisório). `ver_dominio` diz
+  também se o provisório já é o definitivo, se o site aparece na busca e, se
+  o site inteiro foi redirecionado, para onde.
 - Cada pedido de assistente em `/mcp`, `/oauth/token` e `/oauth/register` vai
   ao log com caminho, resposta, se veio com token, agente e método do MCP;
   nunca o token, os argumentos ou o resultado.
@@ -391,6 +405,9 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   de cada página, de onde a busca de imagens tira o crédito e o selo de imagem
   licenciável. Sem crédito escrito, o crédito é o nome do site. Correção em
   imagem que já está no ar entra na próxima publicação de cada conteúdo.
+  `ocultar_credito` (a caixa "Não mostrar o crédito" no painel) tira o
+  "Foto: ..." de baixo da imagem na página, para logo e ícone; o crédito
+  segue no `ImageObject`.
 - Cada site responde em `/licenca-de-imagens` com os termos de uso das imagens
   e como pedir autorização. O texto é o `licencaDeImagens` da identidade; sem
   ele, vale o padrão (todos os direitos reservados em nome da razão social, ou

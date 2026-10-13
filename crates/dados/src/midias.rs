@@ -167,6 +167,7 @@ pub struct MidiaDoSite {
     pub aviso: Option<String>,
     pub licenca: Option<String>,
     pub aquisicao: Option<String>,
+    pub ocultar_credito: bool,
 }
 
 /// A biblioteca do site, da imagem mais nova para a mais antiga.
@@ -180,7 +181,7 @@ pub async fn midias_do_site(pool: &PgPool, site_id: Uuid) -> Result<Vec<MidiaDoS
                 order by v.largura limit 1) as miniatura,
                (select count(*) from uso_de_midia u where u.midia_id = m.id) as "usos!",
                m.legenda, m.credito, m.autoria, m.aviso_de_direitos as aviso, m.licenca,
-               m.aquisicao_de_licenca as aquisicao
+               m.aquisicao_de_licenca as aquisicao, m.ocultar_credito
         from midia m
         where m.site_id = $1
         order by m.criado_em desc, m.id
@@ -233,7 +234,7 @@ pub async fn midia_para_conteudo(
     let Some(linha) = sqlx::query!(
         r#"
         select largura, altura, alt, legenda, credito, autoria, aviso_de_direitos, licenca,
-               aquisicao_de_licenca
+               aquisicao_de_licenca, ocultar_credito
         from midia where id = $1 and site_id = $2
         "#,
         midia_id,
@@ -252,6 +253,7 @@ pub async fn midia_para_conteudo(
         variantes: variantes_de(&mut conexao, midia_id).await?,
         legenda: linha.legenda,
         credito: linha.credito,
+        ocultar_credito: linha.ocultar_credito,
         direitos: Direitos {
             autoria: linha.autoria,
             aviso: linha.aviso_de_direitos,
@@ -268,6 +270,8 @@ pub struct DescricaoDaMidia {
     pub legenda: Option<String>,
     pub credito: Option<String>,
     pub direitos: Direitos,
+    /// Não escrever o crédito embaixo da imagem na página.
+    pub ocultar_credito: bool,
 }
 
 /// Regrava a descrição, o crédito e os direitos de uma imagem. Quem pode é
@@ -301,7 +305,7 @@ pub async fn atualizar_midia(
         r#"
         update midia
         set alt = $2, legenda = $3, credito = $4, autoria = $5, aviso_de_direitos = $6,
-            licenca = $7, aquisicao_de_licenca = $8
+            licenca = $7, aquisicao_de_licenca = $8, ocultar_credito = $9
         where id = $1
         "#,
         midia_id,
@@ -311,7 +315,8 @@ pub async fn atualizar_midia(
         direitos.autoria,
         direitos.aviso,
         direitos.licenca,
-        direitos.aquisicao
+        direitos.aquisicao,
+        descricao.ocultar_credito
     )
     .execute(&mut *transacao)
     .await?;

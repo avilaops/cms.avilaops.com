@@ -45,6 +45,8 @@
 {%- if !f.eh_post && !f.eh_item %}
 <label for="menu">Nome no menu (em branco usa o título)</label>
 <input id="menu" name="menu" maxlength="24" value="{{ f.menu }}">
+<label for="destaque">Cor dos links e botões desta página, como #1d4ed8 (em branco usa a do site)</label>
+<input id="destaque" name="destaque" maxlength="7" autocapitalize="none" spellcheck="false" value="{{ f.destaque }}">
 <label for="acima">Fica abaixo de qual página? Nome | endereço (em branco entra no menu)</label>
 <input id="acima" name="acima" maxlength="200" autocapitalize="none" value="{{ f.acima }}">
 {%- endif %}
@@ -200,6 +202,8 @@
 <label for="seo_descricao">Descrição de busca (até 155 caracteres)</label>
 <textarea id="seo_descricao" name="seo_descricao" maxlength="300">{{ f.seo_descricao }}</textarea>
 <label class="marcar"><input type="checkbox" name="indexar" value="1"{% if f.indexar %} checked{% endif %}> Aparecer nos buscadores</label>
+<label for="canonica">Endereço oficial, se esta página tem outro (https://, em branco é ela mesma)</label>
+<input id="canonica" name="canonica" maxlength="300" inputmode="url" autocapitalize="none" value="{{ f.canonica }}">
 </fieldset>
 <button name="acao" value="salvar">Salvar rascunho</button>
 {%- if pode_revisar %}

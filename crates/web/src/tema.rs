@@ -59,7 +59,7 @@ const INDUSTRIAL: &str = r#"
 body{font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 h1,h2,h3,h4,.marca{font-family:"Oswald","Barlow",system-ui,sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
 header.topo{border-bottom:3px solid var(--texto)}
-nav.principal a{font-size:.875rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+nav.principal a,nav.principal summary{font-size:.875rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
 img,iframe,modelo-3d,.chamada,.chamada a,.botao{border-radius:.125rem}
 .botao,.chamada a{text-transform:uppercase;letter-spacing:.05em}
 .filtros a{border-radius:.125rem}
@@ -72,7 +72,7 @@ const EDITORIAL: &str = r#"
 body{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:1.125rem}
 h1,h2,h3,h4,.marca{font-family:"IBM Plex Serif",Georgia,serif;font-weight:700;letter-spacing:0}
 h3,h4,blockquote{font-family:"IBM Plex Serif",Georgia,serif;font-weight:500}
-nav.principal a,figcaption,.datas,.trilha,.filtros,.ficha,.produto-codigo{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+nav.principal a,nav.principal summary,figcaption,.datas,.trilha,.filtros,.ficha,.produto-codigo{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 img,iframe,modelo-3d,.chamada{border-radius:.25rem}
 "#;
 

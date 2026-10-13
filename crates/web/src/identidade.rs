@@ -10,7 +10,7 @@ use cms_dominio::eventos::origem_do_site;
 use cms_dominio::site::{
     CAMINHO_DA_LICENCA_DE_IMAGENS, Tema, conferir_cor, conferir_tag_do_google,
 };
-use cms_dominio::{Ator, Conta, PerfilDoSite, datas};
+use cms_dominio::{Ator, Conta, EntradaDoMenu, PerfilDoSite, datas, ler_entrada_do_menu};
 use motor_web::tipos::{Endereco, Organizacao};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -142,14 +142,36 @@ async fn paginas_do_menu(
     site: &SiteGravado,
 ) -> Result<Vec<PaginaDoMenu>, ErroWeb> {
     let itens = cms_dados::navegacao(&estado.pool, site.id).await?;
+    // Os grupos (submenus) aparecem como uma linha só, com as páginas deles.
+    let grupos: Vec<(String, String, Vec<&str>)> = site
+        .perfil
+        .menu
+        .iter()
+        .filter_map(|linha| match ler_entrada_do_menu(linha)? {
+            EntradaDoMenu::Grupo { rotulo, caminhos } => {
+                Some((linha.clone(), format!("Grupo {rotulo}"), caminhos))
+            }
+            EntradaDoMenu::Pagina(_) => None,
+        })
+        .collect();
+    let no_grupo = |caminho: &str| {
+        grupos
+            .iter()
+            .any(|(_, _, caminhos)| caminhos.iter().any(|c| c.trim_end_matches('/') == caminho))
+    };
     let mut paginas: Vec<(String, String)> = itens
         .iter()
-        .filter(|item| !item.eh_post && item.caminho != "/")
+        .filter(|item| !item.eh_post && item.caminho != "/" && !no_grupo(&item.caminho))
         .map(|item| (item.caminho.clone(), item.titulo.clone()))
         .collect();
-    if itens.iter().any(|item| item.eh_post) {
+    if itens.iter().any(|item| item.eh_post) && !no_grupo("/blog") {
         paginas.push(("/blog".to_string(), "Blog".to_string()));
     }
+    paginas.extend(
+        grupos
+            .iter()
+            .map(|(linha, nome, _)| (linha.clone(), nome.clone())),
+    );
     let posicao = |caminho: &str| {
         site.perfil
             .menu
@@ -197,7 +219,7 @@ fn menu_da_tela(corpo: &[u8]) -> Option<String> {
         .iter()
         .zip(&posicoes)
         .enumerate()
-        .filter(|(_, (caminho, _))| caminho.starts_with('/'))
+        .filter(|(_, (linha, _))| ler_entrada_do_menu(linha).is_some())
         .filter_map(|(ordem, (caminho, posicao))| {
             let posicao = posicao.parse::<u32>().ok().filter(|posicao| *posicao > 0)?;
             Some((posicao, ordem, *caminho))
@@ -360,10 +382,10 @@ pub(crate) async fn aplicar(
         tema,
         tag_do_google,
         licenca_de_imagens: opcional(&dados.licenca),
-        // Só caminho do site entra na ordem do menu.
+        // Só caminho do site ou grupo de caminhos entra na ordem do menu.
         menu: linhas(&dados.menu)
-            .into_iter()
-            .filter(|caminho| caminho.starts_with('/'))
+            .iter()
+            .filter_map(|linha| ler_entrada_do_menu(linha).map(|entrada| entrada.como_linha()))
             .collect(),
         ..site.perfil.clone()
     };

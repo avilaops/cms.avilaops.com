@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select m.id, m.nome, m.alt, m.largura, m.altura, m.situacao,\n               (select v.arquivo from variante v\n                where v.midia_id = m.id and v.formato = 'webp'\n                order by v.largura limit 1) as miniatura,\n               (select count(*) from uso_de_midia u where u.midia_id = m.id) as \"usos!\",\n               m.legenda, m.credito, m.autoria, m.aviso_de_direitos as aviso, m.licenca,\n               m.aquisicao_de_licenca as aquisicao\n        from midia m\n        where m.site_id = $1\n        order by m.criado_em desc, m.id\n        ",
+  "query": "\n        select m.id, m.nome, m.alt, m.largura, m.altura, m.situacao,\n               (select v.arquivo from variante v\n                where v.midia_id = m.id and v.formato = 'webp'\n                order by v.largura limit 1) as miniatura,\n               (select count(*) from uso_de_midia u where u.midia_id = m.id) as \"usos!\",\n               m.legenda, m.credito, m.autoria, m.aviso_de_direitos as aviso, m.licenca,\n               m.aquisicao_de_licenca as aquisicao, m.ocultar_credito\n        from midia m\n        where m.site_id = $1\n        order by m.criado_em desc, m.id\n        ",
   "describe": {
     "columns": [
       {
@@ -72,6 +72,11 @@
         "ordinal": 13,
         "name": "aquisicao",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "ocultar_credito",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -93,8 +98,9 @@
       true,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
-  "hash": "46cf85871ad26ff0c1af9ba1059adf242739774f0e030a0dd72420709f262451"
+  "hash": "f0fb5b2fd2c0999de03145cf821ba10ffe4d92d052f5840f4a2daea4a88b5d9f"
 }

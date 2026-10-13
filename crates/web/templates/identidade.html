@@ -58,7 +58,7 @@
 {%- if paginas.is_empty() %}
 <p class="dica">O site ainda não tem página no ar para pôr no menu.</p>
 {%- else %}
-<p class="dica">Dê um número às páginas que aparecem no topo, na ordem: 1, 2, 3. Página sem número vai para o rodapé. Sem nenhum número, todas ficam no topo.</p>
+<p class="dica">Dê um número às páginas que aparecem no topo, na ordem: 1, 2, 3. Página sem número vai para o rodapé. Sem nenhum número, todas ficam no topo. Um grupo com submenu, como Produtos: /mail /crm, entra pelo conector e aparece aqui como uma linha.</p>
 {%- for pagina in paginas %}
 <label class="ordem"><input type="number" name="posicao" min="1" max="99" inputmode="numeric" value="{{ pagina.posicao }}" aria-label="Posição de {{ pagina.nome }} no menu"><input type="hidden" name="pagina" value="{{ pagina.caminho }}"><span>{{ pagina.nome }} <span class="etiquetas">{{ pagina.caminho }}</span></span></label>
 {%- endfor %}

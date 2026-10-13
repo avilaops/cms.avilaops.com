@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as \"nome!\", s.situacao,\n               coalesce(p.papel, 'dono') as \"papel!\"\n        from site s\n        left join participacao p on p.site_id = s.id and p.conta = $1\n        where p.conta is not null or $2\n        order by 3, s.slug\n        ",
+  "query": "\n        select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as \"nome!\", s.situacao,\n               coalesce(p.papel, 'dono') as \"papel!\",\n               (select d.host from dominio d where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo\n        from site s\n        left join participacao p on p.site_id = s.id and p.conta = $1\n        where p.conta is not null or $2\n        order by 3, s.slug\n        ",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,11 @@
         "ordinal": 4,
         "name": "papel!",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "dominio_ativo",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -40,8 +45,9 @@
       false,
       null,
       false,
+      null,
       null
     ]
   },
-  "hash": "fea32cd0cfb69bf2136425160c10358d6d1c269d8bd6d338bc6846c7a3f280db"
+  "hash": "745377a72e98651018b90e72f42f5a1f1c2646cdac1f1cee46cdc066864744ce"
 }

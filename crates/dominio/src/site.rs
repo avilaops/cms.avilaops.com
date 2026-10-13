@@ -102,8 +102,9 @@ pub struct PerfilDoSite {
     #[serde(default, skip_serializing_if = "Tema::eh_o_padrao")]
     pub tema: Tema,
     /// As páginas do menu do topo, na ordem, pelos caminhos (`/servicos`,
-    /// `/blog`). O que não está na lista vai para o rodapé. Vazia, todas as
-    /// páginas ficam no topo, em ordem de endereço.
+    /// `/blog`), ou um grupo com submenu (`Produtos: /mail /crm`, veja
+    /// [`ler_entrada_do_menu`]). O que não está na lista vai para o rodapé.
+    /// Vazia, todas as páginas ficam no topo, em ordem de endereço.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub menu: Vec<String>,
     /// A tag do Google do site, como `GTM-ABC1234` ou `G-ABC1234567`. Com
@@ -140,48 +141,57 @@ pub fn conferir_tag_do_google(tag: &str) -> Result<String, TagRecusada> {
     if valido { Ok(tag) } else { Err(TagRecusada) }
 }
 
-/// O contraste mínimo de texto normal contra o fundo, pela WCAG.
-const CONTRASTE_MINIMO: f64 = 4.5;
+/// A cor de destaque segue a regra do motor: a mesma vale para a cor de
+/// uma página.
+pub use motor_web::cor::{CorRecusada, conferir_cor};
 
-/// Por que uma cor de destaque não serve.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-pub enum CorRecusada {
-    #[error("Escreva a cor como #225cf2: cerquilha e seis dígitos de 0 a 9 ou de a até f.")]
-    Formato,
-    #[error(
-        "Esta cor é clara demais: o texto dos links e dos botões ficaria difícil de ler. Escolha um tom mais escuro."
-    )]
-    Clara,
+/// O nome de um grupo do menu tem o tamanho do nome curto de uma página.
+const ROTULO_DO_GRUPO_MAXIMO: usize = 24;
+
+/// Uma linha da lista do menu.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EntradaDoMenu<'a> {
+    /// Uma página, pelo caminho.
+    Pagina(&'a str),
+    /// Um grupo: o nome no menu e as páginas que abrem embaixo dele.
+    Grupo {
+        rotulo: &'a str,
+        caminhos: Vec<&'a str>,
+    },
 }
 
-/// A luminância relativa de uma cor, de 0 (preto) a 1 (branco).
-fn luminancia(cor: [u8; 3]) -> f64 {
-    let canal = |valor: u8| {
-        let v = f64::from(valor) / 255.0;
-        if v <= 0.03928 {
-            v / 12.92
-        } else {
-            ((v + 0.055) / 1.055).powf(2.4)
-        }
+/// Lê uma linha da lista do menu: um caminho (`/servicos`) ou um grupo, com
+/// o nome, dois-pontos e os caminhos separados por espaço ou vírgula
+/// (`Produtos: /mail, /crm`). `None` se não é nenhum dos dois.
+pub fn ler_entrada_do_menu(linha: &str) -> Option<EntradaDoMenu<'_>> {
+    let linha = linha.trim();
+    let caminho_valido = |caminho: &str| {
+        caminho.starts_with('/') && !caminho.starts_with("//") && !caminho.contains(':')
     };
-    0.2126 * canal(cor[0]) + 0.7152 * canal(cor[1]) + 0.0722 * canal(cor[2])
+    if linha.starts_with('/') {
+        return caminho_valido(linha).then_some(EntradaDoMenu::Pagina(linha));
+    }
+    let (rotulo, resto) = linha.split_once(':')?;
+    let rotulo = rotulo.trim();
+    let caminhos: Vec<&str> = resto
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter(|caminho| !caminho.is_empty())
+        .collect();
+    let valido = !rotulo.is_empty()
+        && rotulo.chars().count() <= ROTULO_DO_GRUPO_MAXIMO
+        && !caminhos.is_empty()
+        && caminhos.iter().all(|caminho| caminho_valido(caminho));
+    valido.then_some(EntradaDoMenu::Grupo { rotulo, caminhos })
 }
 
-/// Confere a cor de destaque e a devolve em minúsculas. A cor é usada como
-/// texto sobre fundo branco (links) e como fundo de texto branco (botões):
-/// nos dois casos o contraste é o dela contra o branco.
-pub fn conferir_cor(cor: &str) -> Result<String, CorRecusada> {
-    let cor = cor.trim().to_ascii_lowercase();
-    let digitos = cor.strip_prefix('#').ok_or(CorRecusada::Formato)?;
-    if digitos.len() != 6 || !digitos.chars().all(|c| c.is_ascii_hexdigit()) {
-        return Err(CorRecusada::Formato);
+impl EntradaDoMenu<'_> {
+    /// A linha como vai gravada: o caminho, ou `Nome: /a /b`.
+    pub fn como_linha(&self) -> String {
+        match self {
+            Self::Pagina(caminho) => (*caminho).to_string(),
+            Self::Grupo { rotulo, caminhos } => format!("{rotulo}: {}", caminhos.join(" ")),
+        }
     }
-    let canal = |i: usize| u8::from_str_radix(&digitos[i..i + 2], 16).unwrap_or(0);
-    let contraste = 1.05 / (luminancia([canal(0), canal(2), canal(4)]) + 0.05);
-    if contraste < CONTRASTE_MINIMO {
-        return Err(CorRecusada::Clara);
-    }
-    Ok(cor)
 }
 
 /// O texto de um campo opcional, se tiver algo escrito.
@@ -208,6 +218,7 @@ impl PerfilDoSite {
                 variantes: Vec::new(),
                 legenda: None,
                 credito: None,
+                ocultar_credito: false,
                 direitos: Direitos::default(),
             },
             organizacao: Organizacao::default(),
@@ -416,15 +427,31 @@ mod testes {
     }
 
     #[test]
-    fn cor_de_destaque_precisa_ser_legivel() {
-        assert_eq!(conferir_cor(" #225CF2 "), Ok("#225cf2".to_string()));
-        assert_eq!(conferir_cor("#9a3412"), Ok("#9a3412".to_string()));
-        for torta in ["225cf2", "#225cf", "#225cfg", "azul", ""] {
-            assert_eq!(conferir_cor(torta), Err(CorRecusada::Formato), "{torta}");
-        }
-        // Amarelo e azul claro não seguram texto branco nem leem sobre branco.
-        for clara in ["#f4c544", "#7fb2ff", "#ffffff"] {
-            assert_eq!(conferir_cor(clara), Err(CorRecusada::Clara), "{clara}");
+    fn menu_le_pagina_e_grupo() {
+        assert_eq!(
+            ler_entrada_do_menu(" /servicos "),
+            Some(EntradaDoMenu::Pagina("/servicos"))
+        );
+        let grupo = ler_entrada_do_menu("Produtos: /mail, /crm  /erp").expect("grupo");
+        assert_eq!(
+            grupo,
+            EntradaDoMenu::Grupo {
+                rotulo: "Produtos",
+                caminhos: vec!["/mail", "/crm", "/erp"]
+            }
+        );
+        assert_eq!(grupo.como_linha(), "Produtos: /mail /crm /erp");
+        for ruim in [
+            "",
+            "servicos",
+            "Produtos:",
+            ": /mail",
+            "Produtos: mail",
+            "Produtos: /mail https://x.example",
+            "//outro.example",
+            "Um nome de grupo comprido demais: /a",
+        ] {
+            assert_eq!(ler_entrada_do_menu(ruim), None, "{ruim}");
         }
     }
 
