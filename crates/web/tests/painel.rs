@@ -3935,6 +3935,27 @@ async fn site_de_produtos_tem_cor_por_pagina_submenu_canonica_e_mailto(pool: PgP
     assert!(rodape.contains(">Fale com a gente</a>"));
     assert!(!rodape.contains("/mail"));
 
+    // Pela tela: o grupo aparece como linha editável e dá para criar outro.
+    const IDENTIDADE: &str = "/painel/sites/padaria/identidade";
+    let tela = painel.abrir(Some("ana"), IDENTIDADE).await;
+    assert!(tela.corpo.contains(r#"value="Produtos: /mail /crm""#));
+    let dados = formulario(&[
+        ("nome", "Padaria da Ana"),
+        ("posicao", "2"),
+        ("pagina", "/contato"),
+        ("posicao", ""),
+        ("pagina", "Produtos: /mail /crm"),
+        ("posicao", "1"),
+        ("pagina", "Apps: /crm, /mail"),
+    ]);
+    let salvo = painel.postar("ana", IDENTIDADE, &dados).await;
+    assert!(salvo.cabecalho("location").ends_with("/identidade?r=salvo"));
+    let home = pedir(&pool, &host("padaria"), "/").await;
+    assert!(home.corpo.contains("<summary>Apps</summary>"));
+    assert!(!home.corpo.contains("<summary>Produtos</summary>"));
+    let topo = home.corpo.split("<footer").next().expect("topo");
+    assert!(topo.find("Apps").expect("grupo") < topo.find(">Fale com a gente<").expect("contato"));
+
     // A canônica para fora vale na página (o sitemap é do motor, e o site
     // provisório nem publica um); a cor do site volta nas outras páginas.
     let mail = pedir(&pool, &host("padaria"), "/mail").await;

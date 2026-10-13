@@ -370,7 +370,7 @@ registro dinâmico e PKCE S256. Não há lista de assistentes aceitos.
   submenu (`<details>`, sem JavaScript). Com a lista definida, só o que está
   nela aparece no topo e as outras páginas vão para o rodapé, com o nome curto
   (`menu`) de cada uma; sem lista, todas ficam no topo. No painel, o grupo
-  aparece como uma linha e é mantido ao salvar. O
+  aparece como uma linha editável, e uma linha em branco cria um grupo novo; grupo sem número sai do menu. O
   cabeçalho do site mostra a logo quando ela tem variante gerada, e o ícone
   do site (favicon) sai da logo.
 - Página de apresentação: a página aceita `abertura` (o topo, com o `<h1>`,

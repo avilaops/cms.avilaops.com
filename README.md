@@ -117,3 +117,4 @@ Tomadas por Nicolas em 08 e 09/10/2026. O detalhe de cada uma está nas specs.
 - [CMS](docs/superpowers/specs/2026-10-09-cms-design.md)
 - [Lojas em Rust](docs/superpowers/specs/2026-10-09-lojas-rust-design.md)
 - [Modo de trabalho dos agentes](AGENTS.md)
+- [Identidade visual Ávila](docs/identidade/README.md)
