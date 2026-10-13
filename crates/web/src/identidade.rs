@@ -133,6 +133,8 @@ struct PaginaDoMenu {
     nome: String,
     /// A posição no menu, a partir de 1; vazia quando a página está no rodapé.
     posicao: String,
+    /// Um grupo com submenu: a linha dele é editada na tela.
+    eh_grupo: bool,
 }
 
 /// As páginas publicadas que podem aparecer no menu, as do menu primeiro e na
@@ -191,6 +193,7 @@ async fn paginas_do_menu(
         .into_iter()
         .map(|(caminho, nome)| PaginaDoMenu {
             posicao: posicao(&caminho).map_or(String::new(), |i| (i + 1).to_string()),
+            eh_grupo: !caminho.starts_with('/'),
             caminho,
             nome,
         })
