@@ -1767,7 +1767,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     assert!(!erro);
     assert_eq!(
         sites["sites"],
-        json!([{ "site": "padaria", "nome": "Padaria da Ana", "situacao": "em-montagem", "papel": "dono" }])
+        json!([{ "site": "padaria", "nome": "Padaria da Ana", "situacao": "em-montagem", "papel": "dono", "endereco": "https://padaria.sites.teste" }])
     );
 
     // O site de outra conta não existe para esta conexão.
@@ -3784,4 +3784,243 @@ async fn dono_escolhe_o_tema_e_o_site_sai_com_as_fontes_do_cms(pool: PgPool) {
         StatusCode::OK
     );
     std::fs::remove_dir_all(&painel.diretorio).ok();
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn site_de_produtos_tem_cor_por_pagina_submenu_canonica_e_mailto(pool: PgPool) {
+    use base64::Engine;
+
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, token, _) = painel
+        .conectar(
+            "ana",
+            &[
+                "sites:ler",
+                "sites:editar",
+                "conteudo:ler",
+                "conteudo:escrever",
+                "conteudo:publicar",
+                "midia:escrever",
+            ],
+        )
+        .await;
+    let publicar = |conteudo: Value| {
+        let painel = &painel;
+        let token = &token;
+        async move {
+            let (erro, criado) = painel
+                .ferramenta(
+                    token,
+                    "criar_rascunho",
+                    json!({ "site": "padaria", "conteudo": conteudo }),
+                )
+                .await;
+            assert!(!erro, "{criado}");
+            let alvo = json!({ "site": "padaria", "documento": criado["documento"] });
+            let (erro, publicado) = painel.ferramenta(token, "publicar", alvo).await;
+            assert!(!erro, "{publicado}");
+        }
+    };
+    let pagina = |slug: &str, titulo: &str, extra: Value| {
+        let mut dados = json!({
+            "slug": slug,
+            "titulo": titulo,
+            "corpo": [{ "tipo": "titulo", "nivel": 2, "texto": "Como funciona" }],
+            "seo": {
+                "titulo": format!("{titulo} | Padaria da Ana"),
+                "descricao": format!("{titulo}: pão de fermentação natural, assado todo dia no bairro desde 1998."),
+                "indexar": true
+            }
+        });
+        for (chave, valor) in extra.as_object().expect("objeto") {
+            if chave == "seo" {
+                for (k, v) in valor.as_object().expect("seo") {
+                    dados["seo"][k] = v.clone();
+                }
+            } else {
+                dados[chave] = valor.clone();
+            }
+        }
+        json!({ "especie": "pagina", "dados": dados })
+    };
+
+    // A cor da página troca a do site; cor ilegível não vai ao ar.
+    let (erro, clara) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": pagina("clara", "Clara", json!({ "destaque": "#f4c544" })) }),
+        )
+        .await;
+    assert!(!erro, "{clara}");
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "publicar",
+            json!({ "site": "padaria", "documento": clara["documento"] }),
+        )
+        .await;
+    assert!(erro, "{recusa}");
+    assert!(recusa.to_string().contains("clara demais"), "{recusa}");
+
+    publicar(pagina(
+        "",
+        "Pão fresco todo dia",
+        json!({
+            "destaque": "#1D4ED8",
+            "corpo": [{
+                "tipo": "chamada",
+                "texto": "Encomendas para festas",
+                "rotulo": "Escrever para a padaria",
+                "url": "mailto:contato@padaria.example?subject=Encomenda"
+            }]
+        }),
+    ))
+    .await;
+    publicar(pagina(
+        "mail",
+        "E-mail da padaria",
+        json!({ "menu": "Mail", "seo": { "canonica": "https://mail.padaria.example/" } }),
+    ))
+    .await;
+    publicar(pagina(
+        "crm",
+        "Clientes da padaria",
+        json!({ "menu": "CRM" }),
+    ))
+    .await;
+    publicar(pagina("contato", "Fale com a gente", json!({}))).await;
+    let (erro, invalida) = painel
+        .ferramenta(
+            &token,
+            "criar_rascunho",
+            json!({ "site": "padaria", "conteudo": pagina("torta", "Torta", json!({ "seo": { "canonica": "/outra" } })) }),
+        )
+        .await;
+    assert!(!erro, "{invalida}");
+    let (erro, recusa) = painel
+        .ferramenta(
+            &token,
+            "publicar",
+            json!({ "site": "padaria", "documento": invalida["documento"] }),
+        )
+        .await;
+    assert!(erro);
+    assert!(recusa.to_string().contains("https://"), "{recusa}");
+
+    // Submenu: o grupo junta as páginas; o resto vai para o rodapé com o nome curto.
+    let (erro, editada) = painel
+        .ferramenta(
+            &token,
+            "editar_identidade",
+            json!({ "site": "padaria", "menu": "Produtos: /mail, /crm\nlixo sem caminho" }),
+        )
+        .await;
+    assert!(!erro, "{editada}");
+    let home = pedir(&pool, &host("padaria"), "/").await;
+    assert_eq!(home.status, StatusCode::OK);
+    assert!(
+        home.corpo.contains(":root{--destaque:#1d4ed8}"),
+        "sem a cor da página"
+    );
+    assert!(
+        home.corpo
+            .contains(r#"href="mailto:contato@padaria.example?subject=Encomenda""#),
+        "sem o mailto"
+    );
+    assert!(home.corpo.contains("<summary>Produtos</summary>"));
+    assert!(home.corpo.contains(r#"<a href="/mail">Mail</a>"#));
+    let rodape = home.corpo.split("<footer").nth(1).expect("rodapé");
+    assert!(rodape.contains(">Fale com a gente</a>"));
+    assert!(!rodape.contains("/mail"));
+
+    // A canônica para fora vale na página (o sitemap é do motor, e o site
+    // provisório nem publica um); a cor do site volta nas outras páginas.
+    let mail = pedir(&pool, &host("padaria"), "/mail").await;
+    assert!(
+        mail.corpo
+            .contains(r#"<link rel="canonical" href="https://mail.padaria.example/">"#),
+        "{}",
+        mail.corpo
+    );
+    assert!(!mail.corpo.contains("--destaque:#1d4ed8"));
+
+    // O crédito pode sair da legenda, por imagem, e voltar.
+    let base64 = base64::engine::general_purpose::STANDARD.encode(png(400, 400, 90));
+    let (_, enviada) = painel
+        .ferramenta(
+            &token,
+            "enviar_midia",
+            json!({ "site": "padaria", "nome": "logo.png", "alt": "Logo da padaria", "credito": "Ana", "base64": base64 }),
+        )
+        .await;
+    let id = enviada["id"].clone();
+    for (valor, esperado) in [("sim", true), (" ", true), ("nao", false)] {
+        let argumentos = if valor.trim().is_empty() {
+            json!({ "site": "padaria", "id": id, "alt": "Logo da padaria" })
+        } else {
+            json!({ "site": "padaria", "id": id, "ocultar_credito": valor })
+        };
+        let (erro, editada) = painel.ferramenta(&token, "editar_midia", argumentos).await;
+        assert!(!erro, "{editada}");
+        let (_, midias) = painel
+            .ferramenta(&token, "listar_midia", json!({ "site": "padaria" }))
+            .await;
+        assert_eq!(midias["midias"][0]["ocultar_credito"], esperado, "{valor}");
+        assert_eq!(midias["midias"][0]["credito"], "Ana");
+    }
+
+    // O endereço público de cada site, e se ele já é o definitivo.
+    let (_, sites) = painel.ferramenta(&token, "listar_sites", json!({})).await;
+    let endereco = sites["sites"][0]["endereco"].as_str().expect("endereço");
+    assert!(endereco.contains("://padaria."), "{endereco}");
+    let (_, dominio) = painel
+        .ferramenta(&token, "ver_dominio", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(dominio["endereco"], endereco);
+    assert_eq!(dominio["provisorio_definitivo"], false);
+    assert_eq!(dominio["aparece_na_busca"], false);
+
+    // O site inteiro pode ir para outro endereço, com caminho e consulta.
+    let (erro, regra) = painel
+        .ferramenta(
+            &token,
+            "salvar_redirecionamento",
+            json!({ "site": "padaria", "de": "/*", "para": "https://novo.padaria.example/*" }),
+        )
+        .await;
+    assert!(!erro, "{regra}");
+    for (caminho, destino) in [
+        ("/", "https://novo.padaria.example/"),
+        (
+            "/mail?origem=x",
+            "https://novo.padaria.example/mail?origem=x",
+        ),
+        ("/robots.txt", "https://novo.padaria.example/robots.txt"),
+    ] {
+        let resposta = pedir(&pool, &host("padaria"), caminho).await;
+        assert_eq!(resposta.status, StatusCode::MOVED_PERMANENTLY, "{caminho}");
+        assert_eq!(resposta.cabecalho("location"), destino, "{caminho}");
+    }
+    let (_, dominio) = painel
+        .ferramenta(&token, "ver_dominio", json!({ "site": "padaria" }))
+        .await;
+    assert_eq!(
+        dominio["redirecionado_para"],
+        "https://novo.padaria.example/*"
+    );
+    let (erro, _) = painel
+        .ferramenta(
+            &token,
+            "remover_redirecionamento",
+            json!({ "site": "padaria", "de": "/*" }),
+        )
+        .await;
+    assert!(!erro);
+    assert_eq!(
+        pedir(&pool, &host("padaria"), "/").await.status,
+        StatusCode::OK
+    );
+    std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
 }

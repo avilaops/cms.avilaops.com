@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        select s.id, s.slug, s.situacao, s.provisorio_definitivo,\n               s.perfil as \"perfil: Json<PerfilDoSite>\",\n               d.host as dominio_ativo\n        from dominio d\n        join site s on s.id = d.site_id\n        where d.host = $1 and d.situacao = 'ativo'\n        ",
+  "query": "\n        select s.id, s.slug, s.situacao, s.provisorio_definitivo,\n               s.perfil as \"perfil: Json<PerfilDoSite>\",\n               (select d.host from dominio d where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo,\n               (select r.para from redirecionamento r where r.site_id = s.id and r.de = '/*') as mudou_para\n        from site s\n        where s.slug = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "dominio_ativo",
         "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "mudou_para",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -45,8 +50,9 @@
       false,
       false,
       false,
-      false
+      null,
+      null
     ]
   },
-  "hash": "c73c06a93f44ed7d5139444eb76f00ad3f09578c2c60a222962a558fa0dafe1a"
+  "hash": "a24824ed6c8b1ef473d6cb3eaf601e484cff1797d902463abdd60056c52b3730"
 }

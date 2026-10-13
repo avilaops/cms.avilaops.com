@@ -3,8 +3,8 @@
 
 use askama::Template;
 use cms_dados::ItemDeNavegacao;
-use cms_dominio::datas;
 use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
+use cms_dominio::{EntradaDoMenu, datas, ler_entrada_do_menu};
 use motor_web::conteudo::renderizar_corpo;
 use motor_web::midia::{Papel, renderizar_midia, url_principal};
 use motor_web::secoes::{ESTILO_DAS_SECOES, renderizar_abertura};
@@ -15,6 +15,9 @@ pub struct Link {
     pub rotulo: String,
     pub url: String,
     pub atual: bool,
+    /// As páginas de um grupo do menu, que abrem embaixo dele. Com filhos, o
+    /// link é só o nome do grupo e não tem endereço.
+    pub filhos: Vec<Link>,
 }
 
 /// O que toda página do site tem em volta do conteúdo.
@@ -80,29 +83,45 @@ pub fn logo_do_cabecalho(site: &Site) -> Option<Logo> {
 }
 
 impl Moldura {
-    /// Monta o menu que o site definiu: "Início" na frente e as páginas da
-    /// lista, na ordem dela. O que não está na lista sai do topo e vai para o
-    /// rodapé, na ordem em que chegou: é onde ficam a política de privacidade
-    /// e as páginas que não são do dia a dia. Sem lista, tudo fica no topo.
+    /// Monta o menu que o site definiu: "Início" na frente e as entradas da
+    /// lista, na ordem dela. Uma entrada é uma página ou um grupo, que junta
+    /// páginas num submenu. O que não está na lista sai do topo e vai para o
+    /// rodapé, na ordem em que chegou: é onde ficam a política de
+    /// privacidade e as páginas que não são do dia a dia. Sem lista, tudo
+    /// fica no topo.
     pub fn ordenar_menu(&mut self, ordem: &[String]) {
         if ordem.is_empty() {
             return;
         }
-        let posicao = |link: &Link| {
-            if link.url == "/" {
-                return Some(0);
-            }
-            ordem
-                .iter()
-                .position(|caminho| caminho.trim_end_matches('/') == link.url)
-                .map(|i| i + 1)
+        let mut soltos = std::mem::take(&mut self.navegacao);
+        let mut tirar = |caminho: &str| {
+            let caminho = match caminho.trim_end_matches('/') {
+                "" => "/",
+                sem_barra => sem_barra,
+            };
+            let posicao = soltos.iter().position(|link| link.url == caminho)?;
+            Some(soltos.remove(posicao))
         };
-        let (mut no_menu, fora): (Vec<Link>, Vec<Link>) = std::mem::take(&mut self.navegacao)
-            .into_iter()
-            .partition(|link| posicao(link).is_some());
-        no_menu.sort_by_key(posicao);
-        self.navegacao = no_menu;
-        self.mais_paginas = fora;
+        let mut menu: Vec<Link> = tirar("/").into_iter().collect();
+        for entrada in ordem.iter().filter_map(|linha| ler_entrada_do_menu(linha)) {
+            match entrada {
+                EntradaDoMenu::Pagina(caminho) => menu.extend(tirar(caminho)),
+                EntradaDoMenu::Grupo { rotulo, caminhos } => {
+                    let filhos: Vec<Link> = caminhos.into_iter().filter_map(&mut tirar).collect();
+                    // Grupo sem página no ar não aparece.
+                    if !filhos.is_empty() {
+                        menu.push(Link {
+                            rotulo: rotulo.to_string(),
+                            url: String::new(),
+                            atual: filhos.iter().any(|filho| filho.atual),
+                            filhos,
+                        });
+                    }
+                }
+            }
+        }
+        self.navegacao = menu;
+        self.mais_paginas = soltos;
     }
 }
 
@@ -112,6 +131,7 @@ impl Moldura {
             rotulo: "Início".into(),
             url: "/".into(),
             atual: caminho_atual == "/",
+            filhos: Vec::new(),
         }];
         navegacao.extend(
             itens
@@ -121,6 +141,7 @@ impl Moldura {
                     rotulo: item.titulo.clone(),
                     url: item.caminho.clone(),
                     atual: item.caminho == caminho_atual,
+                    filhos: Vec::new(),
                 }),
         );
         // Site com produto no ar ganha o catálogo no menu, antes do blog.
@@ -129,6 +150,7 @@ impl Moldura {
                 rotulo: "Produtos".into(),
                 url: CAMINHO_DOS_PRODUTOS.into(),
                 atual: caminho_atual.starts_with(CAMINHO_DOS_PRODUTOS),
+                filhos: Vec::new(),
             });
         }
         if itens.iter().any(|item| item.eh_post) {
@@ -136,6 +158,7 @@ impl Moldura {
                 rotulo: "Blog".into(),
                 url: "/blog".into(),
                 atual: caminho_atual.starts_with("/blog"),
+                filhos: Vec::new(),
             });
         }
 
@@ -276,6 +299,7 @@ impl PaginaDeDocumento {
                 rotulo: post.categoria.nome.clone(),
                 url: caminho_da_categoria(&post.categoria.slug),
                 atual: false,
+                filhos: Vec::new(),
             }),
             // A capa é a única imagem com prioridade de carregamento.
             capa: documento
@@ -379,6 +403,7 @@ impl PaginaDeItem {
                 rotulo: acao.rotulo.clone(),
                 url: acao.url.clone(),
                 atual: false,
+                filhos: Vec::new(),
             }),
             corpo: renderizar_corpo(&item.corpo),
             visualizador_3d: documento
@@ -520,6 +545,7 @@ mod testes {
             rotulo: url.to_string(),
             url: url.to_string(),
             atual: false,
+            filhos: Vec::new(),
         }
     }
 
@@ -558,7 +584,37 @@ mod testes {
             .collect();
         assert_eq!(fora, ["/comparativos", "/contato", "/segmentos"]);
 
+        // Um grupo junta páginas num submenu e as tira do rodapé.
+        moldura.navegacao.append(&mut moldura.mais_paginas);
+        moldura
+            .navegacao
+            .iter_mut()
+            .for_each(|l| l.atual = l.url == "/contato");
+        moldura.ordenar_menu(&[
+            "/servicos".to_string(),
+            "Empresa: /contato /segmentos /nao-existe".to_string(),
+            "Vazio: /nao-existe".to_string(),
+        ]);
+        let ordem: Vec<&str> = moldura
+            .navegacao
+            .iter()
+            .map(|l| l.rotulo.as_str())
+            .collect();
+        assert_eq!(ordem, ["/", "/servicos", "Empresa"]);
+        let grupo = &moldura.navegacao[2];
+        assert!(grupo.atual);
+        let filhos: Vec<&str> = grupo.filhos.iter().map(|l| l.url.as_str()).collect();
+        assert_eq!(filhos, ["/contato", "/segmentos"]);
+        let fora: Vec<&str> = moldura
+            .mais_paginas
+            .iter()
+            .map(|l| l.url.as_str())
+            .collect();
+        assert_eq!(fora, ["/blog", "/comparativos"]);
+
         // Sem ordem definida, nada sai do topo.
+        let grupo = moldura.navegacao.pop().expect("grupo");
+        moldura.navegacao.extend(grupo.filhos);
         moldura.navegacao.append(&mut moldura.mais_paginas);
         moldura.ordenar_menu(&[]);
         assert_eq!(moldura.navegacao.len(), 6);

@@ -61,6 +61,7 @@
 <input id="m{{ loop.index }}-legenda" name="legenda" maxlength="300" value="{{ midia.legenda }}">
 <label for="m{{ loop.index }}-credito">Crédito (quem aparece em "Foto:")</label>
 <input id="m{{ loop.index }}-credito" name="credito" maxlength="120" value="{{ midia.credito }}">
+<label class="marcar"><input type="checkbox" name="ocultar_credito" value="1"{% if midia.ocultar_credito %} checked{% endif %}> Não mostrar o crédito embaixo da imagem (logo, ícone). Ele continua nos dados da imagem para a busca.</label>
 <label for="m{{ loop.index }}-autoria">Quem fez a imagem</label>
 <input id="m{{ loop.index }}-autoria" name="autoria" maxlength="120" value="{{ midia.autoria }}">
 <label for="m{{ loop.index }}-aviso">Aviso de direitos, como © 2026 Nome da empresa</label>

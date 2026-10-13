@@ -11,6 +11,7 @@ use cms_dados::{Ausencia, SiteGravado};
 use cms_dominio::eventos::CampoRecebido;
 use cms_dominio::eventos::origem_do_site;
 use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
+use cms_dominio::redirecionamento::{SITE_INTEIRO, destino_por_prefixo};
 use cms_dominio::site::{
     CAMINHO_DA_LICENCA_DE_IMAGENS, aparece_na_busca, conferir_cor, conferir_tag_do_google,
 };
@@ -168,6 +169,17 @@ async fn responder(
             StatusCode::GONE,
             "Este site não está mais disponível.",
         ));
+    }
+    // Site aposentado: tudo vai para o endereço novo, antes de qualquer página.
+    // Com /* no destino, caminho e consulta vão junto.
+    if let Some(para) = gravado.mudou_para.as_deref() {
+        if let Some(destino) = destino_por_prefixo(SITE_INTEIRO, para, uri.path()) {
+            let destino = match uri.query() {
+                Some(consulta) if para.ends_with('*') => format!("{destino}?{consulta}"),
+                _ => destino,
+            };
+            return Ok(redirecionar(StatusCode::MOVED_PERMANENTLY, &destino));
+        }
     }
     // Com domínio próprio, o endereço provisório deixa de responder conteúdo.
     if let (Endereco::Provisorio { .. }, Some(dominio)) = (&endereco, &gravado.dominio_ativo) {
@@ -436,6 +448,17 @@ async fn moldura(
         .cor_de_destaque
         .as_deref()
         .and_then(|cor| conferir_cor(cor).ok());
+    // A página pode ter a cor dela, como a de um produto na página que o
+    // apresenta. Passa pela mesma conferência que a do site.
+    if let Conteudo::Pagina(pagina) = &documento.conteudo {
+        if let Some(cor) = pagina
+            .destaque
+            .as_deref()
+            .and_then(|cor| conferir_cor(cor).ok())
+        {
+            moldura.cor_de_destaque = Some(cor);
+        }
+    }
     Ok(moldura)
 }
 
@@ -553,6 +576,7 @@ fn pagina_avulsa(
             slug: normalizar_slug(caminho),
             titulo: titulo.to_string(),
             menu: None,
+            destaque: None,
             corpo: Vec::new(),
             capa: None,
             abertura: None,
@@ -563,6 +587,7 @@ fn pagina_avulsa(
                 descricao,
                 indexar: indexar && pedido.indexavel,
                 imagem_social: None,
+                canonica: None,
             },
             trilha: [Some(inicio), acima, Some(aqui)]
                 .into_iter()

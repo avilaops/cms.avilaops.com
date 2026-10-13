@@ -188,6 +188,7 @@ pub fn midia_vazia() -> Midia {
         variantes: Vec::new(),
         legenda: None,
         credito: None,
+        ocultar_credito: false,
         direitos: Direitos::default(),
     }
 }

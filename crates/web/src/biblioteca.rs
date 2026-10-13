@@ -43,6 +43,8 @@ struct Linha {
     propria: bool,
     /// A imagem tem licença de fora: os endereços dela aparecem abertos.
     de_terceiros: bool,
+    /// A página não escreve o crédito embaixo da imagem.
+    ocultar_credito: bool,
 }
 
 impl Linha {
@@ -51,6 +53,7 @@ impl Linha {
         Self {
             propria,
             de_terceiros: !propria && (midia.licenca.is_some() || midia.aquisicao.is_some()),
+            ocultar_credito: midia.ocultar_credito,
             id: midia.id,
             alt: midia.alt,
             miniatura: midia
@@ -361,6 +364,8 @@ struct Correcao {
     /// Marcada, a imagem passa a ser de autoria da empresa do site, com a
     /// licença dele.
     propria: String,
+    /// Marcada, a página não escreve o crédito embaixo da imagem.
+    ocultar_credito: String,
 }
 
 pub async fn corrigir(
@@ -396,6 +401,7 @@ pub async fn corrigir(
         legenda: Some(correcao.legenda),
         credito: Some(credito),
         direitos,
+        ocultar_credito: !correcao.ocultar_credito.is_empty(),
     };
     let (status, recado) =
         match cms_dados::atualizar_midia(&estado.pool, site.id, &ator, midia_id, &descricao).await

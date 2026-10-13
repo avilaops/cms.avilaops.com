@@ -97,6 +97,10 @@ pub struct Formulario {
     pub titulo: String,
     /// O nome curto da página no menu do site.
     pub menu: String,
+    /// A cor de destaque da página, como `#1d4ed8`. Vazia, vale a do site.
+    pub destaque: String,
+    /// O endereço oficial da página, quando ele mora em outro lugar.
+    pub canonica: String,
     pub slug: String,
     pub seo_titulo: String,
     pub seo_descricao: String,
@@ -186,6 +190,8 @@ impl Formulario {
             acao: campo("acao"),
             titulo: campo("titulo"),
             menu: campo("menu"),
+            destaque: campo("destaque"),
+            canonica: campo("canonica"),
             slug: campo("slug").trim().to_lowercase(),
             seo_titulo: campo("seo_titulo"),
             seo_descricao: campo("seo_descricao"),
@@ -259,6 +265,7 @@ impl Formulario {
                 seo_titulo: seo.titulo.clone(),
                 seo_descricao: seo.descricao.clone(),
                 indexar: seo.indexar,
+                canonica: seo.canonica.clone().unwrap_or_default(),
                 capa: capa.map(|capa| capa.id.clone()).unwrap_or_default(),
                 tipo_do_post: "artigo".to_string(),
                 blocos: corpo.iter().map(digitar).collect(),
@@ -269,6 +276,7 @@ impl Formulario {
                 let abertura = pagina.abertura.clone().unwrap_or_default();
                 Self {
                     menu: pagina.menu.clone().unwrap_or_default(),
+                    destaque: pagina.destaque.clone().unwrap_or_default(),
                     abertura_sobretitulo: abertura.sobretitulo.unwrap_or_default(),
                     abertura_texto: abertura.texto,
                     abertura_acoes: escrever_botoes(&abertura.acoes),
@@ -377,6 +385,7 @@ impl Formulario {
             .map(|bloco| montar(bloco, resolvido))
             .collect();
         let seo = Seo {
+            canonica: opcional(&self.canonica),
             titulo: self.seo_titulo.trim().to_string(),
             descricao: self.seo_descricao.trim().to_string(),
             indexar: self.indexar,
@@ -481,6 +490,7 @@ impl Formulario {
             })
         } else {
             Conteudo::Pagina(Pagina {
+                destaque: opcional(&self.destaque),
                 // A página inicial não tem trilha: ela é o começo.
                 trilha: if self.slug.is_empty() {
                     Vec::new()

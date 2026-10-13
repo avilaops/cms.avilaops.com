@@ -165,6 +165,8 @@ pub struct SiteDaConta {
     pub nome: String,
     pub situacao: Situacao,
     pub papel: Papel,
+    /// O domínio próprio em uso, se houver.
+    pub dominio_ativo: Option<String>,
 }
 
 /// Os sites que a conta alcança, em ordem de nome: aqueles de que participa
@@ -174,7 +176,8 @@ pub async fn sites_da_conta(pool: &PgPool, conta: &Conta) -> Result<Vec<SiteDaCo
     let linhas = sqlx::query!(
         r#"
         select s.id, s.slug, coalesce(s.perfil ->> 'nome', '') as "nome!", s.situacao,
-               coalesce(p.papel, 'dono') as "papel!"
+               coalesce(p.papel, 'dono') as "papel!",
+               (select d.host from dominio d where d.site_id = s.id and d.situacao = 'ativo') as dominio_ativo
         from site s
         left join participacao p on p.site_id = s.id and p.conta = $1
         where p.conta is not null or $2
@@ -195,6 +198,7 @@ pub async fn sites_da_conta(pool: &PgPool, conta: &Conta) -> Result<Vec<SiteDaCo
                 situacao: Situacao::try_from(linha.situacao.as_str())
                     .map_err(|erro| ErroDeDados::DadoInvalido(erro.to_string()))?,
                 papel: papel_lido(&linha.papel)?,
+                dominio_ativo: linha.dominio_ativo,
             })
         })
         .collect()

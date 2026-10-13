@@ -190,8 +190,18 @@ pub struct Documento {
 pub enum Conteudo { Pagina(Pagina), Post(Post), Produto(Product) }
 ```
 
-A canônica não é campo: é calculada de `site.origem` e `documento.caminho`. O
-caminho é de quem chama, porque CMS e Lojas têm rotas diferentes.
+A canônica é calculada de `site.origem` e `documento.caminho`. O caminho é de
+quem chama, porque CMS e Lojas têm rotas diferentes. A exceção é
+`seo.canonica`: um endereço `https://` completo em outro lugar, quando a página
+é cópia ou apresentação de algo que mora lá. Ele vale no `<link
+rel="canonical">` e no `og:url`, e a página sai do sitemap e do `llms.txt`.
+
+`pagina.destaque` (`#rrggbb`) troca a cor de destaque do site naquela página.
+A regra da cor (formato e contraste de 4,5:1 contra o branco) mora em
+`cor::conferir_cor`, a mesma que o CMS usa na cor da marca.
+
+`midia.ocultarCredito` tira o "Foto: ..." da legenda daquela imagem (logo,
+ícone, ilustração da casa); o crédito e os direitos seguem no `ImageObject`.
 
 A moeda é o real. O campo entra quando existir a segunda.
 
@@ -285,7 +295,10 @@ Rascunho salva sempre. A trava é na publicação.
 | `alt` igual ao nome do arquivo | `midia.alt.arquivo` | Bloqueia |
 | Autor sem bio ou sem foto | `post.autor.incompleto` | Bloqueia |
 | Capa de post com menos de 1200 px de largura | `post.capa.pequena` | Bloqueia |
-| Link que não é `http(s)` nem caminho do próprio site | `link.invalido` | Bloqueia |
+| Link que não é `http(s)`, caminho do próprio site nem `mailto:` com um destinatário | `link.invalido` | Bloqueia |
+| `seo.canonica` que não é `https://` completo | `seo.canonica.invalida` | Bloqueia |
+| `seo.canonica` apontando para outro endereço | `seo.canonica.outra` | Avisa |
+| `pagina.destaque` fora do formato ou clara demais | `pagina.destaque` | Bloqueia |
 | Vídeo fora de YouTube e Vimeo | `video.origem` | Bloqueia |
 | Produto sem variação | `produto.sem-variacao` | Bloqueia |
 | Variação com preço zero ou negativo | `produto.preco` | Bloqueia |

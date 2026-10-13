@@ -35,6 +35,14 @@ header.topo .faixa{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem 1.
 nav.principal ul{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;list-style:none;margin:0;padding:0}
 nav.principal a{color:var(--suave);text-decoration:none;display:inline-block;padding:.35rem 0}
 nav.principal a[aria-current]{color:var(--texto);font-weight:600}
+nav.principal .grupo{position:relative}
+nav.principal summary{color:var(--suave);cursor:pointer;padding:.35rem 0;list-style:none}
+nav.principal summary::-webkit-details-marker{display:none}
+nav.principal summary::after{content:"";display:inline-block;margin-left:.35em;border:.3em solid transparent;border-top-color:currentColor;border-bottom:0;vertical-align:.15em}
+nav.principal summary.atual{color:var(--texto);font-weight:600}
+nav.principal summary:focus-visible{outline:3px solid var(--destaque);outline-offset:2px}
+nav.principal .grupo ul{display:block;padding:.25rem 0 .25rem .75rem}
+@media (min-width:40rem){nav.principal .grupo ul{position:absolute;z-index:2;left:-.75rem;top:100%;min-width:12rem;padding:.4rem .75rem;background:var(--fundo);border:1px solid var(--linha);border-radius:.375rem}}
 main{padding:2rem 0 3rem}
 h1{font-size:clamp(1.75rem,5vw,2.5rem);line-height:1.15;margin:.25rem 0 1rem;letter-spacing:-.01em}
 h2{font-size:1.5rem;line-height:1.25;margin:2.25rem 0 .5rem}
@@ -126,7 +134,17 @@ footer.rodape .mais{display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;margin-bottom
 <nav class="principal" aria-label="Principal">
 <ul>
 {%- for link in moldura.navegacao %}
+{%- if link.filhos.is_empty() %}
 <li><a href="{{ link.url }}"{% if link.atual %} aria-current="page"{% endif %}>{{ link.rotulo }}</a></li>
+{%- else %}
+<li class="grupo"><details><summary{% if link.atual %} class="atual"{% endif %}>{{ link.rotulo }}</summary>
+<ul>
+{%- for filho in link.filhos %}
+<li><a href="{{ filho.url }}"{% if filho.atual %} aria-current="page"{% endif %}>{{ filho.rotulo }}</a></li>
+{%- endfor %}
+</ul>
+</details></li>
+{%- endif %}
 {%- endfor %}
 </ul>
 </nav>

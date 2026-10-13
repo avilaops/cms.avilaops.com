@@ -111,6 +111,7 @@ fn sem_imagem() -> Midia {
         variantes: Vec::new(),
         legenda: None,
         credito: None,
+        ocultar_credito: false,
         direitos: Direitos::default(),
     }
 }
@@ -620,6 +621,7 @@ fn seo_vazio() -> Seo {
         descricao: String::new(),
         indexar: true,
         imagem_social: None,
+        canonica: None,
     }
 }
 
@@ -639,6 +641,7 @@ pub fn conteudo_do_modelo(id: &str, agora: DateTime<Utc>) -> Option<Conteudo> {
             slug: slug.into(),
             titulo: nome.into(),
             menu: None,
+            destaque: None,
             corpo,
             capa: None,
             abertura,
