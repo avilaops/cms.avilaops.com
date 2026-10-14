@@ -282,6 +282,46 @@ async fn um_site_nao_enxerga_o_conteudo_do_outro(pool: PgPool) {
     )
     .await;
     assert_eq!(de_outro.status, StatusCode::NOT_FOUND);
+
+    // A prévia de link pede o JPEG: ele nasce do WebP no primeiro pedido e
+    // fica gravado ao lado.
+    let mut webp = Vec::new();
+    image::codecs::webp::WebPEncoder::new_lossless(&mut webp)
+        .encode(&[30u8; 16 * 16 * 3], 16, 16, image::ExtendedColorType::Rgb8)
+        .expect("webp de teste");
+    std::fs::write(
+        pasta
+            .join(oficina.to_string())
+            .join("icone-0a1b2c3d-1024.webp"),
+        &webp,
+    )
+    .expect("arquivo");
+    let jpeg = pedir_em(
+        estado(&pool, pasta.clone()),
+        &host("oficina"),
+        "/midia/icone-0a1b2c3d-1024.jpg",
+    )
+    .await;
+    assert_eq!(jpeg.status, StatusCode::OK);
+    assert_eq!(jpeg.cabecalho("content-type"), "image/jpeg");
+    assert!(jpeg.cabecalho("cache-control").contains("immutable"));
+    assert!(
+        pasta
+            .join(oficina.to_string())
+            .join("icone-0a1b2c3d-1024.jpg")
+            .exists()
+    );
+    // Sem o WebP irmão, não há JPEG.
+    assert_eq!(
+        pedir_em(
+            estado(&pool, pasta.clone()),
+            &host("oficina"),
+            "/midia/outra-0a1b2c3d-1024.jpg",
+        )
+        .await
+        .status,
+        StatusCode::NOT_FOUND
+    );
     let fuga = format!("/midia/..%2f{oficina}%2ffoto-0a1b2c3d-480.webp");
     assert_eq!(
         pedir_em(estado(&pool, pasta.clone()), &host("vazio"), &fuga)
