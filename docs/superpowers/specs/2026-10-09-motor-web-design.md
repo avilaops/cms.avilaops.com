@@ -354,7 +354,10 @@ controlar a ordem.
 - `robots`: `noindex, follow` quando `indexar` é falso.
 - Open Graph e Twitter Card saem do título, da descrição e da
   `imagem_social`, com a capa como reserva. Sem imagem, o card sai em formato
-  resumido, sem campo vazio.
+  resumido, sem campo vazio. O `og:image` e o `twitter:image` apontam para o
+  JPEG irmão do WebP escolhido (mesmo nome, `.jpg`), com `og:image:type`:
+  WhatsApp e Telegram não abrem WebP na prévia. O CMS gera esse JPEG a partir
+  do WebP no primeiro pedido e o grava ao lado.
 - Post leva `article:published_time` e `article:modified_time`.
 - O JSON-LD é serializado com `<`, `>` e `&` escapados em `\u`, para o texto de
   quem edita não fechar o `<script>`.
