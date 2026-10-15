@@ -62,7 +62,7 @@ root.addEventListener('click',event=>{
   if(target.hasAttribute('data-quantity')){const i=Number(target.dataset.quantity),r=cart[i];r.quantity=Math.min(99,r.quantity+Number(target.dataset.delta));if(r.quantity<=0)cart.splice(i,1);storeCart();renderOrder();}
   if(target.hasAttribute('data-cart-open')){if(!products.size)return;$('#cart-dialog').showModal();}
 });
-$('#category-tabs').addEventListener('keydown',event=>{const tabs=[...$('#category-tabs').children];let index=tabs.findIndex(t=>t.dataset.category===active);if(event.key==='ArrowRight')index=(index+1)%tabs.length;else if(event.key==='ArrowLeft')index=(index-1+tabs.length)%tabs.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=tabs.length-1;else return;event.preventDefault();chooseCategory(tabs[index].dataset.category);$('#tab-'+active).focus();});
+$('#category-tabs').addEventListener('keydown',event=>{const tabs=[...$('#category-tabs').children];let index=tabs.indexOf(event.target.closest('[role="tab"]'));if(index<0)return;if(event.key==='ArrowRight')index=(index+1)%tabs.length;else if(event.key==='ArrowLeft')index=(index-1+tabs.length)%tabs.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=tabs.length-1;else return;event.preventDefault();chooseCategory(tabs[index].dataset.category);$('#tab-'+active).focus();});
 $('#search').addEventListener('input',()=>{query=normalize($('#search').value.trim());renderProducts();});
 $('#sort').addEventListener('change',()=>{sort=$('#sort').value;renderProducts();});
 root.addEventListener('change',event=>{if(event.target.id==='border-choice')detailTotal();});
