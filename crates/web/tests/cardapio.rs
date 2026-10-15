@@ -25,7 +25,7 @@ fn pagina(caminho: &str, nome: &str, preco: &str) -> Documento {
     pagina.menu = Some(nome.to_string());
     pagina.abertura = None;
     pagina.corpo = vec![Bloco::Planos {
-        titulo: nome.to_string(),
+        titulo: Some(nome.to_string()),
         itens: vec![Plano {
             nome: nome.to_string(),
             preco: preco.to_string(),
