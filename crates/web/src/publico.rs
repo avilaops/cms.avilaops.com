@@ -61,7 +61,11 @@ fn chave_de_cache(metodo: &Method, cabecalhos: &HeaderMap, uri: &Uri) -> Option<
     }
     let host = host_do_pedido(cabecalhos)?;
     let caminho = uri.path_and_query().map_or("/", |valor| valor.as_str());
-    Some(format!("{}{caminho}", host.com_porta))
+    Some(format!(
+        "{}{caminho}|{}",
+        host.com_porta,
+        crate::descoberta::prefere_markdown(cabecalhos)
+    ))
 }
 
 pub async fn atender(
@@ -252,10 +256,21 @@ async fn responder(
                 None if caminho == CAMINHO_DOS_PRODUTOS => {
                     catalogo(estado, &pedido, uri.query().unwrap_or_default()).await
                 }
-                None => documento(estado, &pedido, caminho).await,
+                None => {
+                    documento(
+                        estado,
+                        &pedido,
+                        caminho,
+                        crate::descoberta::prefere_markdown(cabecalhos),
+                    )
+                    .await
+                }
             },
         },
     }?;
+    if pedido.gravado.perfil.tema == Tema::Cardapio {
+        crate::descoberta::marcar(&mut resposta, pedido.indexavel);
+    }
     if tem_tag {
         liberar_tag_do_google(&mut resposta);
     }
@@ -463,7 +478,12 @@ async fn moldura(
     Ok(moldura)
 }
 
-async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Response, ErroWeb> {
+async fn documento(
+    estado: &Estado,
+    pedido: &Pedido,
+    caminho: &str,
+    markdown: bool,
+) -> Result<Response, ErroWeb> {
     // Um endereço só por página: a barra final redireciona para o sem barra.
     if caminho.len() > 1 && caminho.ends_with('/') {
         let sem_barra = caminho.trim_end_matches('/');
@@ -498,6 +518,46 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
         };
     };
     ajustar_indexacao(&mut documento, pedido.indexavel);
+
+    if markdown && pedido.indexavel && pedido.gravado.perfil.tema == Tema::Cardapio {
+        let documentos = if caminho == "/" {
+            cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id)
+                .await?
+                .into_iter()
+                .filter(|d| {
+                    d.caminho == "/"
+                        || pedido
+                            .gravado
+                            .perfil
+                            .paginas_do_cardapio
+                            .iter()
+                            .any(|linha| {
+                                cms_dominio::cardapio::ler_categoria(linha)
+                                    .is_some_and(|(_, p)| p == d.caminho)
+                            })
+                })
+                .collect()
+        } else {
+            vec![documento]
+        };
+        let itens = ItensDoSite {
+            documentos: &documentos,
+            categorias: &[],
+            destaques: &[],
+        };
+        let mut resposta = texto(
+            StatusCode::OK,
+            "text/markdown; charset=utf-8",
+            gerar_llms_completo(&pedido.site, &itens),
+        );
+        resposta.headers_mut().insert(
+            "cache-control",
+            axum::http::HeaderValue::from_static(
+                "public, max-age=0, s-maxage=60, stale-while-revalidate=600",
+            ),
+        );
+        return Ok(resposta);
+    }
 
     let moldura = moldura(estado, pedido, &documento).await?;
     let mut tem_cardapio = false;

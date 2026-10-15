@@ -2341,6 +2341,57 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn conector_define_endereco_definitivo_so_com_escopo_e_papel_do_dono(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, leitura, _) = painel.conectar("ana", &["sites:ler"]).await;
+    let (_, dono, _) = painel.conectar("ana", &["sites:ler", "sites:editar"]).await;
+    let argumentos = json!({"site":"padaria","definitivo":"sim"});
+    let (erro, _) = painel
+        .ferramenta(
+            &leitura,
+            "definir_provisorio_definitivo",
+            argumentos.clone(),
+        )
+        .await;
+    assert!(erro);
+    let (erro, resultado) = painel
+        .ferramenta(&dono, "definir_provisorio_definitivo", argumentos)
+        .await;
+    assert!(!erro, "{resultado}");
+    assert_eq!(resultado["provisorio_definitivo"], true);
+    let (erro, _) = painel
+        .ferramenta(
+            &dono,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"talvez"}),
+        )
+        .await;
+    assert!(erro);
+    let (erro, resultado) = painel
+        .ferramenta(
+            &dono,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"nao"}),
+        )
+        .await;
+    assert!(!erro, "{resultado}");
+    assert_eq!(resultado["provisorio_definitivo"], false);
+    // Uma conexão de outra conta não alcança este tenant.
+    let (_, outro, _) = painel
+        .conectar("caio", &["sites:ler", "sites:editar"])
+        .await;
+    let (erro, _) = painel
+        .ferramenta(
+            &outro,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"sim"}),
+        )
+        .await;
+    assert!(erro);
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn assistente_monta_pagina_de_apresentacao_a_partir_de_um_modelo(pool: PgPool) {
     use base64::Engine;
     use motor_web::tipos::Formato;

@@ -7,6 +7,7 @@ mod cache;
 mod cardapio;
 mod conector;
 mod conteudo;
+mod descoberta;
 mod dominio;
 mod editor;
 mod equipe;

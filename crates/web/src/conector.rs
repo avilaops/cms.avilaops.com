@@ -974,6 +974,20 @@ const FERRAMENTAS: [Ferramenta; 36] = [
         opcionais: &[],
     },
     Ferramenta {
+        nome: "definir_provisorio_definitivo",
+        escopo: "sites:editar",
+        descricao: "Define se o endereço provisório já é o endereço público definitivo do site e pode aparecer na busca. Exige papel de dono. Informe sim para liberar a indexação ou nao para voltar ao provisório.",
+        argumentos: &[
+            SITE,
+            (
+                "definitivo",
+                "sim ou nao; muda a indexação do endereço provisório.",
+            ),
+        ],
+        entrada: Entrada::Nenhuma,
+        opcionais: &[],
+    },
+    Ferramenta {
         nome: "listar_autores",
         escopo: "conteudo:ler",
         descricao: "Lista os autores cadastrados no site.",
@@ -1609,6 +1623,26 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             Ok(do_site(json!({ "removido": true }), None))
         }
         "ver_dominio" => Ok(do_site(dominio_em_json(chamada.estado, &site).await?, None)),
+        "definir_provisorio_definitivo" => {
+            let definitivo = match chamada.texto("definitivo")? {
+                "sim" => true,
+                "nao" => false,
+                _ => return Err(recusa("Informe sim ou nao para definitivo.")),
+            };
+            cms_dados::definir_provisorio_definitivo(pool, site.id, &ator, definitivo)
+                .await
+                .map_err(|erro| match erro {
+                    ErroDeDominio::Dados(erro) => Recusa::Interna(erro.into()),
+                    erro => recusa(erro.to_string()),
+                })?;
+            chamada.estado.cache.invalidar_site(site.id);
+            let mut atualizado = site;
+            atualizado.provisorio_definitivo = definitivo;
+            Ok(do_site(
+                dominio_em_json(chamada.estado, &atualizado).await?,
+                None,
+            ))
+        }
         "pedir_dominio" => {
             let configuracao = &chamada.estado.configuracao;
             let mut reservados = vec![configuracao.dominio_base.as_str()];

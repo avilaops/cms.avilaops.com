@@ -134,6 +134,14 @@ O resumo não registra pedidos, cobra, reserva estoque nem envia mensagens.
 O visitante revisa a mensagem e combina disponibilidade, tamanho, entrega e
 pagamento no atendimento. Essas regras continuam a cargo do negócio.
 
+Nos sites com o tema Cardápio e endereço definitivo, `Accept: text/markdown`
+negocia uma representação pública do documento; a home inclui as categorias
+configuradas. As variantes usam cache separado e `Vary: Accept`. Os cabeçalhos
+`Link` apontam para os documentos reais `/llms.txt` e `/llms-full.txt`.
+O conector permite ao dono definir o provisório como definitivo com
+`definir_provisorio_definitivo` e `definitivo: "sim"` (ou `"nao"` para reverter).
+Isso libera robots e sitemap pelas regras existentes, sem expor o painel.
+
 Verificação do cálculo no navegador:
 `node --test crates/web/recursos/pedido.test.mjs`. Os testes Rust cobrem renderização,
 isolamento entre sites, publicação de preços e compatibilidade dos outros temas.

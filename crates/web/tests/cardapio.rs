@@ -153,3 +153,49 @@ fn identidade_antiga_continua_sem_cardapio() {
         Some(Bloco::Planos { .. })
     ));
 }
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn markdown_e_html_tem_cache_separado_e_so_leem_o_site_publicado(pool: PgPool) {
+    use axum::body::Body;
+    use axum::http::Request;
+    let id = semear(&pool, "cardapio", Tema::Cardapio, "R$ 35,90").await;
+    semear(&pool, "outro", Tema::Cardapio, "R$ 99,00").await;
+    let estado = comum::estado(&pool, std::path::PathBuf::from("midia-ausente"));
+    for accept in ["text/markdown", "text/html", "text/markdown"] {
+        let pedido = Request::builder()
+            .uri("/")
+            .header("host", host("cardapio"))
+            .header("accept", accept)
+            .body(Body::empty())
+            .expect("pedido");
+        let resposta = comum::responder(estado.clone(), pedido).await;
+        assert!(resposta.cabecalho("content-type").starts_with(accept));
+        assert!(resposta.cabecalho("vary").contains("Accept"));
+        assert!(resposta.cabecalho("link").contains("/llms-full.txt"));
+        if accept == "text/markdown" {
+            assert!(resposta.corpo.contains("R$ 35,90"));
+            assert!(!resposta.corpo.contains("R$ 99,00"));
+            assert!(!resposta.corpo.contains("<html"));
+        } else {
+            assert!(resposta.corpo.contains("<html"));
+        }
+    }
+    // Deixar de ser endereço definitivo não pode revelar uma representação
+    // alternativa que burle a regra existente de indexação.
+    sqlx::query("update site set provisorio_definitivo = false where id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+        .expect("provisório");
+    let novo = comum::estado(&pool, std::path::PathBuf::from("midia-ausente"));
+    let pedido = Request::builder()
+        .uri("/")
+        .header("host", host("cardapio"))
+        .header("accept", "text/markdown")
+        .body(Body::empty())
+        .expect("pedido");
+    let resposta = comum::responder(novo, pedido).await;
+    assert!(resposta.cabecalho("content-type").starts_with("text/html"));
+    assert!(resposta.cabecalho("link").is_empty());
+    assert_eq!(resposta.cabecalho("x-robots-tag"), "noindex");
+}
