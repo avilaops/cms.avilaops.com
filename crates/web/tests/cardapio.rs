@@ -199,3 +199,35 @@ async fn markdown_e_html_tem_cache_separado_e_so_leem_o_site_publicado(pool: PgP
     assert!(resposta.cabecalho("link").is_empty());
     assert_eq!(resposta.cabecalho("x-robots-tag"), "noindex");
 }
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn selecao_tem_escopo_estavel_por_site_em_todas_as_paginas(pool: PgPool) {
+    // Mesmo nome, telefone e catálogo: só a identidade do site separa a seleção.
+    let primeiro = semear(&pool, "primeiro", Tema::Cardapio, "R$ 35,90").await;
+    let segundo = semear(&pool, "segundo", Tema::Cardapio, "R$ 35,90").await;
+    for (slug, id) in [("primeiro", primeiro), ("segundo", segundo)] {
+        for caminho in ["/", "/pizzas"] {
+            let resposta = pedir(&pool, &host(slug), caminho).await;
+            assert!(resposta.corpo.contains(&format!("data-scope=\"{id}\"")));
+        }
+    }
+    // Alterar dados de contato não deve abandonar a seleção do próprio site.
+    let mut perfil = PerfilDoSite::from(demonstracao::site());
+    perfil.tema = Tema::Cardapio;
+    perfil.organizacao.telefone = Some("(11) 98888-0000".to_string());
+    perfil.paginas_do_cardapio = vec!["pizza /pizzas".to_string()];
+    let valor = serde_json::to_value(&perfil).expect("perfil");
+    sqlx::query("update site set perfil = $1 where id = $2")
+        .bind(valor)
+        .bind(primeiro)
+        .execute(&pool)
+        .await
+        .expect("contato alterado");
+    let resposta = pedir(&pool, &host("primeiro"), "/").await;
+    assert!(
+        resposta
+            .corpo
+            .contains(&format!("data-scope=\"{primeiro}\""))
+    );
+    assert!(resposta.corpo.contains("data-whatsapp=\"5511988880000\""));
+}

@@ -60,6 +60,7 @@ struct Categoria<'a> {
 }
 
 pub struct Cardapio {
+    pub escopo: String,
     pub dados: String,
     pub ativo: String,
     pub whatsapp: String,
@@ -100,7 +101,12 @@ fn whatsapp(telefone: &str) -> Option<String> {
     Some(numero)
 }
 
-pub fn montar(perfil: &PerfilDoSite, documentos: &[Documento], caminho: &str) -> Option<Cardapio> {
+pub fn montar(
+    perfil: &PerfilDoSite,
+    documentos: &[Documento],
+    caminho: &str,
+    site_id: uuid::Uuid,
+) -> Option<Cardapio> {
     let whatsapp = whatsapp(perfil.organizacao.telefone.as_deref()?)?;
     let mut categorias = Vec::new();
     let mut ids = std::collections::HashSet::new();
@@ -165,6 +171,7 @@ pub fn montar(perfil: &PerfilDoSite, documentos: &[Documento], caminho: &str) ->
         .id
         .clone();
     Some(Cardapio {
+        escopo: site_id.to_string(),
         dados: serde_json::to_string(&categorias).ok()?,
         ativo,
         whatsapp,

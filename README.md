@@ -31,7 +31,7 @@ demonstração publicado.
 | Mídia | Envio pelo painel com `alt` obrigatório, original em disco, rotina que gera AVIF e WebP, legenda, crédito e direitos por imagem (autoria, aviso, licença e página de aquisição) corrigíveis depois do envio, imagem de autoria própria marcada com uma caixa (crédito, autor, aviso e a licença do site), página `/licenca-de-imagens` em cada site com os termos escritos na identidade ou o texto padrão, `ImageObject` no dado estruturado e `max-image-preview:large`, uso por documento, limite de espaço por site; imagem em uso não é apagada e sem variante não vai ao ar | Feita |
 | Modelos 3D | Biblioteca de modelos por site (GLB e, opcional, USDZ para iPhone), conferidos no envio; bloco `modelo-3d` no editor e no conector; visualizador próprio em WebGL, sem biblioteca de terceiros, carregado só na página que tem o bloco; atalho para ver o modelo pela câmera do celular | Feita. O visualizador não toca animação do modelo |
 | Catálogo de produtos | Espécie `item`: produto sem preço, com código, resumo, fotos, modelo 3D, ficha técnica e botão; página em `/produtos/<slug>`; listagem `/produtos` com filtros por link, tirados das linhas da ficha marcadas como filtro; formulário próprio no painel e `especie: "item"` no conector | Feita. Carrinho e pagamento continuam no Lojas |
-| Temas | Quatro temas completos hospedados no CMS (clássico, industrial, editorial e moderno), com fontes livres embutidas e servidas pelo próprio site; o site escolhe na tela de identidade ou pelo conector e mantém a cor da marca | Feita |
+| Temas | Cinco temas completos hospedados no CMS (clássico, industrial, editorial, moderno e [cardápio](docs/cardapio.md)), com fontes livres embutidas e servidas pelo próprio site; o site escolhe na tela de identidade ou pelo conector e mantém a cor da marca | Feita |
 | Eventos e n8n | Fila de eventos gravada na transação do fato, entrega por webhook com nova tentativa, rota de volta com token próprio, chave do IndexNow servida por site, workflow `CMS - Operação` em [`n8n/`](n8n/cms-operacao.ts) | Feita para conteúdo, site novo, convite e mensagem de formulário; o workflow está publicado no n8n desde 12/10/2026, com as credenciais `CMS - entrada de eventos` e `CMS - volta de eventos` |
 | Conector | Servidor de autorização próprio (registro dinâmico, PKCE S256, tokens só como hash), ponto MCP com 36 ferramentas por escopo (o formato do conteúdo vai no esquema de cada ferramenta; inclui criação de rascunhos em lote, prévia do rascunho, cadastro de autor e categoria, edição da identidade, correção de imagem, envio de imagem e de modelo 3D por endereço, modelos de página, redirecionamentos, domínio próprio e ordem do menu; no post, autor, categoria e imagem vão só pela referência), tela de conexões com desconectar, registro de chamadas sem argumentos | Feita |
 | Domínio próprio, cache e rotinas | Pedido de domínio pelo Dono, conferência de DNS por rotina, resposta ao Caddy para TLS sob demanda, endereço provisório assumido como definitivo, cache de página em memória derrubado ao publicar, publicação agendada, limpeza de histórico, catálogo de rotinas com trava no banco | Feita |
@@ -114,37 +114,10 @@ Tomadas por Nicolas em 08 e 09/10/2026. O detalhe de cada uma está nas specs.
 
 ### Tema Cardápio
 
-O tema optativo `cardapio` acrescenta busca por nome ou ingrediente, categorias,
-ordenação, seleção de borda por pizza e resumo para abrir no WhatsApp. As fontes,
-os estilos e o script são servidos pelo próprio CMS.
-
-Na identidade, `paginasDoCardapio` define as categorias na ordem, uma por linha:
-`pizza /pizzas`, `borda /bordas` ou `produto /bebidas`. Os produtos vêm dos blocos
-`planos` das versões **publicadas do próprio site**, com nome, descrição e preço
-exato no formato `R$ 35,90`. O telefone da identidade é o destino do WhatsApp.
-Alterar um rascunho não altera o cardápio público; publicar a página atualiza o
-catálogo, respeitado o cache de página já existente.
-
-A seleção fica no navegador, separada pelo nome e telefone do site. Ao voltar,
-ela é conferida contra os produtos e os preços atuais. Nomes repetidos na mesma
-categoria, períodos de cobrança ou preços ambíguos mantêm a versão legível sem
-interação. Ela também permanece disponível se o script não carregar.
-
-O resumo não registra pedidos, cobra, reserva estoque nem envia mensagens.
-O visitante revisa a mensagem e combina disponibilidade, tamanho, entrega e
-pagamento no atendimento. Essas regras continuam a cargo do negócio.
-
-Nos sites com o tema Cardápio e endereço definitivo, `Accept: text/markdown`
-negocia uma representação pública do documento; a home inclui as categorias
-configuradas. As variantes usam cache separado e `Vary: Accept`. Os cabeçalhos
-`Link` apontam para os documentos reais `/llms.txt` e `/llms-full.txt`.
-O conector permite ao dono definir o provisório como definitivo com
-`definir_provisorio_definitivo` e `definitivo: "sim"` (ou `"nao"` para reverter).
-Isso libera robots e sitemap pelas regras existentes, sem expor o painel.
-
-Verificação do cálculo no navegador:
-`node --test crates/web/recursos/pedido.test.mjs`. Os testes Rust cobrem renderização,
-isolamento entre sites, publicação de preços e compatibilidade dos outros temas.
+O quinto tema usa o conteúdo publicado do próprio site para montar uma seleção
+com categorias, bordas, quantidades e resumo para WhatsApp. A seleção persiste
+pelo identificador estável do site; preços e produtos são revalidados ao abrir.
+Veja [configuração, limites, verificação e instalação](docs/cardapio.md).
 
 - [Base Rust](docs/superpowers/specs/2026-10-09-base-rust-design.md)
 - [Motor](docs/superpowers/specs/2026-10-09-motor-web-design.md)
