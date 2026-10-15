@@ -277,6 +277,7 @@ pub struct PaginaDeDocumento {
     pub autor: Option<CaixaDoAutor>,
     /// O endereço do visualizador de modelo 3D, só na página que tem o bloco.
     pub visualizador_3d: Option<&'static str>,
+    pub cardapio: Option<crate::cardapio::Cardapio>,
 }
 
 impl PaginaDeDocumento {
@@ -311,6 +312,7 @@ impl PaginaDeDocumento {
             visualizador_3d: documento
                 .tem_modelo_3d()
                 .then(crate::modelos::caminho_do_visualizador),
+            cardapio: None,
         }
     }
 }

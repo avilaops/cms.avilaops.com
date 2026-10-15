@@ -617,10 +617,14 @@ pub async fn previa(
         conteudo: aberto.conteudo,
     };
     match publico::previa(estado, site, documento).await {
-        Ok(pagina) => Ok(html_privado(
-            StatusCode::OK,
-            pagina.replace("\"/midia/", &imagens),
-        )),
+        Ok(pagina) => {
+            let tem_cardapio = pagina.contains("data-cardapio-dados");
+            let mut resposta = html_privado(StatusCode::OK, pagina.replace("\"/midia/", &imagens));
+            if tem_cardapio {
+                crate::resposta::liberar_visualizador_3d(&mut resposta);
+            }
+            Ok(resposta)
+        }
         // Rascunho que o motor não consegue montar ainda não tem prévia.
         Err(ErroWeb::Documento(_)) => Ok(simples(
             StatusCode::UNPROCESSABLE_ENTITY,

@@ -28,14 +28,17 @@ pub enum Tema {
     Editorial,
     /// Sem serifa geométrica, títulos pesados e cantos redondos.
     Moderno,
+    /// Cardápio com seleção de itens e resumo para WhatsApp.
+    Cardapio,
 }
 
 impl Tema {
-    pub const TODOS: [Tema; 4] = [
+    pub const TODOS: [Tema; 5] = [
         Tema::Classico,
         Tema::Industrial,
         Tema::Editorial,
         Tema::Moderno,
+        Tema::Cardapio,
     ];
 
     /// O nome que vai gravado e que o conector usa.
@@ -45,6 +48,7 @@ impl Tema {
             Tema::Industrial => "industrial",
             Tema::Editorial => "editorial",
             Tema::Moderno => "moderno",
+            Tema::Cardapio => "cardapio",
         }
     }
 
@@ -54,6 +58,7 @@ impl Tema {
             Tema::Industrial => "Industrial",
             Tema::Editorial => "Editorial",
             Tema::Moderno => "Moderno",
+            Tema::Cardapio => "Cardápio",
         }
     }
 
@@ -64,6 +69,7 @@ impl Tema {
             Tema::Industrial => "títulos condensados em caixa alta, cantos retos",
             Tema::Editorial => "títulos com serifa, fundo de papel",
             Tema::Moderno => "títulos pesados, cantos redondos",
+            Tema::Cardapio => "fundo de papel, verde e dourado, seleção para WhatsApp",
         }
     }
 
@@ -101,6 +107,10 @@ pub struct PerfilDoSite {
     /// O tema do site. O clássico não vai gravado.
     #[serde(default, skip_serializing_if = "Tema::eh_o_padrao")]
     pub tema: Tema,
+    /// Categorias do cardápio, na ordem: `pizza /pizzas`, `borda /bordas`
+    /// ou `produto /bebidas`. Só páginas publicadas do próprio site entram.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub paginas_do_cardapio: Vec<String>,
     /// As páginas do menu do topo, na ordem, pelos caminhos (`/servicos`,
     /// `/blog`), ou um grupo com submenu (`Produtos: /mail /crm`, veja
     /// [`ler_entrada_do_menu`]). O que não está na lista vai para o rodapé.
@@ -226,6 +236,7 @@ impl PerfilDoSite {
             orcamento_peso_kb: ORCAMENTO_DE_PESO_PADRAO_KB,
             cor_de_destaque: None,
             tema: Tema::default(),
+            paginas_do_cardapio: Vec::new(),
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,
@@ -312,6 +323,7 @@ impl From<Site> for PerfilDoSite {
             orcamento_peso_kb: site.orcamento_peso_kb,
             cor_de_destaque: None,
             tema: Tema::default(),
+            paginas_do_cardapio: Vec::new(),
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,

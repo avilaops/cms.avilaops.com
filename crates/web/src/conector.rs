@@ -613,7 +613,11 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
     (
         "tema",
-        "O tema do site, com as fontes, as cores de base e as formas: classico, industrial, editorial ou moderno.",
+        "O tema do site, com as fontes, as cores de base e as formas: classico, industrial, editorial, moderno ou cardapio.",
+    ),
+    (
+        "paginasDoCardapio",
+        "Categorias do tema cardapio, uma por linha, na ordem: pizza /pizzas, borda /bordas ou produto /bebidas. Só páginas publicadas deste site entram. Os itens vêm das seções planos, com preço exato em reais (R$ 35,00). A seleção é levada ao WhatsApp do telefone do site, com DDI e DDD; não envia mensagem nem calcula frete ou pagamento.",
     ),
     (
         "tagDoGoogle",
