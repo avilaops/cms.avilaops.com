@@ -1690,7 +1690,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        36
+        37
     );
     // O formato do conteúdo vai no esquema: a espécie e os tipos de bloco.
     let esquema = |nome: &str| {
@@ -2338,6 +2338,57 @@ async fn assistente_cadastra_autor_categoria_e_identidade_e_escreve_um_post(pool
     assert!(erro);
     assert!(recusa.as_str().expect("frase").contains("sites:editar"));
     std::fs::remove_dir_all(&painel.diretorio).expect("pasta removida");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn conector_define_endereco_definitivo_so_com_escopo_e_papel_do_dono(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+    painel.criar_site("ana", "padaria", "Padaria da Ana").await;
+    let (_, leitura, _) = painel.conectar("ana", &["sites:ler"]).await;
+    let (_, dono, _) = painel.conectar("ana", &["sites:ler", "sites:editar"]).await;
+    let argumentos = json!({"site":"padaria","definitivo":"sim"});
+    let (erro, _) = painel
+        .ferramenta(
+            &leitura,
+            "definir_provisorio_definitivo",
+            argumentos.clone(),
+        )
+        .await;
+    assert!(erro);
+    let (erro, resultado) = painel
+        .ferramenta(&dono, "definir_provisorio_definitivo", argumentos)
+        .await;
+    assert!(!erro, "{resultado}");
+    assert_eq!(resultado["provisorio_definitivo"], true);
+    let (erro, _) = painel
+        .ferramenta(
+            &dono,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"talvez"}),
+        )
+        .await;
+    assert!(erro);
+    let (erro, resultado) = painel
+        .ferramenta(
+            &dono,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"nao"}),
+        )
+        .await;
+    assert!(!erro, "{resultado}");
+    assert_eq!(resultado["provisorio_definitivo"], false);
+    // Uma conexão de outra conta não alcança este tenant.
+    let (_, outro, _) = painel
+        .conectar("caio", &["sites:ler", "sites:editar"])
+        .await;
+    let (erro, _) = painel
+        .ferramenta(
+            &outro,
+            "definir_provisorio_definitivo",
+            json!({"site":"padaria","definitivo":"sim"}),
+        )
+        .await;
+    assert!(erro);
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]

@@ -1,0 +1,76 @@
+@font-face{font-family:"Plex Serif";font-weight:500;font-display:swap;src:url(/recursos/fontes/plex-serif-500.woff2) format("woff2")}
+:root{--texto:#24332a;--suave:#586450;--linha:#dedfd3;--fundo:#f8f5ee;--destaque:#31513c;--largura:72rem}
+body{font-size:1rem}h1,h2,.marca{font-family:"Plex Serif",Georgia,serif;font-weight:500}header.topo{background:#1c2a25;color:#f8f5ee}header.topo .marca,header.topo nav a,header.topo nav summary,header.topo .botao-menu{color:#f8f5ee}header.topo nav a[aria-current]{color:#dfb570}.abertura{background:#1c2a25;color:#f8f5ee;border-radius:1rem;margin-bottom:2rem}.abertura p{color:#d8ddce}.abertura .botao{background:#dfb570;color:#1c2a25}.abertura h1{font-size:clamp(2rem,6vw,4rem)}
+.cms-cardapio{max-width:none!important}.cms-cardapio *{box-sizing:border-box}.cms-cardapio [hidden]{display:none!important}.cms-cardapio button,.cms-cardapio input,.cms-cardapio select,.cms-cardapio textarea{font:inherit}.cms-cardapio button{cursor:pointer;touch-action:manipulation}.cms-cardapio button:disabled{opacity:.5;cursor:not-allowed}.cms-cardapio :is(button,input,select,textarea):focus-visible{outline:3px solid #94703b;outline-offset:3px}.cms-cardapio svg{width:1.2rem;height:1.2rem;fill:none;stroke:currentColor;stroke-width:1.6}.cms-cardapio .menu-toolbar{display:flex;gap:1rem;justify-content:space-between;flex-wrap:wrap;padding:1rem 0;border-bottom:1px solid var(--linha)}.cms-cardapio .category-tabs{display:flex;gap:.35rem;flex-wrap:wrap}.cms-cardapio .category-tabs button{border:1px solid var(--linha);background:transparent;border-radius:6px;padding:.65rem .8rem;color:var(--texto)}.cms-cardapio .category-tabs button[aria-selected=true]{background:#1c2a25;color:#fff}.cms-cardapio small{font-size:.75rem;margin-left:.3rem;opacity:.75}.cms-cardapio .search{display:flex;align-items:center;gap:.5rem;font-size:.85rem;flex:0 1 20rem}.cms-cardapio .search input{min-width:0;width:100%;padding:.65rem;border:1px solid var(--linha);border-radius:6px;background:#fffdf8}.cms-cardapio .menu-layout{display:grid;grid-template-columns:minmax(0,1fr) 19rem;gap:1.5rem;padding:1.5rem 0}.cms-cardapio .menu-main{min-width:0}.cms-cardapio .menu-meta{display:flex;justify-content:space-between;align-items:center;gap:.5rem;font-size:.8rem;color:var(--suave)}.cms-cardapio .menu-meta p{margin:0}.cms-cardapio .menu-meta select{max-width:9rem;border:0;background:transparent}.cms-cardapio .ingredient-filters{display:flex;flex-wrap:wrap;gap:.4rem;margin:1rem 0}.cms-cardapio .ingredient-filters button{padding:.35rem .75rem;border:1px solid #cbd2bf;border-radius:99px;font-size:.8rem;background:transparent;color:var(--texto)}.cms-cardapio .ingredient-filters button.active{background:#e7e9dc;border-color:#637359}.cms-cardapio .product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.cms-cardapio .product{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:#fffdf8;border:1px solid var(--linha);border-radius:8px;padding:1.25rem;color:var(--texto);width:100%;min-height:12rem}.cms-cardapio .product:hover{border-color:#94703b;box-shadow:0 4px 20px #17231e0c}.cms-cardapio .product-index{font-size:.65rem;letter-spacing:.05em;color:var(--suave)}.cms-cardapio .product h3{font:500 1.35rem/1.25 "Plex Serif",Georgia,serif;margin:.7rem 0}.cms-cardapio .product-description{font-size:.85rem;line-height:1.7;color:var(--suave);flex:1}.cms-cardapio .product-bottom{display:flex;justify-content:space-between;align-items:center;width:100%;gap:.5rem}.cms-cardapio .product-price{font-size:1.1rem}.cms-cardapio .product-plus{display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:#edf0e5}.cms-cardapio .menu-note,.cms-cardapio .order-note,.cms-cardapio .order-foot,.cms-cardapio .detail-disclosure{font-size:.8rem;color:var(--suave)}.cms-cardapio .menu-note{margin-top:1.5rem;border-left:2px solid #dfb570;padding-left:.75rem}.cms-cardapio .order-card{background:#eeeee3;border:1px solid var(--linha);border-radius:8px;padding:1.25rem;position:sticky;top:1rem;max-height:90vh;overflow:auto}.cms-cardapio .order-title,.cms-cardapio .order-totals,.cms-cardapio .order-item-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.cms-cardapio .order-title h3{font:500 1.5rem "Plex Serif",Georgia,serif;margin:0}.cms-cardapio .order-title span{font-size:.8rem}.cms-cardapio .empty-order{text-align:center;padding:2rem .5rem}.cms-cardapio .empty-order h4{font-size:.9rem}.cms-cardapio .empty-order p{font-size:.8rem;color:var(--suave)}.cms-cardapio .order-items{list-style:none;margin:1rem 0;padding:0;max-height:20rem;overflow:auto}.cms-cardapio .order-item{padding:1rem 0;border-bottom:1px solid var(--linha)}.cms-cardapio .order-item-name{font-size:.9rem;font-weight:600;margin:0}.cms-cardapio .order-item-note{font-size:.8rem;margin:.3rem 0;color:var(--suave);overflow-wrap:anywhere}.cms-cardapio .order-item-footer{margin-top:.6rem;font-size:.85rem}.cms-cardapio .quantity-control{display:flex;align-items:center;gap:.6rem}.cms-cardapio .quantity-control button{min-width:2rem;min-height:2rem;border:1px solid #cbd2bf;border-radius:5px;background:#fffdf8;color:var(--texto)}.cms-cardapio .order-totals{padding-top:1rem;border-top:1px solid #cbd2bf;font-size:.9rem}.cms-cardapio .order-totals strong{font-size:1.2rem}.cms-cardapio .checkout,.cms-cardapio .dark-button{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;padding:.8rem;border:0;border-radius:6px;background:#1c2a25;color:#fffdf8;text-decoration:none;font-size:.85rem}.cms-cardapio .order-fields label,.cms-cardapio .detail-label{display:block;font-size:.8rem;margin:1rem 0}.cms-cardapio .order-fields input,.cms-cardapio .order-fields textarea,.cms-cardapio .detail-label select,.cms-cardapio .detail-label textarea{display:block;width:100%;border:1px solid #cbd2bf;border-radius:5px;background:#fffdf8;padding:.6rem;margin-top:.4rem;color:var(--texto)}.cms-cardapio textarea{resize:vertical;min-height:4rem}.cms-cardapio dialog{width:min(32rem,calc(100% - 1.5rem));max-height:88dvh;overflow:auto;border:1px solid #cbd2bf;border-radius:12px;padding:2rem;background:#f8f5ee;color:var(--texto);box-shadow:0 20px 80px #0004}.cms-cardapio dialog::backdrop{background:#10251bbd}.cms-cardapio .close-dialog{position:absolute;right:.75rem;top:.75rem;width:2rem;height:2rem;border:0;border-radius:50%;background:#e7e9dc;font-size:1.4rem;color:var(--texto)}.cms-cardapio .detail-eyebrow{font-size:.7rem;letter-spacing:.1em;color:#786236;margin:1rem 0}.cms-cardapio #product-title{font:500 2rem/1.2 "Plex Serif",Georgia,serif;margin:1rem 0}.cms-cardapio .detail-description{font-size:.9rem;color:var(--suave)}.cms-cardapio .detail-price{font-size:1.4rem;font-weight:600}.cms-cardapio .detail-actions{display:flex;align-items:center;gap:1rem}.cms-cardapio .detail-actions .dark-button{flex:1;flex-wrap:wrap}.cms-cardapio .mobile-cart{display:none}.cms-cardapio .toast{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:20;max-width:calc(100% - 2rem);padding:.75rem 1rem;background:#1c2a25;color:#fffdf8;border:1px solid #dfb570;border-radius:8px;font-size:.85rem;opacity:0;pointer-events:none}.cms-cardapio .toast.visible{opacity:1}.cms-cardapio .empty-results{grid-column:1/-1;padding:2rem;border:1px dashed #cbd2bf;text-align:center}.cms-cardapio .empty-results button{display:block;margin:1rem auto 0;border:0;background:transparent;text-decoration:underline;color:var(--texto)}
+@media(max-width:55rem){.cms-cardapio .menu-layout{grid-template-columns:1fr}.cms-cardapio .order-card{display:none}.cms-cardapio .mobile-cart{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.9rem 1rem;border:1px solid #dfb570;border-radius:8px;background:#1c2a25;color:#fffdf8;box-shadow:0 4px 20px #0004}.cms-cardapio .toast{bottom:5rem}footer.rodape{padding-bottom:7rem}}
+@media(max-width:36rem){.cms-cardapio .menu-toolbar{display:block}.cms-cardapio .search{margin-top:1rem}.cms-cardapio .category-tabs button{font-size:.85rem;flex:1}.cms-cardapio .product-grid{gap:.6rem}.cms-cardapio .product{padding:.85rem}.cms-cardapio .product h3{font-size:1.15rem}.cms-cardapio .product-description{font-size:.8rem}.cms-cardapio .menu-meta{flex-wrap:wrap}.cms-cardapio dialog{padding:1.4rem}.cms-cardapio .detail-actions{gap:.6rem}.cms-cardapio .detail-actions .quantity-control{gap:.4rem}}
+/* A moldura e as seções continuam vindo do conteúdo do CMS. */
+html{scroll-behavior:smooth;scroll-padding-top:7rem}
+header.topo{position:sticky;top:0;z-index:8;border-color:#ffffff18}
+header.topo .faixa{min-height:5.5rem;align-items:center;justify-content:space-between;gap:1rem}
+header.topo .marca{font-size:1.35rem;gap:.8rem}
+header.topo .marca img{height:3.3rem;max-width:6rem;object-fit:contain}
+header.topo nav a,header.topo nav summary{font-size:.85rem}
+header.topo nav .grupo ul{background:#1c2a25}
+main{padding-top:2rem}
+.abertura{padding:3rem;overflow:hidden;border:1px solid #314338;box-shadow:0 16px 50px #17231e0a}
+.abertura h1{font-size:clamp(2.6rem,4.7vw,4.5rem);line-height:1.08;letter-spacing:-.055em;margin:1rem 0 1.5rem}
+.abertura .s-sobretitulo{color:#dfb570;font-size:.75rem;letter-spacing:.12em}
+.abertura .s-intro{font-size:1rem;line-height:1.9}
+.abertura .botao{border-color:#dfb570;padding:.85rem 1.15rem;font-size:.9rem}
+.abertura .botao.secundario{color:#f8f5ee;background:transparent;border-color:#f8f5ee55}
+.abertura figure{margin:0}
+.abertura img{width:100%;border-radius:50% 50% 8px 8px;mix-blend-mode:lighten}
+.abertura figcaption{font-size:.65rem;color:#d8ddce;margin-top:.7rem}
+.cms-cardapio .menu-section{margin:3.5rem 0}
+.cms-cardapio .section-heading{display:flex;justify-content:space-between;align-items:end;gap:2rem;margin-bottom:1.5rem}
+.cms-cardapio .section-heading h2{font-size:clamp(2rem,3vw,3rem);letter-spacing:-.04em;margin:.5rem 0 0}
+.cms-cardapio .section-heading>p{font-size:.85rem;color:var(--suave);margin:0}
+.cms-cardapio .eyebrow{font-size:.7rem;font-weight:600;letter-spacing:.12em;color:#7a5f31;margin:0}
+.cms-cardapio .order-card{align-self:start;top:6.5rem;max-height:calc(100dvh - 8rem)}
+.cms-cardapio .product{transition:border-color .15s,transform .15s}
+.cms-cardapio .product:hover{transform:translateY(-2px)}
+.cms-cardapio .product h3,.cms-cardapio .order-item-name{overflow-wrap:anywhere}
+.cms-cardapio .order-foot{text-align:center;font-size:.7rem;margin:.7rem 0 0}
+.cms-cardapio .empty-symbol{display:grid;place-items:center;margin:0 auto 1rem;width:3rem;height:3rem;border-radius:50%;border:1px solid #cbd2bf}
+.cms-cardapio .quantity-control button,.cms-cardapio .close-dialog{min-width:2.75rem;min-height:2.75rem}
+.cms-cardapio .close-dialog{top:.6rem;right:.6rem}
+.cms-cardapio .order-item-footer strong{white-space:nowrap}
+.cms-cardapio .mobile-cart-count{display:grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:4px;background:#dfb570;color:#1c2a25;font-weight:700}
+.cms-cardapio .mobile-cart strong{margin-left:auto}
+.cms-cardapio dialog form{margin:0}
+.cms-cardapio #mobile-order .order-items{max-height:none}
+body:has(.cms-cardapio dialog[open]){overflow:hidden}
+.secao>h2{font-size:clamp(1.8rem,3vw,2.5rem);letter-spacing:-.03em}
+.s-cartao{background:#fffdf8;padding:1.5rem}
+.s-cartao h3{font-family:"Plex Serif",Georgia,serif;font-size:1.5rem}
+.s-cartao .botao{margin-top:1rem;font-size:.85rem}
+.s-numeros{border-block:1px solid var(--linha);padding:2rem 0}
+.s-numeros dd{font-family:"Plex Serif",Georgia,serif;color:#8b632d;font-weight:500;font-size:3rem}
+.s-passos{gap:2rem}
+.s-canais{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));padding:1.5rem;border:1px solid var(--linha);border-radius:8px;background:#fffdf8}
+.s-faixa{background:#1c2a25;padding:3rem 2rem}
+.s-faixa .botao{color:#1c2a25;background:#dfb570;border-color:#dfb570}
+dl.perguntas{max-width:52rem}
+dl.perguntas dt{border-top:1px solid var(--linha);padding-top:1.2rem}
+dl.perguntas dd{font-size:.95rem;color:var(--suave)}
+footer.rodape{background:#1c2a25;color:#d8ddce;padding-top:2rem}
+footer.rodape a{color:#dfb570}
+@media(max-width:55rem){
+ .abertura{padding:2rem}.abertura h1{font-size:3rem}
+ .cms-cardapio .section-heading{display:block}
+ .cms-cardapio .section-heading>p{margin-top:1rem}
+ .cms-cardapio .section-heading h2{font-size:2.3rem}
+}
+@media(max-width:36rem){
+ header.topo .faixa{min-height:4.7rem}header.topo .marca{font-size:1rem;gap:.4rem}header.topo .marca img{height:2.4rem;max-width:3.5rem}
+ main{padding-top:1rem}.abertura{padding:1.5rem;margin-top:0}.abertura h1{font-size:2.6rem}.abertura .s-intro{font-size:.9rem}
+ .abertura .s-acoes{gap:.5rem}.abertura .botao{font-size:.8rem;padding:.65rem .8rem}
+ .cms-cardapio .menu-section{margin:2.5rem 0}
+ .cms-cardapio .product{min-height:14rem}.cms-cardapio .product-description{font-size:.85rem}
+ .cms-cardapio .search input{font-size:1rem}.cms-cardapio .category-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .cms-cardapio .category-tabs button{min-height:2.75rem}.cms-cardapio .ingredient-filters button{min-height:2.5rem}
+ .cms-cardapio .detail-actions{flex-wrap:wrap}.cms-cardapio .detail-actions .dark-button{min-width:12rem}
+ .s-canais{grid-template-columns:1fr}.s-numeros{grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}.s-numeros dt{font-size:.75rem}.s-numeros dd{font-size:2rem}
+}
+@media(prefers-reduced-motion:reduce){html,.cms-cardapio *{scroll-behavior:auto!important;transition:none!important}}

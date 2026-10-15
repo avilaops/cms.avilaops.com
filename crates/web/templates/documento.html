@@ -16,7 +16,11 @@
 {%- if !capa.is_empty() && abertura.is_empty() %}
 <div class="capa">{{ capa|safe }}</div>
 {%- endif %}
+{%- if let Some(cardapio) = cardapio %}
+{%- include "cardapio.html" %}
+{%- else %}
 {{ corpo|safe }}
+{%- endif %}
 {%- if let Some(autor) = autor %}
 <aside class="autor" aria-label="Sobre quem escreveu">
 {{ autor.foto|safe }}

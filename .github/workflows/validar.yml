@@ -55,7 +55,20 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Testes
+        env:
+          CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
         run: cargo test --workspace --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Seleção de itens
+        run: node --test crates/web/recursos/pedido.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cardapio-preview
+          path: target/cardapio-preview
+          retention-days: 7
+          if-no-files-found: error
 
   # A imagem de produção. Sai daqui, e não de um servidor da casa: o build em
   # release pede uns 4 GB de disco, e a máquina de build é compartilhada com

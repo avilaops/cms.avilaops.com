@@ -613,7 +613,11 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
     (
         "tema",
-        "O tema do site, com as fontes, as cores de base e as formas: classico, industrial, editorial ou moderno.",
+        "O tema do site, com as fontes, as cores de base e as formas: classico, industrial, editorial, moderno ou cardapio.",
+    ),
+    (
+        "paginasDoCardapio",
+        "Categorias do tema cardapio, uma por linha, na ordem: pizza /pizzas, borda /bordas ou produto /bebidas. Só páginas publicadas deste site entram. Os itens vêm das seções planos, com preço exato em reais (R$ 35,00). A seleção é levada ao WhatsApp do telefone do site, com DDI e DDD; não envia mensagem nem calcula frete ou pagamento.",
     ),
     (
         "tagDoGoogle",
@@ -629,7 +633,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 36] = [
+const FERRAMENTAS: [Ferramenta; 37] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -966,6 +970,20 @@ const FERRAMENTAS: [Ferramenta; 36] = [
         escopo: "sites:editar",
         descricao: "Registra o domínio próprio do site, como padaria.com.br. Ele vira o endereço do site sozinho, em até dez minutos, depois que o DNS apontar para o servidor (veja ver_dominio); até lá nada muda. Exige papel de dono e a página inicial publicada.",
         argumentos: &[SITE, ("dominio", "Só o domínio, sem http e sem barra.")],
+        entrada: Entrada::Nenhuma,
+        opcionais: &[],
+    },
+    Ferramenta {
+        nome: "definir_provisorio_definitivo",
+        escopo: "sites:editar",
+        descricao: "Define se o endereço provisório já é o endereço público definitivo do site e pode aparecer na busca. Exige papel de dono. Informe sim para liberar a indexação ou nao para voltar ao provisório.",
+        argumentos: &[
+            SITE,
+            (
+                "definitivo",
+                "sim ou nao; muda a indexação do endereço provisório.",
+            ),
+        ],
         entrada: Entrada::Nenhuma,
         opcionais: &[],
     },
@@ -1605,6 +1623,26 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
             Ok(do_site(json!({ "removido": true }), None))
         }
         "ver_dominio" => Ok(do_site(dominio_em_json(chamada.estado, &site).await?, None)),
+        "definir_provisorio_definitivo" => {
+            let definitivo = match chamada.texto("definitivo")? {
+                "sim" => true,
+                "nao" => false,
+                _ => return Err(recusa("Informe sim ou nao para definitivo.")),
+            };
+            cms_dados::definir_provisorio_definitivo(pool, site.id, &ator, definitivo)
+                .await
+                .map_err(|erro| match erro {
+                    ErroDeDominio::Dados(erro) => Recusa::Interna(erro.into()),
+                    erro => recusa(erro.to_string()),
+                })?;
+            chamada.estado.cache.invalidar_site(site.id);
+            let mut atualizado = site.clone();
+            atualizado.provisorio_definitivo = definitivo;
+            Ok(do_site(
+                dominio_em_json(chamada.estado, &atualizado).await?,
+                None,
+            ))
+        }
         "pedir_dominio" => {
             let configuracao = &chamada.estado.configuracao;
             let mut reservados = vec![configuracao.dominio_base.as_str()];

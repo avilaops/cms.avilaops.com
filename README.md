@@ -112,6 +112,40 @@ Tomadas por Nicolas em 08 e 09/10/2026. O detalhe de cada uma está nas specs.
 
 ## Documentos
 
+### Tema Cardápio
+
+O tema optativo `cardapio` acrescenta busca por nome ou ingrediente, categorias,
+ordenação, seleção de borda por pizza e resumo para abrir no WhatsApp. As fontes,
+os estilos e o script são servidos pelo próprio CMS.
+
+Na identidade, `paginasDoCardapio` define as categorias na ordem, uma por linha:
+`pizza /pizzas`, `borda /bordas` ou `produto /bebidas`. Os produtos vêm dos blocos
+`planos` das versões **publicadas do próprio site**, com nome, descrição e preço
+exato no formato `R$ 35,90`. O telefone da identidade é o destino do WhatsApp.
+Alterar um rascunho não altera o cardápio público; publicar a página atualiza o
+catálogo, respeitado o cache de página já existente.
+
+A seleção fica no navegador, separada pelo nome e telefone do site. Ao voltar,
+ela é conferida contra os produtos e os preços atuais. Nomes repetidos na mesma
+categoria, períodos de cobrança ou preços ambíguos mantêm a versão legível sem
+interação. Ela também permanece disponível se o script não carregar.
+
+O resumo não registra pedidos, cobra, reserva estoque nem envia mensagens.
+O visitante revisa a mensagem e combina disponibilidade, tamanho, entrega e
+pagamento no atendimento. Essas regras continuam a cargo do negócio.
+
+Nos sites com o tema Cardápio e endereço definitivo, `Accept: text/markdown`
+negocia uma representação pública do documento; a home inclui as categorias
+configuradas. As variantes usam cache separado e `Vary: Accept`. Os cabeçalhos
+`Link` apontam para os documentos reais `/llms.txt` e `/llms-full.txt`.
+O conector permite ao dono definir o provisório como definitivo com
+`definir_provisorio_definitivo` e `definitivo: "sim"` (ou `"nao"` para reverter).
+Isso libera robots e sitemap pelas regras existentes, sem expor o painel.
+
+Verificação do cálculo no navegador:
+`node --test crates/web/recursos/pedido.test.mjs`. Os testes Rust cobrem renderização,
+isolamento entre sites, publicação de preços e compatibilidade dos outros temas.
+
 - [Base Rust](docs/superpowers/specs/2026-10-09-base-rust-design.md)
 - [Motor](docs/superpowers/specs/2026-10-09-motor-web-design.md)
 - [CMS](docs/superpowers/specs/2026-10-09-cms-design.md)
