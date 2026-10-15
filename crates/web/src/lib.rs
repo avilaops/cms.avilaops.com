@@ -4,6 +4,7 @@ mod acesso;
 mod admin;
 mod biblioteca;
 mod cache;
+mod cardapio;
 mod conector;
 mod conteudo;
 mod dominio;

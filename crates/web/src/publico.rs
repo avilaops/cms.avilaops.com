@@ -13,7 +13,7 @@ use cms_dominio::eventos::origem_do_site;
 use cms_dominio::fluxo::CAMINHO_DOS_PRODUTOS;
 use cms_dominio::redirecionamento::{SITE_INTEIRO, destino_por_prefixo};
 use cms_dominio::site::{
-    CAMINHO_DA_LICENCA_DE_IMAGENS, aparece_na_busca, conferir_cor, conferir_tag_do_google,
+    CAMINHO_DA_LICENCA_DE_IMAGENS, Tema, aparece_na_busca, conferir_cor, conferir_tag_do_google,
 };
 use cms_dominio::{Endereco, Host, Situacao, classificar, ler_host};
 use motor_web::descoberta::{
@@ -228,6 +228,7 @@ async fn responder(
         }
         _ if caminho.starts_with("/recursos/") => Ok(modelos::visualizador(caminho)
             .or_else(|| tema::fonte(caminho))
+            .or_else(|| crate::cardapio::recurso(caminho))
             .unwrap_or_else(|| simples(StatusCode::NOT_FOUND, "Não encontrado."))),
         _ => match (caminho.strip_prefix("/midia/"), Icone::do_caminho(caminho)) {
             (Some(arquivo), _) => {
@@ -499,19 +500,49 @@ async fn documento(estado: &Estado, pedido: &Pedido, caminho: &str) -> Result<Re
     ajustar_indexacao(&mut documento, pedido.indexavel);
 
     let moldura = moldura(estado, pedido, &documento).await?;
+    let mut tem_cardapio = false;
     let pagina = match &documento.conteudo {
         Conteudo::Item(item) => PaginaDeItem::nova(moldura, &documento, item).render()?,
-        _ => PaginaDeDocumento::nova(moldura, &documento).render()?,
+        _ => {
+            let mut pagina = PaginaDeDocumento::nova(moldura, &documento);
+            if usa_cardapio(pedido, &documento) {
+                let documentos =
+                    cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
+                pagina.cardapio = crate::cardapio::montar(
+                    &pedido.gravado.perfil,
+                    &documentos,
+                    caminho,
+                    pedido.gravado.id,
+                );
+                tem_cardapio = pagina.cardapio.is_some();
+            }
+            pagina.render()?
+        }
     };
     let mut resposta = html(
         StatusCode::OK,
         pagina,
         pedido.indexavel && documento.seo().indexar,
     );
-    if documento.tem_modelo_3d() {
+    if documento.tem_modelo_3d() || tem_cardapio {
         liberar_visualizador_3d(&mut resposta);
     }
     Ok(resposta)
+}
+
+fn usa_cardapio(pedido: &Pedido, documento: &Documento) -> bool {
+    pedido.gravado.perfil.tema == Tema::Cardapio
+        && matches!(documento.conteudo, Conteudo::Pagina(_))
+        && (documento.caminho == "/"
+            || pedido
+                .gravado
+                .perfil
+                .paginas_do_cardapio
+                .iter()
+                .any(|linha| {
+                    cms_dominio::cardapio::ler_categoria(linha)
+                        .is_some_and(|(_, caminho)| caminho == documento.caminho)
+                }))
 }
 
 /// A página que diz em que termos as imagens do site podem ser usadas e como
@@ -936,7 +967,20 @@ pub(crate) async fn previa(
     let mut moldura = moldura(estado, &pedido, &documento).await?;
     // Prévia não é visita: não carrega a tag de medição.
     moldura.tag_do_google = None;
-    Ok(PaginaDeDocumento::nova(moldura, &documento).render()?)
+    let mut pagina = PaginaDeDocumento::nova(moldura, &documento);
+    if usa_cardapio(&pedido, &documento) {
+        let mut documentos =
+            cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
+        documentos.retain(|d| d.caminho != documento.caminho);
+        documentos.push(documento.clone());
+        pagina.cardapio = crate::cardapio::montar(
+            &pedido.gravado.perfil,
+            &documentos,
+            &documento.caminho,
+            pedido.gravado.id,
+        );
+    }
+    Ok(pagina.render()?)
 }
 
 /// O que o visitante lê quando o endereço não tem página.

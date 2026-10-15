@@ -1,0 +1,17 @@
+<div class="cms-cardapio cardapio" data-cardapio-dados data-scope="{{ cardapio.escopo }}" data-menu="{{ cardapio.dados }}" data-active="{{ cardapio.ativo }}" data-name="{{ moldura.nome_do_site }}" data-whatsapp="{{ cardapio.whatsapp }}">
+<section id="cardapio" class="menu-section" aria-labelledby="menu-heading">
+<div class="section-heading"><div><p class="eyebrow dark">ESCOLHA. COMBINE. APROVEITE.</p><h2 id="menu-heading">Seu próximo favorito.</h2></div><p>Ingredientes e preços para escolher com calma.<br>Os detalhes do pedido, a gente combina no atendimento.</p></div>
+<div data-cardapio-app hidden>
+<div class="menu-toolbar"><div class="category-tabs" role="tablist" aria-label="Categorias do cardápio" id="category-tabs"></div><label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="search" type="search" placeholder="Busque sabor ou ingrediente" aria-label="Buscar sabor ou ingrediente" maxlength="100"></label></div>
+<div class="menu-layout"><div class="menu-main" id="menu-panel" role="tabpanel"><div class="menu-meta"><p id="result-count" role="status" aria-live="polite"></p><label class="sort-label">Ordenar <select id="sort" aria-label="Ordenar produtos"><option value="original">Pelo cardápio</option><option value="price">Menor preço</option><option value="name">Nome de A a Z</option></select></label></div><div class="ingredient-filters" id="ingredient-filters" role="group" aria-label="Filtrar por ingredientes"></div><div class="product-grid" id="products"></div><p class="menu-note" id="menu-note"></p></div>
+<aside class="order-card" id="desktop-order" aria-label="Resumo do pedido"></aside></div>
+<button class="mobile-cart" data-cart-open type="button"><span class="mobile-cart-count" data-count>0</span><span>Ver meu pedido</span><strong id="mobile-total">R$ 0,00</strong><span aria-hidden="true">↗</span></button>
+<dialog id="product-dialog" aria-labelledby="product-title"><form method="dialog"><button class="close-dialog" aria-label="Fechar detalhes">×</button></form><div id="product-detail"></div></dialog>
+<dialog id="cart-dialog" aria-label="Meu pedido"><form method="dialog"><button class="close-dialog" aria-label="Fechar meu pedido">×</button></form><div id="mobile-order"></div></dialog>
+<div class="toast" role="status" aria-live="polite" id="toast"></div>
+</div>
+<div data-cardapio-alternativa>{{ cardapio.alternativa|safe }}</div>
+</section>
+{{ cardapio.complemento|safe }}
+</div>
+<script type="module" src="{{ cardapio.script }}"></script>

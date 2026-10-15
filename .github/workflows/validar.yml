@@ -56,6 +56,11 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Testes
         run: cargo test --workspace --locked
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cálculo e persistência da seleção do cardápio
+        run: node --test crates/web/recursos/pedido.test.mjs
 
   # A imagem de produção. Sai daqui, e não de um servidor da casa: o build em
   # release pede uns 4 GB de disco, e a máquina de build é compartilhada com

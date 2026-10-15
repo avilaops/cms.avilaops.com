@@ -42,6 +42,8 @@ pub(crate) struct DadosDaIdentidade {
     cor: String,
     /// O tema do site, pelo nome gravado (`classico`, `industrial`...).
     tema: String,
+    /// Papel e caminho das categorias do cardápio, um por linha.
+    cardapio: String,
     /// A ordem das páginas no menu: um caminho por linha, como `/servicos`.
     menu: String,
     /// A tag do Google, como `GTM-ABC1234`; vazio deixa o site sem script.
@@ -77,6 +79,7 @@ impl DadosDaIdentidade {
             diretrizes: perfil.diretrizes_ia.join("\n"),
             cor: perfil.cor_de_destaque.clone().unwrap_or_default(),
             tema: perfil.tema.slug().to_string(),
+            cardapio: perfil.paginas_do_cardapio.join("\n"),
             menu: perfil.menu.join("\n"),
             tag: perfil.tag_do_google.clone().unwrap_or_default(),
             licenca: perfil.licenca_de_imagens.clone().unwrap_or_default(),
@@ -100,6 +103,7 @@ impl DadosDaIdentidade {
             "diretrizes" => &mut self.diretrizes,
             "corDeDestaque" => &mut self.cor,
             "tema" => &mut self.tema,
+            "paginasDoCardapio" => &mut self.cardapio,
             "menu" => &mut self.menu,
             "tagDoGoogle" => &mut self.tag,
             "licencaDeImagens" => &mut self.licenca,
@@ -336,6 +340,10 @@ pub(crate) async fn aplicar(
         )));
     };
     dados.tema = tema.slug().to_string();
+    let paginas_do_cardapio = match cms_dominio::cardapio::conferir_categorias(&dados.cardapio) {
+        Ok(categorias) => categorias,
+        Err(recusa) => return Ok(Err(recusa.to_string())),
+    };
     // Quem chamou recebe de volta a cor como ficou gravada.
     dados.cor = cor_de_destaque.clone().unwrap_or_default();
     let tag_do_google = match opcional(&dados.tag) {
@@ -383,6 +391,7 @@ pub(crate) async fn aplicar(
         diretrizes_ia: linhas(&dados.diretrizes),
         cor_de_destaque,
         tema,
+        paginas_do_cardapio,
         tag_do_google,
         licenca_de_imagens: opcional(&dados.licenca),
         // Só caminho do site ou grupo de caminhos entra na ordem do menu.

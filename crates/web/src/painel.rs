@@ -504,6 +504,9 @@ async fn responder(
     if let Some(fonte) = tema::fonte(caminho).filter(|_| leitura) {
         return Ok(fonte);
     }
+    if let Some(recurso) = crate::cardapio::recurso(caminho).filter(|_| leitura) {
+        return Ok(recurso);
+    }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };

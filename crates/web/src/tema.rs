@@ -94,6 +94,7 @@ pub fn estilo(tema: Tema) -> &'static str {
         Tema::Industrial => INDUSTRIAL,
         Tema::Editorial => EDITORIAL,
         Tema::Moderno => MODERNO,
+        Tema::Cardapio => include_str!("../recursos/cardapio.css"),
     }
 }
 

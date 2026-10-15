@@ -21,6 +21,9 @@
 <option value="{{ opcao.0 }}"{% if opcao.2 %} selected{% endif %}>{{ opcao.1 }}</option>
 {%- endfor %}
 </select>
+<label for="cardapio">Categorias do tema Cardápio, uma por linha</label>
+<textarea id="cardapio" name="cardapio" maxlength="2400" aria-describedby="dica-cardapio">{{ d.cardapio }}</textarea>
+<p class="dica" id="dica-cardapio">Escreva o tipo e o caminho: pizza /pizzas, borda /bordas ou produto /bebidas. Use seções de planos e preços nessas páginas, com preços no formato R$ 35,00. O resumo usa o telefone do site como WhatsApp; confirme o DDI e o DDD. Frete e pagamento são combinados no atendimento.</p>
 <fieldset>
 <legend>Quem está por trás do site</legend>
 <label for="razao_social">Razão social</label>
