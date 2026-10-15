@@ -633,7 +633,7 @@ const IDENTIDADE: &[(&str, &str)] = &[
     ),
 ];
 
-const FERRAMENTAS: [Ferramenta; 36] = [
+const FERRAMENTAS: [Ferramenta; 37] = [
     Ferramenta {
         nome: "listar_sites",
         escopo: "sites:ler",
@@ -1636,7 +1636,7 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
                     erro => recusa(erro.to_string()),
                 })?;
             chamada.estado.cache.invalidar_site(site.id);
-            let mut atualizado = site;
+            let mut atualizado = site.clone();
             atualizado.provisorio_definitivo = definitivo;
             Ok(do_site(
                 dominio_em_json(chamada.estado, &atualizado).await?,

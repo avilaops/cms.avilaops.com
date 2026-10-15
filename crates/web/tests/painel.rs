@@ -1690,7 +1690,7 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
     let lista = painel.rpc(&token, "tools/list", json!({})).await;
     assert_eq!(
         lista["result"]["tools"].as_array().expect("lista").len(),
-        36
+        37
     );
     // O formato do conteúdo vai no esquema: a espécie e os tipos de bloco.
     let esquema = |nome: &str| {

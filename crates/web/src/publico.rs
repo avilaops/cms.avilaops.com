@@ -797,7 +797,7 @@ async fn catalogo(estado: &Estado, pedido: &Pedido, consulta: &str) -> Result<Re
         itens.iter().map(|(_, item)| item.publicado_em).min(),
         itens.iter().map(|(_, item)| item.atualizado_em).max(),
     ) else {
-        return documento(estado, pedido, CAMINHO_DOS_PRODUTOS).await;
+        return documento(estado, pedido, CAMINHO_DOS_PRODUTOS, false).await;
     };
     // Pelo código, quando há; depois pelo nome.
     itens.sort_by(|a, b| {
