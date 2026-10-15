@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {cleanCart, cartTotals, orderMessage} from './pedido.mjs';
+import {cleanCart, cartTotals, orderMessage, escapeHtml} from './pedido.mjs';
 
 const products = new Map([
   ['pizza', {name:'Pizza de exemplo', price:3590, kind:'pizza'}],
@@ -35,4 +35,16 @@ test('seleção salva é revalidada contra o catálogo atual', () => {
   changed.set('pizza',{...products.get('pizza'),price:4200});
   const saved = cleanCart([{id:'pizza',quantity:2,price:1}],changed,borders);
   assert.equal(cartTotals(saved,changed,borders).cents,8400);
+});
+
+test('texto de produto e observação são escapados para HTML', () => {
+  assert.equal(escapeHtml('<img src=x onerror="alert(1)">'), '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;');
+  assert.equal(escapeHtml("Tomate & queijo 'especial'"), 'Tomate &amp; queijo &#39;especial&#39;');
+});
+
+test('seleção limita linhas e ignora entradas nulas sem perder itens válidos', () => {
+  const rows = Array.from({length:101}, () => ({id:'pizza',quantity:99}));
+  assert.equal(cleanCart(rows,products,borders).length,100);
+  assert.deepEqual(cleanCart([null,{id:'pizza',quantity:0},{id:'pizza',quantity:1}],products,borders),
+    [{id:'pizza',quantity:1,borderId:'',note:''}]);
 });

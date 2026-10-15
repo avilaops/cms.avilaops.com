@@ -2,7 +2,7 @@ const root=document.querySelector('[data-cardapio-dados]');
 const $=selector=>root.querySelector(selector);
 const esc=escapeHtml;
 const restaurant=root.dataset.name,phone=root.dataset.whatsapp;
-const storageKey='cms-cardapio-cart-v1:'+restaurant+':'+phone;
+const storageKey='cms-cardapio-'+root.dataset.scope+'-v1';
 const bag='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14l1 14H4L5 7Zm4 0V5a3 3 0 0 1 6 0v2"/></svg>';
 const wa='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8.5 8.5 0 0 1-12.5 7.4L3 20l1.2-4.3A8.5 8.5 0 1 1 20 11.5Z"/><path d="M8 8c0 4 4 7 7 7l1-2-2-1-1 1c-2-1-3-2-3-3l1-1-1-2-2 1Z"/></svg>';
 let categories=[],products=new Map(),borders=new Map(),cart=[],active=root.dataset.active,ingredient='',query='',sort='original',selected=null,quantity=1,toastTimer,name='',delivery='';

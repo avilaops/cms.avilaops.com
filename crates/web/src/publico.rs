@@ -568,8 +568,12 @@ async fn documento(
             if usa_cardapio(pedido, &documento) {
                 let documentos =
                     cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
-                pagina.cardapio =
-                    crate::cardapio::montar(&pedido.gravado.perfil, &documentos, caminho);
+                pagina.cardapio = crate::cardapio::montar(
+                    &pedido.gravado.perfil,
+                    &documentos,
+                    caminho,
+                    pedido.gravado.id,
+                );
                 tem_cardapio = pagina.cardapio.is_some();
             }
             pagina.render()?
@@ -1029,8 +1033,12 @@ pub(crate) async fn previa(
             cms_dados::documentos_publicados(&estado.pool, pedido.gravado.id).await?;
         documentos.retain(|d| d.caminho != documento.caminho);
         documentos.push(documento.clone());
-        pagina.cardapio =
-            crate::cardapio::montar(&pedido.gravado.perfil, &documentos, &documento.caminho);
+        pagina.cardapio = crate::cardapio::montar(
+            &pedido.gravado.perfil,
+            &documentos,
+            &documento.caminho,
+            pedido.gravado.id,
+        );
     }
     Ok(pagina.render()?)
 }
