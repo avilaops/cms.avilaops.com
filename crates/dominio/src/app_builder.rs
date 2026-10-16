@@ -36,9 +36,18 @@ pub struct Screen {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Component {
-    Text { id: String, value: String },
-    Button { id: String, label: String, action: Action },
-    Spacer { id: String },
+    Text {
+        id: String,
+        value: String,
+    },
+    Button {
+        id: String,
+        label: String,
+        action: Action,
+    },
+    Spacer {
+        id: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,7 +73,9 @@ pub enum ValidationError {
 fn valid_id(id: &str) -> bool {
     (1..=64).contains(&id.len())
         && id.as_bytes()[0].is_ascii_lowercase()
-        && id.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
 impl Component {
@@ -153,7 +164,9 @@ mod tests {
     #[test]
     fn rejects_duplicate_component_id() {
         let mut app = fixture();
-        app.screens[0].components.push(Component::Spacer { id: "intro".into() });
+        app.screens[0]
+            .components
+            .push(Component::Spacer { id: "intro".into() });
         assert_eq!(app.validate(), Err(ValidationError::Duplicate));
     }
 
