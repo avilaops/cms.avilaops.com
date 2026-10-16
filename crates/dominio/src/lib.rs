@@ -2,6 +2,7 @@
 //! ele aparece na busca. Sem banco e sem rede.
 
 pub mod app_builder;
+pub mod app_registry;
 pub mod cardapio;
 pub mod conta;
 pub mod datas;
