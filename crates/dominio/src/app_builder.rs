@@ -171,6 +171,34 @@ mod tests {
     }
 
     #[test]
+    fn rejects_duplicate_screen_route() {
+        let mut app = fixture();
+        app.screens[1].route = "home".into();
+        assert_eq!(app.validate(), Err(ValidationError::Duplicate));
+    }
+
+    #[test]
+    fn rejects_button_target_without_screen() {
+        let mut app = fixture();
+        app.screens[1].route = "changed".into();
+        assert_eq!(app.validate(), Err(ValidationError::UnknownRoute));
+    }
+
+    #[test]
+    fn rejects_unsupported_schema_version() {
+        let mut app = fixture();
+        app.schema_version = "2.0.0".into();
+        assert_eq!(app.validate(), Err(ValidationError::UnsupportedSchema));
+    }
+
+    #[test]
+    fn rejects_empty_identifier() {
+        let mut app = fixture();
+        app.app_id.clear();
+        assert_eq!(app.validate(), Err(ValidationError::InvalidIdentifier));
+    }
+
+    #[test]
     fn rejects_unknown_fields() {
         let json = r#"{"schemaVersion":"1.0.0","appId":"x","minimumRuntimeVersion":"1.0.0","navigation":{"initialRoute":"home"},"screens":[],"script":"evil"}"#;
         assert!(serde_json::from_str::<AppDefinition>(json).is_err());
