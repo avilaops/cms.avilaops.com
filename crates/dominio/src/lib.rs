@@ -1,6 +1,8 @@
 //! Regras puras do CMS: o que é um site, como um host vira um site e quando
 //! ele aparece na busca. Sem banco e sem rede.
 
+pub mod app_builder;
+pub mod app_registry;
 pub mod cardapio;
 pub mod conta;
 pub mod datas;

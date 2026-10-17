@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "appId": "app-exemplo",
+  "minimumRuntimeVersion": "1.0.0",
+  "navigation": {
+    "initialRoute": "home"
+  },
+  "screens": [
+    {
+      "id": "home",
+      "route": "home",
+      "title": "Início",
+      "components": [
+        {
+          "type": "text",
+          "id": "intro",
+          "value": "Bem-vindo"
+        },
+        {
+          "type": "button",
+          "id": "go-orders",
+          "label": "Ver pedidos",
+          "action": {
+            "type": "navigate",
+            "target": "orders"
+          }
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "route": "orders",
+      "title": "Pedidos",
+      "components": [
+        {
+          "type": "spacer",
+          "id": "placeholder"
+        }
+      ]
+    }
+  ]
+}
