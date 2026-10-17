@@ -15,29 +15,31 @@ jobs:
   validar:
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    services:
-      # A imagem de produção do Postgres. Cada teste de integração cria a
-      # própria base nela. Vem do espelho oficial no ECR público: o Docker
-      # Hub limita pull sem login pelo IP, que os runners dividem.
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:18-alpine
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       CARGO_TERM_COLOR: always
       # As consultas são conferidas contra o `.sqlx` versionado, e não contra
       # o banco do serviço, que começa vazio.
       SQLX_OFFLINE: "true"
-      DATABASE_URL: postgres://postgres@127.0.0.1:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
+      # Instala no runner para não depender de limites de pull do Docker Hub
+      # ou do ECR público. Os builds continuam integralmente no GitHub.
+      - name: PostgreSQL 18
+        run: |
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-18
+          sudo pg_ctlcluster 18 main start
+          sudo -u postgres psql --set ON_ERROR_STOP=1 \
+            --command "alter user postgres password 'postgres'"
+          pg_isready --host 127.0.0.1 --username postgres
       - name: Toolchain
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt,clippy
@@ -57,7 +59,27 @@ jobs:
       - name: Testes
         env:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
+          CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
         run: cargo test --workspace --locked
+      - name: Prints do App Builder
+        run: |
+          mkdir -p target/app-builder-capture/recursos target/app-builder-screenshots
+          cp crates/web/recursos/app-builder.js target/app-builder-capture/recursos/app-builder.js
+          python3 -m http.server 4173 --directory target/app-builder-capture >/tmp/app-builder-http.log 2>&1 &
+          servidor=$!
+          trap 'kill "$servidor"' EXIT
+          for tentativa in {1..20}; do
+            curl --fail --silent http://127.0.0.1:4173/editor.html >/dev/null && break
+            sleep 0.25
+          done
+          google-chrome --headless --no-sandbox --disable-gpu \
+            --window-size=1440,1200 --hide-scrollbars \
+            --screenshot=target/app-builder-screenshots/editor.png \
+            http://127.0.0.1:4173/editor.html
+          google-chrome --headless --no-sandbox --disable-gpu \
+            --window-size=720,1000 --hide-scrollbars \
+            --screenshot=target/app-builder-screenshots/apps.png \
+            http://127.0.0.1:4173/apps.html
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -68,6 +90,12 @@ jobs:
           name: cardapio-preview
           path: target/cardapio-preview
           retention-days: 7
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-builder-screenshots
+          path: target/app-builder-screenshots
+          retention-days: 14
           if-no-files-found: error
 
   # A imagem de produção. Sai daqui, e não de um servidor da casa: o build em

@@ -1,4 +1,6 @@
+use chrono::{DateTime, Utc};
 use cms_dominio::Conta;
+use cms_dominio::app_builder::AppDefinition;
 use cms_dominio::app_registry::{AppAction, AppRole};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Postgres, Transaction};
@@ -42,6 +44,12 @@ pub enum ErroDeApp {
     VersaoInexistente,
     #[error("Ambiente inválido.")]
     AmbienteInvalido,
+    #[error("O rascunho precisa ser uma definição AAD válida para este aplicativo.")]
+    DefinicaoInvalida,
+    #[error("Informe uma conta válida.")]
+    ContaInvalida,
+    #[error("O aplicativo precisa manter ao menos um proprietário.")]
+    UltimoProprietario,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,6 +64,42 @@ pub struct VersaoDoApp {
     pub id: Uuid,
     pub numero: i32,
     pub criada: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VersaoListadaDoApp {
+    pub id: Uuid,
+    pub numero: i32,
+    pub schema_version: String,
+    pub minimum_runtime_version: String,
+    pub criado_por: String,
+    pub criado_em: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AmbienteDoApp {
+    pub nome: String,
+    pub versao_id: Uuid,
+    pub numero_da_versao: i32,
+    pub atualizado_por: String,
+    pub atualizado_em: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EventoDeAuditoriaDoApp {
+    pub id: i64,
+    pub conta: String,
+    pub acao: String,
+    pub dados: Value,
+    pub correlation_id: Uuid,
+    pub criado_em: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParticipanteDoApp {
+    pub conta: String,
+    pub papel: AppRole,
+    pub criado_em: DateTime<Utc>,
 }
 
 async fn papel_no_app(
@@ -209,17 +253,19 @@ pub async fn criar_app(
     })
 }
 
-pub async fn apps_da_conta(pool: &PgPool, conta: &str) -> Result<Vec<AppDaConta>, ErroDeDados> {
+pub async fn apps_da_conta(pool: &PgPool, conta: &Conta) -> Result<Vec<AppDaConta>, ErroDeDados> {
     let linhas = sqlx::query_as::<_, (Uuid, String, String, String, i64, String)>(
         r#"
-        select a.id, a.slug, a.nome, a.bundle_id, a.revisao_do_rascunho, p.papel
+        select a.id, a.slug, a.nome, a.bundle_id, a.revisao_do_rascunho,
+               coalesce(p.papel, 'owner')
         from app a
-        join app_participacao p on p.app_id = a.id
-        where p.conta = $1
+        left join app_participacao p on p.app_id = a.id and p.conta = $1
+        where p.conta is not null or $2
         order by a.nome, a.id
         "#,
     )
-    .bind(conta)
+    .bind(&conta.sub)
+    .bind(conta.equipe)
     .fetch_all(pool)
     .await?;
     linhas
@@ -231,10 +277,40 @@ pub async fn apps_da_conta(pool: &PgPool, conta: &str) -> Result<Vec<AppDaConta>
                 nome,
                 bundle_id,
                 revisao_do_rascunho,
-                papel: papel_lido(&papel)?,
+                papel: if conta.equipe {
+                    AppRole::Owner
+                } else {
+                    papel_lido(&papel)?
+                },
             })
         })
         .collect()
+}
+
+pub async fn app_da_conta(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+) -> Result<AppDaConta, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    let papel = papel_no_app(&mut transacao, app_id, conta)
+        .await?
+        .ok_or(ErroDeApp::NaoEncontrado)?;
+    let linha: Option<(Uuid, String, String, String, i64)> = sqlx::query_as(
+        "select id, slug, nome, bundle_id, revisao_do_rascunho from app where id = $1",
+    )
+    .bind(app_id)
+    .fetch_optional(&mut *transacao)
+    .await?;
+    let (id, slug, nome, bundle_id, revisao_do_rascunho) = linha.ok_or(ErroDeApp::NaoEncontrado)?;
+    Ok(AppDaConta {
+        id,
+        slug,
+        nome,
+        bundle_id,
+        revisao_do_rascunho,
+        papel,
+    })
 }
 
 pub async fn salvar_rascunho_do_app(
@@ -302,6 +378,282 @@ pub async fn rascunho_do_app(
     })
 }
 
+pub async fn versoes_do_app(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+) -> Result<Vec<VersaoListadaDoApp>, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, conta, AppAction::Read).await?;
+    let versoes = sqlx::query_as::<_, (Uuid, i32, String, String, String, DateTime<Utc>)>(
+        r#"
+        select id, numero, schema_version, minimum_runtime_version, criado_por, criado_em
+        from app_versao
+        where app_id = $1
+        order by numero desc
+        "#,
+    )
+    .bind(app_id)
+    .fetch_all(&mut *transacao)
+    .await?
+    .into_iter()
+    .map(
+        |(id, numero, schema_version, minimum_runtime_version, criado_por, criado_em)| {
+            VersaoListadaDoApp {
+                id,
+                numero,
+                schema_version,
+                minimum_runtime_version,
+                criado_por,
+                criado_em,
+            }
+        },
+    )
+    .collect();
+    Ok(versoes)
+}
+
+pub async fn definicao_da_versao(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+    numero: i32,
+) -> Result<Value, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, conta, AppAction::Read).await?;
+    sqlx::query_scalar("select definicao from app_versao where app_id = $1 and numero = $2")
+        .bind(app_id)
+        .bind(numero)
+        .fetch_optional(&mut *transacao)
+        .await?
+        .ok_or(ErroDeApp::VersaoInexistente)
+}
+
+pub async fn ambientes_do_app(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+) -> Result<Vec<AmbienteDoApp>, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, conta, AppAction::Read).await?;
+    let ambientes = sqlx::query_as::<_, (String, Uuid, i32, String, DateTime<Utc>)>(
+        r#"
+        select a.nome, a.versao_id, v.numero, a.atualizado_por, a.atualizado_em
+        from app_ambiente a
+        join app_versao v on v.app_id = a.app_id and v.id = a.versao_id
+        where a.app_id = $1
+        order by case a.nome
+            when 'development' then 1
+            when 'staging' then 2
+            else 3
+        end
+        "#,
+    )
+    .bind(app_id)
+    .fetch_all(&mut *transacao)
+    .await?
+    .into_iter()
+    .map(
+        |(nome, versao_id, numero_da_versao, atualizado_por, atualizado_em)| AmbienteDoApp {
+            nome,
+            versao_id,
+            numero_da_versao,
+            atualizado_por,
+            atualizado_em,
+        },
+    )
+    .collect();
+    Ok(ambientes)
+}
+
+pub async fn auditoria_do_app(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+    limite: i64,
+) -> Result<Vec<EventoDeAuditoriaDoApp>, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, conta, AppAction::Read).await?;
+    let limite = limite.clamp(1, 100);
+    let eventos = sqlx::query_as::<_, (i64, String, String, Value, Uuid, DateTime<Utc>)>(
+        r#"
+        select id, conta, acao, dados, correlation_id, criado_em
+        from app_auditoria
+        where app_id = $1
+        order by criado_em desc, id desc
+        limit $2
+        "#,
+    )
+    .bind(app_id)
+    .bind(limite)
+    .fetch_all(&mut *transacao)
+    .await?
+    .into_iter()
+    .map(
+        |(id, conta, acao, dados, correlation_id, criado_em)| EventoDeAuditoriaDoApp {
+            id,
+            conta,
+            acao,
+            dados,
+            correlation_id,
+            criado_em,
+        },
+    )
+    .collect();
+    Ok(eventos)
+}
+
+pub async fn participantes_do_app(
+    pool: &PgPool,
+    conta: &Conta,
+    app_id: Uuid,
+) -> Result<Vec<ParticipanteDoApp>, ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, conta, AppAction::ManageMembers).await?;
+    let linhas = sqlx::query_as::<_, (String, String, DateTime<Utc>)>(
+        r#"
+        select conta, papel, criado_em
+        from app_participacao
+        where app_id = $1
+        order by case papel when 'owner' then 1 when 'editor' then 2 else 3 end, conta
+        "#,
+    )
+    .bind(app_id)
+    .fetch_all(&mut *transacao)
+    .await?;
+    linhas
+        .into_iter()
+        .map(|(conta, papel, criado_em)| {
+            Ok(ParticipanteDoApp {
+                conta,
+                papel: papel_lido(&papel)?,
+                criado_em,
+            })
+        })
+        .collect::<Result<Vec<_>, ErroDeDados>>()
+        .map_err(ErroDeApp::Dados)
+}
+
+fn papel_como_texto(papel: AppRole) -> &'static str {
+    match papel {
+        AppRole::Owner => "owner",
+        AppRole::Editor => "editor",
+        AppRole::Viewer => "viewer",
+    }
+}
+
+pub async fn definir_participante_do_app(
+    pool: &PgPool,
+    ator: &Conta,
+    app_id: Uuid,
+    participante: &str,
+    papel: AppRole,
+    correlation_id: Uuid,
+) -> Result<(), ErroDeApp> {
+    let participante = participante.trim();
+    if participante.is_empty() || participante.len() > 255 {
+        return Err(ErroDeApp::ContaInvalida);
+    }
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, ator, AppAction::ManageMembers).await?;
+    sqlx::query("select pg_advisory_xact_lock(hashtext($1))")
+        .bind(app_id.to_string())
+        .execute(&mut *transacao)
+        .await?;
+    let papel_atual: Option<String> =
+        sqlx::query_scalar("select papel from app_participacao where app_id = $1 and conta = $2")
+            .bind(app_id)
+            .bind(participante)
+            .fetch_optional(&mut *transacao)
+            .await?;
+    if papel_atual.as_deref() == Some("owner") && papel != AppRole::Owner {
+        let proprietarios: i64 = sqlx::query_scalar(
+            "select count(*) from app_participacao where app_id = $1 and papel = 'owner'",
+        )
+        .bind(app_id)
+        .fetch_one(&mut *transacao)
+        .await?;
+        if proprietarios <= 1 {
+            return Err(ErroDeApp::UltimoProprietario);
+        }
+    }
+    sqlx::query(
+        r#"
+        insert into app_participacao (app_id, conta, papel)
+        values ($1, $2, $3)
+        on conflict (app_id, conta) do update set papel = excluded.papel
+        "#,
+    )
+    .bind(app_id)
+    .bind(participante)
+    .bind(papel_como_texto(papel))
+    .execute(&mut *transacao)
+    .await?;
+    auditar(
+        &mut transacao,
+        app_id,
+        ator,
+        "member.updated",
+        &json!({ "account": participante, "role": papel_como_texto(papel) }),
+        correlation_id,
+    )
+    .await?;
+    transacao.commit().await?;
+    Ok(())
+}
+
+pub async fn remover_participante_do_app(
+    pool: &PgPool,
+    ator: &Conta,
+    app_id: Uuid,
+    participante: &str,
+    correlation_id: Uuid,
+) -> Result<(), ErroDeApp> {
+    let mut transacao = pool.begin().await?;
+    exigir(&mut transacao, app_id, ator, AppAction::ManageMembers).await?;
+    sqlx::query("select pg_advisory_xact_lock(hashtext($1))")
+        .bind(app_id.to_string())
+        .execute(&mut *transacao)
+        .await?;
+    let papel: Option<String> =
+        sqlx::query_scalar("select papel from app_participacao where app_id = $1 and conta = $2")
+            .bind(app_id)
+            .bind(participante)
+            .fetch_optional(&mut *transacao)
+            .await?;
+    if papel.as_deref() == Some("owner") {
+        let proprietarios: i64 = sqlx::query_scalar(
+            "select count(*) from app_participacao where app_id = $1 and papel = 'owner'",
+        )
+        .bind(app_id)
+        .fetch_one(&mut *transacao)
+        .await?;
+        if proprietarios <= 1 {
+            return Err(ErroDeApp::UltimoProprietario);
+        }
+    }
+    let removidos = sqlx::query("delete from app_participacao where app_id = $1 and conta = $2")
+        .bind(app_id)
+        .bind(participante)
+        .execute(&mut *transacao)
+        .await?
+        .rows_affected();
+    if removidos == 0 {
+        return Err(ErroDeApp::NaoEncontrado);
+    }
+    auditar(
+        &mut transacao,
+        app_id,
+        ator,
+        "member.removed",
+        &json!({ "account": participante }),
+        correlation_id,
+    )
+    .await?;
+    transacao.commit().await?;
+    Ok(())
+}
+
 pub async fn auditar_validacao(
     pool: &PgPool,
     conta: &Conta,
@@ -353,14 +705,19 @@ pub async fn criar_versao_do_app(
             criada: false,
         });
     }
-    let rascunho: Option<Value> =
-        sqlx::query_scalar("select rascunho from app where id = $1 for update")
+    let (slug, rascunho): (String, Option<Value>) =
+        sqlx::query_as("select slug, rascunho from app where id = $1 for update")
             .bind(app_id)
             .fetch_one(&mut *transacao)
             .await?;
     let Some(rascunho) = rascunho else {
         return Err(ErroDeApp::SemRascunho);
     };
+    let definicao: AppDefinition =
+        serde_json::from_value(rascunho.clone()).map_err(|_| ErroDeApp::DefinicaoInvalida)?;
+    if definicao.app_id != slug || definicao.validate().is_err() {
+        return Err(ErroDeApp::DefinicaoInvalida);
+    }
     let numero: i32 = sqlx::query_scalar(
         "select coalesce(max(numero), 0)::int + 1 from app_versao where app_id = $1",
     )
@@ -378,18 +735,8 @@ pub async fn criar_versao_do_app(
     )
     .bind(app_id)
     .bind(numero)
-    .bind(
-        rascunho
-            .get("schemaVersion")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-    )
-    .bind(
-        rascunho
-            .get("minimumRuntimeVersion")
-            .and_then(Value::as_str)
-            .unwrap_or(""),
-    )
+    .bind(&definicao.schema_version)
+    .bind(&definicao.minimum_runtime_version)
     .bind(&rascunho)
     .bind(&conta.sub)
     .bind(chave_idempotencia)

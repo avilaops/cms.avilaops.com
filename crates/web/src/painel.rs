@@ -366,6 +366,9 @@ fn aviso_da_consulta(uri: &Uri) -> Option<String> {
 enum Rota<'a> {
     Raiz,
     Sites,
+    Apps,
+    CriarApp,
+    EditarApp(&'a str),
     CriarSite,
     Convite(&'a str),
     Equipe(&'a str),
@@ -411,6 +414,9 @@ impl<'a> Rota<'a> {
         match (leitura, partes.as_slice()) {
             (true, [""]) => Some(Rota::Raiz),
             (true, ["painel"]) => Some(Rota::Sites),
+            (true, ["painel", "apps"]) => Some(Rota::Apps),
+            (false, ["painel", "apps"]) => Some(Rota::CriarApp),
+            (true, ["painel", "apps", id]) => Some(Rota::EditarApp(id)),
             (true, ["convite", token]) => Some(Rota::Convite(token)),
             (false, ["painel", "sites"]) => Some(Rota::CriarSite),
             (true, ["painel", "sites", slug, "equipe"]) => Some(Rota::Equipe(slug)),
@@ -473,6 +479,7 @@ impl<'a> Rota<'a> {
         matches!(
             self,
             Rota::CriarSite
+                | Rota::CriarApp
                 | Rota::Convidar(_)
                 | Rota::EnviarMidia(_)
                 | Rota::ApagarMidia(..)
@@ -546,6 +553,9 @@ async fn responder(
     if let Some(recurso) = crate::cardapio::recurso(caminho).filter(|_| leitura) {
         return Ok(recurso);
     }
+    if let Some(recurso) = crate::construtor_de_apps::recurso(caminho).filter(|_| leitura) {
+        return Ok(recurso);
+    }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
@@ -572,6 +582,12 @@ async fn responder(
             pagina(estado, &conta, StatusCode::OK, recado).await
         }
         Rota::CriarSite => criar_site(estado, &conta, corpo).await,
+        Rota::Apps => crate::construtor_de_apps::listar(estado, &conta).await,
+        Rota::CriarApp => crate::construtor_de_apps::criar(estado, &conta, corpo).await,
+        Rota::EditarApp(id) => match id.parse() {
+            Ok(id) => crate::construtor_de_apps::editar(estado, &conta, id).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Aplicativo não encontrado.")),
+        },
         Rota::Convite(token) => aceitar_convite(estado, &conta, token).await,
         Rota::Equipe(slug) => equipe::abrir(estado, &conta, slug).await,
         Rota::Convidar(slug) => {

@@ -60,6 +60,13 @@ pub fn liberar_visualizador_3d(resposta: &mut Response) {
     trocar_politica(resposta, &politica);
 }
 
+/// O editor do App Builder usa um módulo JavaScript servido pelo próprio CMS.
+/// A liberação é aplicada apenas nessa tela privada.
+pub fn liberar_script_do_painel(resposta: &mut Response) {
+    let politica = politica_de(resposta).replace("script-src 'none'", SCRIPT_DO_SITE);
+    trocar_politica(resposta, &politica);
+}
+
 /// Troca a política de uma página de site pela que aceita a tag do Google.
 /// O que não é página (imagem, sitemap, redirecionamento) fica como está, e
 /// a página com modelo 3D continua carregando o visualizador.

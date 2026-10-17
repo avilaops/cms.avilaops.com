@@ -134,6 +134,50 @@ async fn cria_e_lista_so_os_apps_da_conta(pool: PgPool) {
     .await;
     assert_eq!(da_bia.status, StatusCode::OK, "{}", da_bia.corpo);
     assert_eq!(da_bia.corpo, "[]");
+
+    let id = app["id"].as_str().expect("id");
+    let membro = enviar(
+        &pool,
+        "ana",
+        Request::builder()
+            .method("PUT")
+            .uri(format!("/api/v1/apps/{id}/members")),
+        json!({ "account": "sub-bia", "role": "viewer" }),
+    )
+    .await;
+    assert_eq!(membro.status, StatusCode::OK, "{}", membro.corpo);
+
+    let membros = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/members")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(membros.status, StatusCode::OK, "{}", membros.corpo);
+    let membros: Value = serde_json::from_str(&membros.corpo).expect("membros JSON");
+    assert_eq!(membros.as_array().map(Vec::len), Some(2));
+
+    let agora_da_bia = enviar(
+        &pool,
+        "bia",
+        Request::builder().uri("/api/v1/apps"),
+        Value::Null,
+    )
+    .await;
+    let agora_da_bia: Value = serde_json::from_str(&agora_da_bia.corpo).expect("apps da Bia JSON");
+    assert_eq!(agora_da_bia[0]["role"], "viewer");
+
+    let ultimo_dono = enviar(
+        &pool,
+        "ana",
+        Request::builder()
+            .method("PUT")
+            .uri(format!("/api/v1/apps/{id}/members")),
+        json!({ "account": "sub-ana", "role": "editor" }),
+    )
+    .await;
+    assert_eq!(ultimo_dono.status, StatusCode::CONFLICT);
 }
 
 fn aad(slug: &str) -> Value {
@@ -179,6 +223,18 @@ async fn rascunho_valida_versiona_e_publica_com_concorrencia_e_idempotencia(pool
     .await;
     assert_eq!(salvo.status, StatusCode::OK, "{}", salvo.corpo);
     assert_eq!(salvo.cabecalho("etag"), "\"1\"");
+
+    let rascunho = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/draft")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(rascunho.status, StatusCode::OK, "{}", rascunho.corpo);
+    assert_eq!(rascunho.cabecalho("etag"), "\"1\"");
+    let rascunho: Value = serde_json::from_str(&rascunho.corpo).expect("rascunho JSON");
+    assert_eq!(rascunho["definition"]["appId"], "app-publicavel");
 
     let desatualizado = enviar(
         &pool,
@@ -248,6 +304,55 @@ async fn rascunho_valida_versiona_e_publica_com_concorrencia_e_idempotencia(pool
     .await;
     assert_eq!(publicada.status, StatusCode::OK, "{}", publicada.corpo);
 
+    let versoes = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/versions")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(versoes.status, StatusCode::OK, "{}", versoes.corpo);
+    let versoes: Value = serde_json::from_str(&versoes.corpo).expect("versões JSON");
+    assert_eq!(versoes.as_array().map(Vec::len), Some(1));
+    assert_eq!(versoes[0]["number"], 1);
+
+    let versao = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/versions/1")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(versao.status, StatusCode::OK, "{}", versao.corpo);
+    assert_eq!(
+        serde_json::from_str::<Value>(&versao.corpo).expect("versão JSON")["definition"]["appId"],
+        "app-publicavel"
+    );
+
+    let ambientes = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/environments")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(ambientes.status, StatusCode::OK, "{}", ambientes.corpo);
+    let ambientes: Value = serde_json::from_str(&ambientes.corpo).expect("ambientes JSON");
+    assert_eq!(ambientes[0]["name"], "production");
+    assert_eq!(ambientes[0]["version"], 1);
+
+    let eventos = enviar(
+        &pool,
+        "ana",
+        Request::builder().uri(format!("/api/v1/apps/{id}/audit")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(eventos.status, StatusCode::OK, "{}", eventos.corpo);
+    let eventos: Value = serde_json::from_str(&eventos.corpo).expect("auditoria JSON");
+    assert_eq!(eventos.as_array().map(Vec::len), Some(5));
+    assert_eq!(eventos[0]["action"], "environment.published");
+
     let barrada = enviar(
         &pool,
         "bia",
@@ -259,6 +364,15 @@ async fn rascunho_valida_versiona_e_publica_com_concorrencia_e_idempotencia(pool
     )
     .await;
     assert_eq!(barrada.status, StatusCode::NOT_FOUND);
+
+    let leitura_barrada = enviar(
+        &pool,
+        "bia",
+        Request::builder().uri(format!("/api/v1/apps/{id}/versions")),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(leitura_barrada.status, StatusCode::NOT_FOUND);
 
     let auditoria: i64 = sqlx::query_scalar("select count(*) from app_auditoria where app_id = $1")
         .bind(id.parse::<uuid::Uuid>().expect("uuid"))

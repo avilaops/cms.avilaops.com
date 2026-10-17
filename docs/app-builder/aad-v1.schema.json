@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cms.avilaops.com/schemas/aad-v1.schema.json",
+  "title": "Ávila App Definition 1.0.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "appId", "minimumRuntimeVersion", "navigation", "screens"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "appId": { "$ref": "#/$defs/identifier" },
+    "minimumRuntimeVersion": { "const": "1.0.0" },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["initialRoute"],
+      "properties": { "initialRoute": { "$ref": "#/$defs/identifier" } }
+    },
+    "screens": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/screen" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "screen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "route", "title", "components"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "route": { "$ref": "#/$defs/identifier" },
+        "title": { "type": "string" },
+        "components": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/text" },
+              { "$ref": "#/$defs/button" },
+              { "$ref": "#/$defs/spacer" }
+            ]
+          }
+        }
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "value"],
+      "properties": {
+        "type": { "const": "text" },
+        "id": { "$ref": "#/$defs/identifier" },
+        "value": { "type": "string" }
+      }
+    },
+    "button": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "label", "action"],
+      "properties": {
+        "type": { "const": "button" },
+        "id": { "$ref": "#/$defs/identifier" },
+        "label": { "type": "string" },
+        "action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "target"],
+          "properties": {
+            "type": { "const": "navigate" },
+            "target": { "$ref": "#/$defs/identifier" }
+          }
+        }
+      }
+    },
+    "spacer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "const": "spacer" },
+        "id": { "$ref": "#/$defs/identifier" }
+      }
+    }
+  }
+}
