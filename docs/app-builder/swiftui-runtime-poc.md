@@ -14,13 +14,20 @@ cd platforms/ios
 swift test
 ```
 
-Compilação e testes **ainda não executados em macOS**. Este pacote é a base experimental e não um app completo instalável em TestFlight.
+O pacote foi compilado e testado no runner GitHub `macos-15` pela execução
+[#39026475261](https://github.com/avilaops/cms.avilaops.com/actions/runs/39026475261).
+Ele continua sendo uma base experimental, não um app completo instalável em
+TestFlight.
 
 ## Próximas verificações
-1. Rodar swift test no runner macOS, conferir paridade de decoding com Rust e corrigir incompatibilidades.
-2. Validar rejeição de campos extras em todos os níveis do JSON (a implementação atual verifica explicitamente os componentes).
-3. Reconciliar payloads máximos, versões e limites de aninhamento com AAD Rust.
-4. Avaliar DynamicUI (MIT) como adaptador opcional, sem alterar o contrato proprietário.
-5. Posteriormente criar app shell e pipeline de assinatura/TestFlight.
+1. Fechar a paridade de campos desconhecidos e limite total do payload com a
+   implementação Rust.
+2. Criar um app shell e validar o runtime em Simulator e dispositivo físico,
+   incluindo VoiceOver e Dynamic Type.
+3. Implementar cache, fallback e rollback de definições assinadas antes de
+   permitir leitura remota.
+4. Criar pipeline de assinatura/TestFlight somente depois desses gates e de
+   aprovação explícita.
 
-Referências: https://github.com/0xWDG/DynamicUI e https://github.com/EnesKaraosman/JSONDrivenUI.
+A comparação e a decisão de não adicionar dependência na v1 estão em
+[`swiftui-library-audit.md`](swiftui-library-audit.md).
