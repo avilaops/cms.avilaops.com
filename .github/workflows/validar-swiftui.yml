@@ -1,0 +1,23 @@
+name: Validar SwiftUI AAD
+
+on:
+  pull_request:
+    paths:
+      - "platforms/ios/**"
+      - ".github/workflows/validar-swiftui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  swift-package:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Build and test Swift package
+        working-directory: platforms/ios
+        run: swift test
