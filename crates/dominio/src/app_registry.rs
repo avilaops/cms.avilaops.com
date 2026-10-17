@@ -51,9 +51,7 @@ pub fn authorize(
     action: AppAction,
 ) -> bool {
     membership.is_some_and(|member| {
-        member.app_id == app_id
-            && member.account_sub == account_sub
-            && member.role.allows(action)
+        member.app_id == app_id && member.account_sub == account_sub && member.role.allows(action)
     })
 }
 
@@ -88,9 +86,24 @@ mod tests {
             account_sub: "account-a".into(),
             role: AppRole::Owner,
         };
-        assert!(authorize(app_id, "account-a", Some(&member), AppAction::Publish));
-        assert!(!authorize(Uuid::new_v4(), "account-a", Some(&member), AppAction::Read));
-        assert!(!authorize(app_id, "account-b", Some(&member), AppAction::Read));
+        assert!(authorize(
+            app_id,
+            "account-a",
+            Some(&member),
+            AppAction::Publish
+        ));
+        assert!(!authorize(
+            Uuid::new_v4(),
+            "account-a",
+            Some(&member),
+            AppAction::Read
+        ));
+        assert!(!authorize(
+            app_id,
+            "account-b",
+            Some(&member),
+            AppAction::Read
+        ));
         assert!(!authorize(app_id, "account-a", None, AppAction::Read));
     }
 }
