@@ -36,7 +36,7 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install --yes postgresql-18
-          sudo pg_ctlcluster 18 main start
+          sudo pg_createcluster 18 main --start
           sudo -u postgres psql --set ON_ERROR_STOP=1 \
             --command "alter user postgres password 'postgres'"
           pg_isready --host 127.0.0.1 --username postgres
