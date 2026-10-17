@@ -1,6 +1,8 @@
 //! Acesso ao banco. SQLx é o dono do esquema: as migrações moram aqui, e as
 //! consultas são conferidas na compilação.
 
+mod app_registry;
+mod apps;
 mod catalogo;
 mod conector;
 mod contas;
@@ -18,6 +20,10 @@ mod sites;
 use sqlx::PgPool;
 use sqlx::migrate::Migrator;
 
+pub use apps::{
+    AppDaConta, ErroDeApp, RascunhoDoApp, VersaoDoApp, apps_da_conta, auditar_validacao, criar_app,
+    criar_versao_do_app, publicar_versao_no_ambiente, rascunho_do_app, salvar_rascunho_do_app,
+};
 pub use catalogo::{
     AutorDoSite, DadosDoAutor, DocumentoAberto, DocumentoDoSite, ErroDeCatalogo, abrir_documento,
     apagar_categoria, autor_para_conteudo, autores_do_site, categorias_do_site, documentos_do_site,

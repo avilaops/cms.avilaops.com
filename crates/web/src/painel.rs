@@ -192,9 +192,41 @@ async fn entrar(
     }
 }
 
+async fn entrar_na_api(estado: &Estado, cabecalhos: &HeaderMap) -> Result<Conta, Response> {
+    let Some(auth) = &estado.auth else {
+        return Err(crate::apps::erro_de_autenticacao(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "auth_unavailable",
+            "O login não está configurado.",
+        ));
+    };
+    match auth.consultar(token_de_sessao(cabecalhos)).await {
+        RespostaDoAuth::Entrou(conta) => Ok(conta),
+        RespostaDoAuth::SemSessao => Err(crate::apps::erro_de_autenticacao(
+            StatusCode::UNAUTHORIZED,
+            "unauthenticated",
+            "Autenticação necessária.",
+        )),
+        RespostaDoAuth::SemAcesso => Err(crate::apps::erro_de_autenticacao(
+            StatusCode::FORBIDDEN,
+            "access_denied",
+            "Sua conta não tem acesso ao CMS.",
+        )),
+        RespostaDoAuth::Indisponivel => Err(crate::apps::erro_de_autenticacao(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "auth_unavailable",
+            "Não foi possível consultar o login.",
+        )),
+    }
+}
+
 /// Formulário só vale vindo do próprio painel. O cookie do Auth chega de
 /// qualquer `*.avilaops.com`, inclusive de sites servidos por esta aplicação.
-fn veio_do_painel(configuracao: &Configuracao, host: &str, cabecalhos: &HeaderMap) -> bool {
+pub(crate) fn veio_do_painel(
+    configuracao: &Configuracao,
+    host: &str,
+    cabecalhos: &HeaderMap,
+) -> bool {
     cabecalhos
         .get(ORIGIN)
         .and_then(|valor| valor.to_str().ok())
@@ -498,6 +530,13 @@ async fn responder(
             return resposta;
         }
         _ => {}
+    }
+    if caminho == "/api/v1/apps" || caminho.starts_with("/api/v1/apps/") {
+        let conta = match entrar_na_api(estado, cabecalhos).await {
+            Ok(conta) => conta,
+            Err(resposta) => return Ok(resposta),
+        };
+        return Ok(crate::apps::atender(estado, &conta, metodo, cabecalhos, caminho, corpo).await);
     }
     // As fontes dos temas, para a prévia do painel sair com a cara do site.
     // São arquivos públicos: os mesmos que todo site serve.
