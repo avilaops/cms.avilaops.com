@@ -1,6 +1,8 @@
 # Ávila App Definition — AAD v1.0 (primeiro incremento)
 
-O App Builder é um domínio separado do `motor-web`. Esta entrega introduz a definição tipada no crate `cms-dominio`, um exemplo e testes unitários. **Não inclui App Registry, tabelas, API, painel ou runtime iOS.**
+O App Builder é um domínio separado do `motor-web`. A definição tipada vive no
+crate `cms-dominio`; o Registry, a API e o painel consomem o mesmo contrato. O
+runtime iOS permanece uma entrega separada.
 
 ## Contrato inicial
 - `schemaVersion` deve ser `1.0.0`.
@@ -12,7 +14,10 @@ O App Builder é um domínio separado do `motor-web`. Esta entrega introduz a de
 - Campos JSON desconhecidos são recusados por Serde.
 
 ## Compatibilidade
-Este é um contrato experimental de primeira fase, ainda não estável nem pronto para distribuição por um runtime Apple. A evolução para JSON Schema formal, limites de bytes/profundidade, tokens de design, fontes de dados, recursos nativos e assinaturas de manifesto exige entregas posteriores.
+O contrato formal está em [`aad-v1.schema.json`](aad-v1.schema.json). Esta
+primeira versão continua restrita a navegação determinística e aos três
+componentes documentados. Tokens de design, fontes de dados, recursos nativos,
+assinatura do manifesto e runtime Apple exigem versões futuras do contrato.
 
 ## Execução local
 ```bash
@@ -21,10 +26,12 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test -p cms-dominio --locked
 ```
 
-## Sequência dos próximos PRs
-1. Fechar contrato AAD com JSON Schema e testes de compatibilidade e de entradas maliciosas.
-2. Adicionar App Registry e migrations SQLx aditivas, preservando o isolamento atual por site.
-3. Criar endpoints Axum e painel Askama/htmx, com autorização, revisão e versões imutáveis.
-4. Desenvolver runtime SwiftUI após validação do contrato e de segurança.
+## Camadas entregues
+1. Contrato AAD tipado, JSON Schema, fixture e testes.
+2. App Registry e migrações SQLx aditivas, isolados do domínio de sites.
+3. [API e painel](api-v1.md), com autorização, revisão otimista, versões
+   imutáveis, ambientes e auditoria.
+4. Runtime SwiftUI: ainda não entregue; depende da validação do contrato e de
+   segurança.
 
 A entrega não deve ser marcada como pronta nem mesclada automaticamente antes de CI, revisão técnica e aprovação explícita.

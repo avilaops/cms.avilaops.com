@@ -2,10 +2,12 @@
 
 mod acesso;
 mod admin;
+mod apps;
 mod biblioteca;
 mod cache;
 mod cardapio;
 mod conector;
+mod construtor_de_apps;
 mod conteudo;
 mod descoberta;
 mod dominio;

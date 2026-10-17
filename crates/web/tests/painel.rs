@@ -128,6 +128,14 @@ impl Painel {
         let corpo = format!("nome={}&slug={slug}", nome.replace(' ', "+"));
         self.postar(quem, "/painel/sites", &corpo).await
     }
+
+    async fn criar_app(&self, quem: &str, slug: &str, nome: &str) -> Resposta {
+        let corpo = format!(
+            "nome={}&slug={slug}&bundle_id=com.avilaops.{slug}",
+            nome.replace(' ', "+")
+        );
+        self.postar(quem, "/painel/apps", &corpo).await
+    }
 }
 
 async fn site_id(pool: &PgPool, slug: &str) -> Uuid {
@@ -136,6 +144,53 @@ async fn site_id(pool: &PgPool, slug: &str) -> Uuid {
         .fetch_one(pool)
         .await
         .expect("site gravado")
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn app_builder_lista_cria_e_abre_editor_privado(pool: PgPool) {
+    let painel = Painel::novo(&pool).await;
+
+    let lista = painel.abrir(Some("ana"), "/painel/apps").await;
+    assert_eq!(lista.status, StatusCode::OK);
+    assert!(lista.corpo.contains("Novo aplicativo"));
+    assert!(lista.corpo.contains("Bundle ID"));
+
+    let criado = painel
+        .criar_app("ana", "app-da-ana", "Aplicativo da Ana")
+        .await;
+    assert_eq!(criado.status, StatusCode::SEE_OTHER, "{}", criado.corpo);
+    let editor = criado.cabecalho("location").to_string();
+    assert!(editor.starts_with("/painel/apps/"), "{editor}");
+
+    let pagina = painel.abrir(Some("ana"), &editor).await;
+    assert_eq!(pagina.status, StatusCode::OK, "{}", pagina.corpo);
+    assert!(pagina.corpo.contains("Aplicativo da Ana"));
+    assert!(pagina.corpo.contains("Definição AAD"));
+    assert!(pagina.corpo.contains("Prévia de referência"));
+    assert!(pagina.corpo.contains("Ambientes"));
+    assert!(pagina.corpo.contains("app-builder.js"));
+    assert!(
+        pagina
+            .cabecalho("content-security-policy")
+            .contains("script-src 'self'")
+    );
+
+    if let Ok(diretorio) = std::env::var("CMS_APP_BUILDER_SCREENSHOTS") {
+        let diretorio = PathBuf::from(diretorio);
+        std::fs::create_dir_all(&diretorio).expect("diretório dos prints");
+        std::fs::write(diretorio.join("editor.html"), &pagina.corpo)
+            .expect("HTML do editor para print");
+        let lista_preenchida = painel.abrir(Some("ana"), "/painel/apps").await;
+        std::fs::write(diretorio.join("apps.html"), lista_preenchida.corpo)
+            .expect("HTML da lista para print");
+    }
+
+    let de_outra_conta = painel.abrir(Some("bia"), &editor).await;
+    assert_eq!(de_outra_conta.status, StatusCode::NOT_FOUND);
+
+    let recurso = painel.abrir(Some("ana"), "/recursos/app-builder.js").await;
+    assert_eq!(recurso.status, StatusCode::OK);
+    assert!(recurso.corpo.contains("idempotency-key"));
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
