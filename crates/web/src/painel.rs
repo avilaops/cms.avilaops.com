@@ -192,31 +192,31 @@ async fn entrar(
     }
 }
 
-async fn entrar_na_api(estado: &Estado, cabecalhos: &HeaderMap) -> Result<Conta, Response> {
+async fn entrar_na_api(estado: &Estado, cabecalhos: &HeaderMap) -> Result<Conta, Box<Response>> {
     let Some(auth) = &estado.auth else {
-        return Err(crate::apps::erro_de_autenticacao(
+        return Err(Box::new(crate::apps::erro_de_autenticacao(
             StatusCode::SERVICE_UNAVAILABLE,
             "auth_unavailable",
             "O login não está configurado.",
-        ));
+        )));
     };
     match auth.consultar(token_de_sessao(cabecalhos)).await {
         RespostaDoAuth::Entrou(conta) => Ok(conta),
-        RespostaDoAuth::SemSessao => Err(crate::apps::erro_de_autenticacao(
+        RespostaDoAuth::SemSessao => Err(Box::new(crate::apps::erro_de_autenticacao(
             StatusCode::UNAUTHORIZED,
             "unauthenticated",
             "Autenticação necessária.",
-        )),
-        RespostaDoAuth::SemAcesso => Err(crate::apps::erro_de_autenticacao(
+        ))),
+        RespostaDoAuth::SemAcesso => Err(Box::new(crate::apps::erro_de_autenticacao(
             StatusCode::FORBIDDEN,
             "access_denied",
             "Sua conta não tem acesso ao CMS.",
-        )),
-        RespostaDoAuth::Indisponivel => Err(crate::apps::erro_de_autenticacao(
+        ))),
+        RespostaDoAuth::Indisponivel => Err(Box::new(crate::apps::erro_de_autenticacao(
             StatusCode::SERVICE_UNAVAILABLE,
             "auth_unavailable",
             "Não foi possível consultar o login.",
-        )),
+        ))),
     }
 }
 
@@ -541,7 +541,7 @@ async fn responder(
     if caminho == "/api/v1/apps" || caminho.starts_with("/api/v1/apps/") {
         let conta = match entrar_na_api(estado, cabecalhos).await {
             Ok(conta) => conta,
-            Err(resposta) => return Ok(resposta),
+            Err(resposta) => return Ok(*resposta),
         };
         return Ok(crate::apps::atender(estado, &conta, metodo, cabecalhos, caminho, corpo).await);
     }
