@@ -20,7 +20,7 @@ jobs:
       # As consultas são conferidas contra o `.sqlx` versionado, e não contra
       # o banco do serviço, que começa vazio.
       SQLX_OFFLINE: "true"
-      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/postgres
     steps:
       - uses: actions/checkout@v4
       # Instala no runner para não depender de limites de pull do Docker Hub
@@ -38,8 +38,9 @@ jobs:
           sudo apt-get install --yes postgresql-18
           sudo pg_createcluster 18 main --start
           sudo -u postgres psql --set ON_ERROR_STOP=1 \
+            --port 5433 \
             --command "alter user postgres password 'postgres'"
-          pg_isready --host 127.0.0.1 --username postgres
+          pg_isready --host 127.0.0.1 --port 5433 --username postgres
       - name: Toolchain
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt,clippy
