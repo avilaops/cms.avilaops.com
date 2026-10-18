@@ -15,6 +15,7 @@ mod midias;
 mod modelos;
 mod redirecionamentos;
 mod rotinas;
+mod runtime_oauth;
 mod sites;
 
 use sqlx::PgPool;
@@ -70,6 +71,11 @@ pub use redirecionamentos::{
     salvar_redirecionamento,
 };
 pub use rotinas::{Agendado, limpar_historico, reivindicar_rotina};
+pub use runtime_oauth::{
+    RUNTIME_READ_SCOPE, RuntimeAuthorization, RuntimeClient, RuntimeOAuthError, RuntimeSession,
+    RuntimeTokens, create_runtime_code, exchange_runtime_code, register_runtime_client,
+    revoke_runtime_session, rotate_runtime_tokens, runtime_client, runtime_session_by_access_token,
+};
 pub use sites::{
     LinhaDoHistorico, SiteGravado, apagar_site, ativar_dominio, atualizar_perfil, criar_site,
     historico_do_site, mudar_situacao, site_por_dominio, site_por_slug,
