@@ -73,7 +73,7 @@
 - Produces: `KeychainCredentialStore(service:account:)`.
 
 - [ ] Escrever testes de contrato sobre uma implementação em memória real para salvar, substituir, ler e apagar.
-- [ ] Implementar o adaptador Keychain com `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` e erros sem segredo.
+- [ ] Implementar o adaptador Keychain com `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` e erros sem segredo.
 - [ ] Verificar compilação condicional e API pública nos dois alvos Apple.
 
 ### Task 4: App shell, acessibilidade e capturas

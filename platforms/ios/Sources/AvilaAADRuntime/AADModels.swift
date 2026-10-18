@@ -1,28 +1,28 @@
 import Foundation
 
-public struct AADApp: Decodable, Equatable, Sendable {
+public struct AADApp: Equatable, Sendable {
     public let schemaVersion: String
     public let appId: String
     public let minimumRuntimeVersion: String
     public let navigation: AADNavigation
     public let screens: [AADScreen]
 
-    private enum CodingKeys: String, CodingKey, CaseIterable {
-        case schemaVersion, appId, minimumRuntimeVersion, navigation, screens
-    }
-
     public init(data: Data) throws {
         self = try AADDefinitionDecoder().decode(data)
     }
 
-    public init(from decoder: Decoder) throws {
-        try rejectUnknownKeys(in: decoder, allowed: CodingKeys.self)
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decode(String.self, forKey: .schemaVersion)
-        appId = try container.decode(String.self, forKey: .appId)
-        minimumRuntimeVersion = try container.decode(String.self, forKey: .minimumRuntimeVersion)
-        navigation = try container.decode(AADNavigation.self, forKey: .navigation)
-        screens = try container.decode([AADScreen].self, forKey: .screens)
+    init(
+        schemaVersion: String,
+        appId: String,
+        minimumRuntimeVersion: String,
+        navigation: AADNavigation,
+        screens: [AADScreen]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.appId = appId
+        self.minimumRuntimeVersion = minimumRuntimeVersion
+        self.navigation = navigation
+        self.screens = screens
     }
 
     private static func validId(_ value: String) -> Bool {
@@ -69,6 +69,38 @@ public struct AADApp: Decodable, Equatable, Sendable {
                 }
             }
         }
+    }
+}
+
+struct AADAppWire: Decodable {
+    let schemaVersion: String
+    let appId: String
+    let minimumRuntimeVersion: String
+    let navigation: AADNavigation
+    let screens: [AADScreen]
+
+    private enum CodingKeys: String, CodingKey, CaseIterable {
+        case schemaVersion, appId, minimumRuntimeVersion, navigation, screens
+    }
+
+    init(from decoder: Decoder) throws {
+        try rejectUnknownKeys(in: decoder, allowed: CodingKeys.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(String.self, forKey: .schemaVersion)
+        appId = try container.decode(String.self, forKey: .appId)
+        minimumRuntimeVersion = try container.decode(String.self, forKey: .minimumRuntimeVersion)
+        navigation = try container.decode(AADNavigation.self, forKey: .navigation)
+        screens = try container.decode([AADScreen].self, forKey: .screens)
+    }
+
+    func makeApp() -> AADApp {
+        AADApp(
+            schemaVersion: schemaVersion,
+            appId: appId,
+            minimumRuntimeVersion: minimumRuntimeVersion,
+            navigation: navigation,
+            screens: screens
+        )
     }
 }
 
