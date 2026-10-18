@@ -22,6 +22,7 @@ mod modelos;
 mod painel;
 mod publico;
 mod resposta;
+mod runtime_oauth;
 mod tema;
 mod visao;
 
