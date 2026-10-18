@@ -8,7 +8,7 @@ public struct AADDefinitionDecoder: Sendable {
     public func decode(_ data: Data) throws -> AADApp {
         guard data.count <= Self.maximumBytes else { throw AADError.payloadTooLarge }
         try JSONDuplicateKeyValidator.validate(data)
-        let app = try JSONDecoder().decode(AADApp.self, from: data)
+        let app = try JSONDecoder().decode(AADAppWire.self, from: data).makeApp()
         try app.validate()
         return app
     }
