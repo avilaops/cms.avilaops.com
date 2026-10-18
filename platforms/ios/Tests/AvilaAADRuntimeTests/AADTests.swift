@@ -97,4 +97,77 @@ final class AADTests: XCTestCase {
             }
         }
     }
+
+    func testPublicModelCannotBypassDefinitionValidation() {
+        XCTAssertFalse(AADApp.self is Decodable.Type)
+    }
+
+    func testScreenCountBoundaries() throws {
+        XCTAssertNoThrow(try decodeApp(screens: makeScreens(count: 100)))
+
+        for count in [0, 101] {
+            XCTAssertThrowsError(try decodeApp(screens: makeScreens(count: count))) { error in
+                XCTAssertEqual(error as? AADError, .limit)
+            }
+        }
+    }
+
+    func testComponentCountBoundaries() throws {
+        XCTAssertNoThrow(try decodeApp(screens: [makeScreen(index: 0, componentCount: 200)]))
+
+        XCTAssertThrowsError(
+            try decodeApp(screens: [makeScreen(index: 0, componentCount: 201)])
+        ) { error in
+            XCTAssertEqual(error as? AADError, .limit)
+        }
+    }
+
+    func testRejectsUnsupportedSchemaAndRuntimeVersions() {
+        let mutations = [
+            valid.replacingOccurrences(of: "\"schemaVersion\":\"1.0.0\"", with: "\"schemaVersion\":\"2.0.0\""),
+            valid.replacingOccurrences(of: "\"minimumRuntimeVersion\":\"1.0.0\"", with: "\"minimumRuntimeVersion\":\"2.0.0\"")
+        ]
+
+        for mutation in mutations {
+            XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(mutation.utf8))) { error in
+                XCTAssertEqual(error as? AADError, .version)
+            }
+        }
+    }
+
+    func testRejectsDuplicateScreenIdentifiersAndUnknownInitialRoute() {
+        let duplicateIdentifier = valid.replacingOccurrences(of: "\"id\":\"orders\"", with: "\"id\":\"home\"")
+        let unknownInitialRoute = valid.replacingOccurrences(of: "\"initialRoute\":\"home\"", with: "\"initialRoute\":\"missing\"")
+
+        XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(duplicateIdentifier.utf8))) { error in
+            XCTAssertEqual(error as? AADError, .duplicate)
+        }
+        XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(unknownInitialRoute.utf8))) { error in
+            XCTAssertEqual(error as? AADError, .route)
+        }
+    }
+
+    private func decodeApp(screens: [String]) throws -> AADApp {
+        let json = """
+        {
+          "schemaVersion":"1.0.0",
+          "appId":"app-exemplo",
+          "minimumRuntimeVersion":"1.0.0",
+          "navigation":{"initialRoute":"screen-0"},
+          "screens":[\(screens.joined(separator: ","))]
+        }
+        """
+        return try AADDefinitionDecoder().decode(Data(json.utf8))
+    }
+
+    private func makeScreens(count: Int) -> [String] {
+        (0..<count).map { makeScreen(index: $0, componentCount: 0) }
+    }
+
+    private func makeScreen(index: Int, componentCount: Int) -> String {
+        let components = (0..<componentCount).map {
+            "{\"type\":\"spacer\",\"id\":\"component-\($0)\"}"
+        }
+        return "{\"id\":\"screen-\(index)\",\"route\":\"screen-\(index)\",\"title\":\"Tela\",\"components\":[\(components.joined(separator: ","))]}"
+    }
 }
