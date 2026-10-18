@@ -102,6 +102,14 @@ async fn runtime_client_rejects_redirects_outside_bundle_and_cardinality(pool: P
             .await
             .is_err()
     );
+    for invalid_https in ["https://:", "https://example.com:99999/callback"] {
+        assert!(
+            register_runtime_client(&pool, app_id, "Runtime iOS", &[invalid_https.to_string()],)
+                .await
+                .is_err(),
+            "invalid HTTPS redirect must be rejected: {invalid_https}"
+        );
+    }
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]

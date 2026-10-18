@@ -42,6 +42,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json"] }
 uuid = { version = "1", features = ["serde", "v4"] }
+url = "2.5"
 
 # O codificador AVIF sem otimização leva minutos por imagem.
 [profile.dev.package."*"]

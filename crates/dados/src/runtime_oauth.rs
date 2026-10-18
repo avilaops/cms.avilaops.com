@@ -5,6 +5,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use cms_dominio::Conta;
 use sha2::{Digest, Sha256};
 use sqlx::{FromRow, PgPool};
+use url::Url;
 use uuid::Uuid;
 
 use crate::{ErroDeDados, hash_de_conteudo};
@@ -48,9 +49,13 @@ fn valid_redirect_uri(uri: &str, bundle_id: &str) -> bool {
     {
         return false;
     }
-    if let Some(remainder) = uri.strip_prefix("https://") {
-        let authority = remainder.split(['/', '?']).next().unwrap_or_default();
-        return !authority.is_empty() && !authority.contains('@');
+    if uri.starts_with("https://") {
+        return Url::parse(uri).is_ok_and(|parsed| {
+            parsed.scheme() == "https"
+                && parsed.host_str().is_some()
+                && parsed.username().is_empty()
+                && parsed.password().is_none()
+        });
     }
     uri.strip_prefix(bundle_id)
         .is_some_and(|remainder| remainder.starts_with(":/") && !remainder.starts_with("://"))
