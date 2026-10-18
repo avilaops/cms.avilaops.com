@@ -28,18 +28,38 @@ final class AADSnapshotTests: XCTestCase {
     }
 
     private func write<V: View>(_ view: V, named name: String, to directory: URL) throws {
-        let content = view.frame(width: 390, height: 844).background(Color(nsColor: .windowBackgroundColor))
-        let renderer = ImageRenderer(content: content)
-        renderer.scale = 2
-        guard let image = renderer.nsImage,
-              let tiff = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff),
-              let png = bitmap.representation(using: .png, properties: [:]) else {
+        let content = view
+            .frame(width: 390, height: 844)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .environment(\.colorScheme, .light)
+        let hostingView = NSHostingView(rootView: content)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 390, height: 844)
+        hostingView.layoutSubtreeIfNeeded()
+
+        guard let bitmap = hostingView.bitmapImageRepForCachingDisplay(in: hostingView.bounds) else {
             throw SnapshotError.renderingFailed
+        }
+        hostingView.cacheDisplay(in: hostingView.bounds, to: bitmap)
+        guard containsVisibleContent(bitmap),
+              let png = bitmap.representation(using: .png, properties: [:]) else {
+            throw SnapshotError.blankRendering
         }
         try png.write(to: directory.appendingPathComponent("\(name).png"), options: .atomic)
     }
+
+    private func containsVisibleContent(_ bitmap: NSBitmapImageRep) -> Bool {
+        for x in stride(from: 0, to: bitmap.pixelsWide, by: 8) {
+            for y in stride(from: 0, to: bitmap.pixelsHigh, by: 8) {
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { continue }
+                let luminance = 0.2126 * color.redComponent
+                    + 0.7152 * color.greenComponent
+                    + 0.0722 * color.blueComponent
+                if luminance < 0.75 { return true }
+            }
+        }
+        return false
+    }
 }
 
-private enum SnapshotError: Error { case renderingFailed }
+private enum SnapshotError: Error { case renderingFailed, blankRendering }
 #endif

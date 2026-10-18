@@ -83,7 +83,7 @@ de autenticação nem presume Bearer token ou cookie.
    por uma interface testável, sem afirmar comportamento de mocks.
 2. `swift test` passa em `macos-15`.
 3. `xcodebuild` compila o pacote para um destino genérico de iOS Simulator.
-4. O workflow publica capturas nativas dos estados pronto e erro.
+4. O workflow publica capturas nativas, não vazias, dos estados pronto e erro.
 5. A validação geral do repositório permanece verde.
 6. Nenhum build ou teste é executado nos servidores da Ávila Ops.
 

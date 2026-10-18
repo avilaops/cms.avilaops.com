@@ -35,7 +35,8 @@ O workflow `Validar SwiftUI AAD`:
 
 1. compila o pacote com `xcodebuild` para iOS Simulator, sem assinatura;
 2. executa XCTest no runner `macos-15`;
-3. renderiza os estados pronto e erro pelo `ImageRenderer` do SwiftUI;
+3. hospeda os estados pronto e erro em `NSHostingView`, valida que há conteúdo
+   visível e renderiza PNGs do SwiftUI;
 4. publica os PNGs no artefato `swiftui-runtime-screenshots`.
 
 Essas capturas são do renderizador SwiftUI real. Elas não substituem UI tests
@@ -51,5 +52,5 @@ tecnologias assistivas. Nenhuma publicação é automática.
 
 - [Keychain Services](https://developer.apple.com/documentation/security/keychain-services)
 - [NavigationStack](https://developer.apple.com/documentation/swiftui/navigationstack)
-- [ImageRenderer](https://developer.apple.com/documentation/swiftui/imagerenderer)
+- [NSHostingView](https://developer.apple.com/documentation/swiftui/nshostingview)
 - [Accessibility testing](https://developer.apple.com/documentation/accessibility/performing-accessibility-testing-for-your-app)

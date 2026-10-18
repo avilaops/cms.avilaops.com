@@ -89,7 +89,7 @@
 
 - [ ] Escrever testes de apresentação para títulos e ações sem depender de detalhes privados.
 - [ ] Implementar estados com componentes nativos, Dynamic Type e labels acessíveis.
-- [ ] Gerar PNG dos estados pronto e erro via `ImageRenderer` no runner macOS.
+- [ ] Gerar PNG não vazio dos estados pronto e erro via `NSHostingView` no runner macOS.
 
 ### Task 5: CI, documentação e evidência final
 
