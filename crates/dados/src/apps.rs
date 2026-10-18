@@ -323,6 +323,27 @@ pub async fn app_da_conta(
     })
 }
 
+/// Looks up an app only through an explicit current membership. Runtime
+/// credentials must not inherit the CMS-wide team bypass.
+pub async fn runtime_app_name_for_member(
+    pool: &PgPool,
+    account_sub: &str,
+    app_id: Uuid,
+) -> Result<Option<String>, ErroDeDados> {
+    Ok(sqlx::query_scalar(
+        r#"
+        select app.nome
+        from app
+        join app_participacao membership on membership.app_id = app.id
+        where app.id = $1 and membership.conta = $2
+        "#,
+    )
+    .bind(app_id)
+    .bind(account_sub)
+    .fetch_optional(pool)
+    .await?)
+}
+
 pub async fn salvar_rascunho_do_app(
     pool: &PgPool,
     conta: &Conta,
@@ -499,20 +520,16 @@ pub async fn published_runtime_definition(
           on version.app_id = environment.app_id
          and version.id = environment.versao_id
         where app.id = $1 and app.slug = $2 and environment.nome = $3
-          and (
-              $4
-              or exists (
-                  select 1
-                  from app_participacao membership
-                  where membership.app_id = app.id and membership.conta = $5
-              )
+          and exists (
+              select 1
+              from app_participacao membership
+              where membership.app_id = app.id and membership.conta = $4
           )
         "#,
     )
     .bind(token_app_id)
     .bind(slug)
     .bind(environment)
-    .bind(account.equipe)
     .bind(&account.sub)
     .fetch_optional(pool)
     .await?;

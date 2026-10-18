@@ -13,7 +13,7 @@ use uuid::Uuid;
 const REDIRECT_URI: &str = "com.avilaops.runtime:/oauth/callback";
 const VERIFIER: &str = "runtime-verifier-with-more-than-forty-three-characters-123";
 
-async fn create_app(pool: &PgPool, slug: &str) -> Uuid {
+async fn create_app(pool: &PgPool, slug: &str, bundle_id: &str) -> Uuid {
     sqlx::query_scalar(
         r#"
         insert into app (slug, nome, bundle_id, criado_por)
@@ -22,7 +22,7 @@ async fn create_app(pool: &PgPool, slug: &str) -> Uuid {
         "#,
     )
     .bind(slug)
-    .bind(format!("com.avilaops.{slug}"))
+    .bind(bundle_id)
     .fetch_one(pool)
     .await
     .expect("app should be created")
@@ -65,8 +65,8 @@ async fn authorize(pool: &PgPool, app_id: Uuid) -> (Uuid, String) {
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn runtime_client_is_bound_to_one_app_and_redirect_allowlist(pool: PgPool) {
-    let app_id = create_app(&pool, "runtime-client").await;
-    let other_app_id = create_app(&pool, "other-runtime-client").await;
+    let app_id = create_app(&pool, "runtime-client", "com.avilaops.runtime").await;
+    let other_app_id = create_app(&pool, "other-runtime-client", "com.avilaops.other").await;
     let client_id =
         register_runtime_client(&pool, app_id, "Runtime iOS", &[REDIRECT_URI.to_string()])
             .await
@@ -82,8 +82,31 @@ async fn runtime_client_is_bound_to_one_app_and_redirect_allowlist(pool: PgPool)
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn runtime_client_rejects_redirects_outside_bundle_and_cardinality(pool: PgPool) {
+    let app_id = create_app(&pool, "runtime-redirects", "com.avilaops.runtime").await;
+    assert!(
+        register_runtime_client(
+            &pool,
+            app_id,
+            "Runtime iOS",
+            &["com.attacker.runtime:/oauth/callback".to_string()],
+        )
+        .await
+        .is_err()
+    );
+    let too_many = (0..6)
+        .map(|index| format!("https://runtime{index}.example.test/callback"))
+        .collect::<Vec<_>>();
+    assert!(
+        register_runtime_client(&pool, app_id, "Runtime iOS", &too_many)
+            .await
+            .is_err()
+    );
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn code_exchange_uses_pkce_once_and_only_persists_token_hashes(pool: PgPool) {
-    let app_id = create_app(&pool, "runtime-exchange").await;
+    let app_id = create_app(&pool, "runtime-exchange", "com.avilaops.runtime").await;
     let (client_id, code) = authorize(&pool, app_id).await;
 
     let tokens = exchange_runtime_code(&pool, &code, client_id, REDIRECT_URI, VERIFIER)
@@ -119,7 +142,7 @@ async fn code_exchange_uses_pkce_once_and_only_persists_token_hashes(pool: PgPoo
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn invalid_pkce_consumes_code_without_issuing_tokens(pool: PgPool) {
-    let app_id = create_app(&pool, "runtime-invalid-pkce").await;
+    let app_id = create_app(&pool, "runtime-invalid-pkce", "com.avilaops.runtime").await;
     let (client_id, code) = authorize(&pool, app_id).await;
 
     assert!(
@@ -137,7 +160,7 @@ async fn invalid_pkce_consumes_code_without_issuing_tokens(pool: PgPool) {
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn refresh_rotation_invalidates_old_credentials_and_revoke_closes_session(pool: PgPool) {
-    let app_id = create_app(&pool, "runtime-rotation").await;
+    let app_id = create_app(&pool, "runtime-rotation", "com.avilaops.runtime").await;
     let (client_id, code) = authorize(&pool, app_id).await;
     let first = exchange_runtime_code(&pool, &code, client_id, REDIRECT_URI, VERIFIER)
         .await
@@ -175,7 +198,7 @@ async fn refresh_rotation_invalidates_old_credentials_and_revoke_closes_session(
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn expired_access_and_refresh_tokens_fail_closed(pool: PgPool) {
-    let app_id = create_app(&pool, "runtime-expiration").await;
+    let app_id = create_app(&pool, "runtime-expiration", "com.avilaops.runtime").await;
     let (client_id, code) = authorize(&pool, app_id).await;
     let tokens = exchange_runtime_code(&pool, &code, client_id, REDIRECT_URI, VERIFIER)
         .await

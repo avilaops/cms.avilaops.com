@@ -5,7 +5,7 @@ create table runtime_oauth_client (
     id uuid primary key default gen_random_uuid(),
     app_id uuid not null references app (id) on delete cascade,
     name text not null check (length(trim(name)) > 0),
-    redirect_uris text[] not null check (cardinality(redirect_uris) > 0),
+    redirect_uris text[] not null check (cardinality(redirect_uris) between 1 and 5),
     created_at timestamptz not null default now(),
     unique (id, app_id)
 );

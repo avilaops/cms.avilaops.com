@@ -38,6 +38,24 @@ fn valid_scopes(scopes: &[String]) -> bool {
     !scopes.is_empty() && scopes.iter().all(|scope| scope == RUNTIME_READ_SCOPE)
 }
 
+fn valid_redirect_uri(uri: &str, bundle_id: &str) -> bool {
+    if uri.is_empty()
+        || uri.len() > 512
+        || uri.contains('#')
+        || uri
+            .chars()
+            .any(|character| character.is_whitespace() || character.is_control())
+    {
+        return false;
+    }
+    if let Some(remainder) = uri.strip_prefix("https://") {
+        let authority = remainder.split(['/', '?']).next().unwrap_or_default();
+        return !authority.is_empty() && !authority.contains('@');
+    }
+    uri.strip_prefix(bundle_id)
+        .is_some_and(|remainder| remainder.starts_with(":/") && !remainder.starts_with("://"))
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, FromRow)]
 pub struct RuntimeClient {
     pub id: Uuid,
@@ -52,7 +70,17 @@ pub async fn register_runtime_client(
     name: &str,
     redirect_uris: &[String],
 ) -> Result<Uuid, RuntimeOAuthError> {
-    if name.trim().is_empty() || redirect_uris.is_empty() {
+    let bundle_id = sqlx::query_scalar::<_, String>("select bundle_id from app where id = $1")
+        .bind(app_id)
+        .fetch_optional(pool)
+        .await?
+        .ok_or(RuntimeOAuthError::InvalidGrant)?;
+    if name.trim().is_empty()
+        || !(1..=5).contains(&redirect_uris.len())
+        || redirect_uris
+            .iter()
+            .any(|uri| !valid_redirect_uri(uri, &bundle_id))
+    {
         return Err(RuntimeOAuthError::InvalidGrant);
     }
     let id = sqlx::query_scalar::<_, Uuid>(

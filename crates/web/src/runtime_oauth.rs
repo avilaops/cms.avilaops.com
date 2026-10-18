@@ -94,7 +94,7 @@ async fn validate_request(
     if !client.redirect_uris.contains(&request.redirect_uri) {
         return reject("Pedido de autorização inválido: retorno não registrado.");
     }
-    let valid_challenge = (43..=128).contains(&request.code_challenge.len())
+    let valid_challenge = request.code_challenge.len() == 43
         && request.code_challenge.chars().all(|character| {
             character.is_ascii_alphanumeric() || character == '-' || character == '_'
         });
@@ -102,15 +102,20 @@ async fn validate_request(
         || request.code_challenge_method != "S256"
         || !valid_challenge
         || request.scope != RUNTIME_READ_SCOPE
+        || request.state.is_empty()
+        || request.state.len() > 256
+        || request.state.chars().any(char::is_control)
     {
         return reject("Pedido de autorização inválido: use código, PKCE S256 e runtime:read.");
     }
-    let app = match cms_dados::app_da_conta(&state.pool, account, client.app_id).await {
-        Ok(app) => app,
-        Err(cms_dados::ErroDeApp::Dados(error)) => return Err(error.into()),
-        Err(_) => return reject("Pedido de autorização inválido: aplicativo indisponível."),
-    };
-    Ok(Ok((client_id, client.app_id, app.nome)))
+    let app_name =
+        match cms_dados::runtime_app_name_for_member(&state.pool, &account.sub, client.app_id)
+            .await?
+        {
+            Some(name) => name,
+            None => return reject("Pedido de autorização inválido: aplicativo indisponível."),
+        };
+    Ok(Ok((client_id, client.app_id, app_name)))
 }
 
 pub async fn authorization_page(

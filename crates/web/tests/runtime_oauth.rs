@@ -97,7 +97,7 @@ async fn app_and_client(pool: &PgPool) -> (Uuid, Uuid) {
         &account,
         "runtime-oauth-http",
         "Runtime OAuth HTTP",
-        "com.avilaops.runtime-oauth-http",
+        "com.avilaops.runtime",
         Uuid::new_v4(),
     )
     .await
@@ -139,6 +139,19 @@ async fn native_authorization_requires_login_registered_redirect_and_membership(
     );
     assert_eq!(
         request(&pool, "GET", &wrong_redirect, true, "")
+            .await
+            .status,
+        StatusCode::BAD_REQUEST
+    );
+
+    let missing_state = path.replace("&state=state-123", "");
+    assert_eq!(
+        request(&pool, "GET", &missing_state, true, "").await.status,
+        StatusCode::BAD_REQUEST
+    );
+    let long_challenge = path.replace(CHALLENGE, &format!("{CHALLENGE}A"));
+    assert_eq!(
+        request(&pool, "GET", &long_challenge, true, "")
             .await
             .status,
         StatusCode::BAD_REQUEST

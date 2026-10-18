@@ -12,7 +12,6 @@ use uuid::Uuid;
 
 use comum::{HOST_DO_PAINEL, Resposta, estado, responder};
 
-const REDIRECT_URI: &str = "com.avilaops.runtime:/oauth/callback";
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 const CHALLENGE: &str = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 
@@ -69,11 +68,17 @@ async fn published_app(pool: &PgPool, slug: &str) -> Uuid {
 }
 
 async fn runtime_token(pool: &PgPool, app_id: Uuid) -> String {
+    let bundle_id: String = sqlx::query_scalar("select bundle_id from app where id = $1")
+        .bind(app_id)
+        .fetch_one(pool)
+        .await
+        .expect("app bundle should exist");
+    let redirect_uri = format!("{bundle_id}:/oauth/callback");
     let client_id = cms_dados::register_runtime_client(
         pool,
         app_id,
         "Runtime iOS",
-        &[REDIRECT_URI.to_string()],
+        std::slice::from_ref(&redirect_uri),
     )
     .await
     .expect("runtime client should be registered");
@@ -85,13 +90,13 @@ async fn runtime_token(pool: &PgPool, app_id: Uuid) -> String {
             app_id,
             account: &account(),
             scopes: &scopes,
-            redirect_uri: REDIRECT_URI,
+            redirect_uri: &redirect_uri,
             challenge: CHALLENGE,
         },
     )
     .await
     .expect("code should be created");
-    cms_dados::exchange_runtime_code(pool, &code, client_id, REDIRECT_URI, VERIFIER)
+    cms_dados::exchange_runtime_code(pool, &code, client_id, &redirect_uri, VERIFIER)
         .await
         .expect("code should be exchanged")
         .access
@@ -166,6 +171,11 @@ async fn runtime_hides_cross_app_missing_environment_and_revoked_membership(pool
         .execute(&pool)
         .await
         .expect("membership should be revoked");
+    sqlx::query("update runtime_oauth_session set account_team = true where app_id = $1")
+        .bind(app_id)
+        .execute(&pool)
+        .await
+        .expect("stale team claim should be simulated");
     assert_eq!(
         get(
             &pool,
