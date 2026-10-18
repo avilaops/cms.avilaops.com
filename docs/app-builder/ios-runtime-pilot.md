@@ -11,14 +11,18 @@ nativos e oferece uma fronteira de credenciais baseada no Keychain.
 - `AADRuntimeRootView`: estados carregando, pronto e erro recuperável.
 - `AADCredentialStoring`: contrato de credencial independente do protocolo de
   login, com implementações em memória e Keychain.
+- `AADRuntimeAPIClient`: transporte HTTP injetável, Bearer, `ETag` e validação
+  estrita do envelope publicado.
+- `RemoteAADDefinitionLoader`: adapta o cliente remoto à fronteira já consumida
+  pelo `AADRuntimeStore`.
 
 ## Autenticação
 
-O CMS atual autentica endpoints privados com cookie do Ávila Auth. Isso não é
-um contrato OAuth/OIDC para aplicativo móvel. O piloto, portanto, não inventa
-um token Bearer nem tenta extrair cookies de sessão do navegador. Ele entrega
-o armazenamento seguro necessário e deixa o carregador remoto bloqueado até
-existirem endpoint móvel e fluxo de autenticação documentados.
+O runtime usa Authorization Code com PKCE S256 em navegador externo. O cliente
+é público, pré-cadastrado para um aplicativo e não leva segredo embutido. O
+único escopo é `runtime:read`; access token e refresh token são opacos, ficam no
+Keychain e o servidor armazena somente seus hashes. Esta fase é OAuth, não
+OIDC: não há `id_token`, `userinfo` nem promessa de identidade ao aplicativo.
 
 ## Segurança
 
@@ -27,6 +31,8 @@ existirem endpoint móvel e fluxo de autenticação documentados.
 - somente `text`, `button`, `spacer` e `navigate` são reconhecidos;
 - mensagens de erro da UI não incluem detalhes técnicos ou credenciais;
 - Keychain usa `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`;
+- token runtime não acessa MCP e token MCP não acessa a entrega AAD;
+- a participação no aplicativo é revalidada em cada leitura, inclusive `304`;
 - o pacote não inclui dependências externas, WebView ou código remoto.
 
 ## Evidências no GitHub
@@ -44,9 +50,9 @@ em iOS Simulator nem validação de acessibilidade em dispositivo físico.
 
 ## Antes de produção
 
-Ainda são necessários OAuth/OIDC, endpoint de entrega, cache assinado, última
-versão válida, rollback, app host assinado, UI tests e testes manuais com
-tecnologias assistivas. Nenhuma publicação é automática.
+Ainda são necessários cache assinado, última versão válida, rollback local, app
+host assinado, UI tests e testes manuais com tecnologias assistivas. Nenhuma
+publicação é automática.
 
 ## Referências Apple
 

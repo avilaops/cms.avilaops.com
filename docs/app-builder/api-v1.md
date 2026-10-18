@@ -52,3 +52,24 @@ não revelar a existência do aplicativo.
 
 O preview web é uma representação determinística do contrato. Ele não é
 descrito como teste do runtime Apple e não executa JavaScript vindo do AAD.
+
+## Runtime móvel
+
+O recurso móvel usa OAuth próprio e não aceita cookie do painel nem token MCP.
+Clientes nativos são pré-cadastrados para um único aplicativo e uma lista
+fechada de retornos. Não existe registro dinâmico público.
+
+- `GET /oauth/runtime/authorize`: autentica no navegador externo e solicita
+  `runtime:read` com Authorization Code e PKCE S256.
+- `POST /oauth/runtime/token`: troca o código ou gira o refresh token.
+- `GET /api/runtime/v1/apps/{slug}/environments/{environment}`: entrega apenas
+  a versão publicada em `development`, `staging` ou `production`.
+- `GET /.well-known/oauth-authorization-server/runtime`: metadados do servidor.
+- `GET /.well-known/oauth-protected-resource/api/runtime`: metadados do recurso.
+
+O endpoint de entrega responde `{ appId, environment, version, definition }`,
+`ETag`, `Cache-Control: private, no-store` e `X-Correlation-Id`. Um
+`If-None-Match` correspondente recebe `304`, mas somente depois de autenticar o
+token e revalidar a participação atual. Aplicativo, ambiente ou participação
+ausente recebe `404`; credencial ausente, expirada ou de outro recurso recebe
+`401` com desafio Bearer.

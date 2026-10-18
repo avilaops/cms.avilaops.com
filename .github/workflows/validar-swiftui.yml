@@ -21,6 +21,9 @@ jobs:
       - name: Build Swift package for iOS Simulator
         working-directory: platforms/ios
         run: xcodebuild -scheme AvilaAADRuntime -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+      - name: Test authenticated runtime API client
+        working-directory: platforms/ios
+        run: swift test --filter AADRuntimeAPIClientTests
       - name: Test Swift package and render native screenshots
         working-directory: platforms/ios
         env:
