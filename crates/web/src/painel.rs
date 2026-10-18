@@ -570,6 +570,9 @@ async fn responder(
             Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use GET ou POST."))
         };
     }
+    if caminho == "/api/runtime" || caminho.starts_with("/api/runtime/") {
+        return Ok(crate::runtime_apps::serve(estado, &origem, metodo, cabecalhos, caminho).await);
+    }
     if caminho == "/api/v1/apps" || caminho.starts_with("/api/v1/apps/") {
         let conta = match entrar_na_api(estado, cabecalhos).await {
             Ok(conta) => conta,

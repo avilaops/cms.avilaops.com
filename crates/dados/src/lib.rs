@@ -22,11 +22,12 @@ use sqlx::PgPool;
 use sqlx::migrate::Migrator;
 
 pub use apps::{
-    AmbienteDoApp, AppDaConta, ErroDeApp, EventoDeAuditoriaDoApp, ParticipanteDoApp, RascunhoDoApp,
-    VersaoDoApp, VersaoListadaDoApp, ambientes_do_app, app_da_conta, apps_da_conta,
-    auditar_validacao, auditoria_do_app, criar_app, criar_versao_do_app, definicao_da_versao,
-    definir_participante_do_app, participantes_do_app, publicar_versao_no_ambiente,
-    rascunho_do_app, remover_participante_do_app, salvar_rascunho_do_app, versoes_do_app,
+    AmbienteDoApp, AppDaConta, ErroDeApp, EventoDeAuditoriaDoApp, ParticipanteDoApp,
+    PublishedRuntimeDefinition, RascunhoDoApp, VersaoDoApp, VersaoListadaDoApp, ambientes_do_app,
+    app_da_conta, apps_da_conta, auditar_validacao, auditoria_do_app, criar_app,
+    criar_versao_do_app, definicao_da_versao, definir_participante_do_app, participantes_do_app,
+    publicar_versao_no_ambiente, published_runtime_definition, rascunho_do_app,
+    remover_participante_do_app, salvar_rascunho_do_app, versoes_do_app,
 };
 pub use catalogo::{
     AutorDoSite, DadosDoAutor, DocumentoAberto, DocumentoDoSite, ErroDeCatalogo, abrir_documento,

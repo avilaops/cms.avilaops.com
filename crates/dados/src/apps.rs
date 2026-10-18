@@ -86,6 +86,16 @@ pub struct AmbienteDoApp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct PublishedRuntimeDefinition {
+    pub app_id: Uuid,
+    pub slug: String,
+    pub environment: String,
+    pub version_id: Uuid,
+    pub version: i32,
+    pub definition: Value,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct EventoDeAuditoriaDoApp {
     pub id: i64,
     pub conta: String,
@@ -464,6 +474,58 @@ pub async fn ambientes_do_app(
     )
     .collect();
     Ok(ambientes)
+}
+
+/// Returns only the immutable version selected by a published environment.
+/// App binding and current membership are checked in the same query so a
+/// revoked account cannot keep reading through an otherwise active token.
+pub async fn published_runtime_definition(
+    pool: &PgPool,
+    account: &Conta,
+    token_app_id: Uuid,
+    slug: &str,
+    environment: &str,
+) -> Result<Option<PublishedRuntimeDefinition>, ErroDeDados> {
+    if !matches!(environment, "development" | "staging" | "production") {
+        return Ok(None);
+    }
+    let row = sqlx::query_as::<_, (Uuid, String, String, Uuid, i32, Value)>(
+        r#"
+        select app.id, app.slug, environment.nome, version.id, version.numero,
+               version.definicao
+        from app
+        join app_ambiente environment on environment.app_id = app.id
+        join app_versao version
+          on version.app_id = environment.app_id
+         and version.id = environment.versao_id
+        where app.id = $1 and app.slug = $2 and environment.nome = $3
+          and (
+              $4
+              or exists (
+                  select 1
+                  from app_participacao membership
+                  where membership.app_id = app.id and membership.conta = $5
+              )
+          )
+        "#,
+    )
+    .bind(token_app_id)
+    .bind(slug)
+    .bind(environment)
+    .bind(account.equipe)
+    .bind(&account.sub)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(
+        |(app_id, slug, environment, version_id, version, definition)| PublishedRuntimeDefinition {
+            app_id,
+            slug,
+            environment,
+            version_id,
+            version,
+            definition,
+        },
+    ))
 }
 
 pub async fn auditoria_do_app(
