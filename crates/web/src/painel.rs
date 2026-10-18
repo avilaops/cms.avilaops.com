@@ -517,12 +517,25 @@ async fn responder(
         "/.well-known/oauth-authorization-server" if leitura => {
             return Ok(conector::metadados(&origem));
         }
+        "/.well-known/oauth-authorization-server/runtime" if leitura => {
+            return Ok(crate::runtime_oauth::authorization_metadata(&origem));
+        }
         // O segundo endereço é o que a RFC 9728 monta para um recurso em
         // `/mcp`; há assistente que pede um e há o que pede o outro.
         "/.well-known/oauth-protected-resource" | "/.well-known/oauth-protected-resource/mcp"
             if leitura =>
         {
             return Ok(conector::recurso_protegido(&origem));
+        }
+        "/.well-known/oauth-protected-resource/api/runtime" if leitura => {
+            return Ok(crate::runtime_oauth::protected_resource_metadata(&origem));
+        }
+        "/oauth/runtime/token" => {
+            return if metodo == Method::POST {
+                crate::runtime_oauth::token(estado, corpo).await
+            } else {
+                Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST."))
+            };
         }
         "/oauth/register" | "/oauth/token" | "/mcp" => {
             let resposta = match caminho {
@@ -537,6 +550,28 @@ async fn responder(
             return resposta;
         }
         _ => {}
+    }
+    if caminho == "/oauth/runtime/authorize" {
+        if metodo == Method::POST && !veio_do_painel(&estado.configuracao, host, cabecalhos) {
+            return Ok(simples(
+                StatusCode::FORBIDDEN,
+                "Pedido recusado: não veio do painel.",
+            ));
+        }
+        let conta = match entrar(estado, host, cabecalhos, uri).await {
+            Ok(conta) => conta,
+            Err(resposta) => return Ok(*resposta),
+        };
+        return if metodo == Method::GET {
+            crate::runtime_oauth::authorization_page(estado, &conta, uri).await
+        } else if metodo == Method::POST {
+            crate::runtime_oauth::authorize(estado, &conta, corpo).await
+        } else {
+            Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use GET ou POST."))
+        };
+    }
+    if caminho == "/api/runtime" || caminho.starts_with("/api/runtime/") {
+        return Ok(crate::runtime_apps::serve(estado, &origem, metodo, cabecalhos, caminho).await);
     }
     if caminho == "/api/v1/apps" || caminho.starts_with("/api/v1/apps/") {
         let conta = match entrar_na_api(estado, cabecalhos).await {

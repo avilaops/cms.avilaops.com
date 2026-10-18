@@ -1,0 +1,19 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Autorizar {{ app_name }}{% endblock %}
+{% block conteudo %}
+<h1>Autorizar aplicativo</h1>
+<p class="quem">{{ account }}</p>
+<p><strong>{{ app_name }}</strong> quer baixar a versão publicada para este dispositivo.</p>
+<form method="post" action="/oauth/runtime/authorize">
+<input type="hidden" name="response_type" value="{{ request.response_type }}">
+<input type="hidden" name="client_id" value="{{ request.client_id }}">
+<input type="hidden" name="redirect_uri" value="{{ request.redirect_uri }}">
+<input type="hidden" name="code_challenge" value="{{ request.code_challenge }}">
+<input type="hidden" name="code_challenge_method" value="{{ request.code_challenge_method }}">
+<input type="hidden" name="scope" value="{{ request.scope }}">
+<input type="hidden" name="state" value="{{ request.state }}">
+<p class="marcar"><code>runtime:read</code> — ler somente a definição AAD publicada.</p>
+<button name="decision" value="authorize">Autorizar</button>
+<button class="secundario" name="decision" value="deny">Recusar</button>
+</form>
+{% endblock %}

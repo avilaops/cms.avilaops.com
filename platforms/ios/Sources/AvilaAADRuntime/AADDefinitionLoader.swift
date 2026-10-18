@@ -13,3 +13,15 @@ public struct InMemoryAADDefinitionLoader: AADDefinitionLoading {
 
     public func loadDefinition() async throws -> Data { data }
 }
+
+public struct RemoteAADDefinitionLoader: AADDefinitionLoading {
+    private let client: AADRuntimeAPIClient
+
+    public init(client: AADRuntimeAPIClient) {
+        self.client = client
+    }
+
+    public func loadDefinition() async throws -> Data {
+        try await client.fetchDefinition().definitionData
+    }
+}

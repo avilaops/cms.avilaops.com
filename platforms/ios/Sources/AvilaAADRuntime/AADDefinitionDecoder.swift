@@ -14,7 +14,7 @@ public struct AADDefinitionDecoder: Sendable {
     }
 }
 
-private struct JSONDuplicateKeyValidator {
+struct JSONDuplicateKeyValidator {
     private let bytes: [UInt8]
     private var index = 0
 
