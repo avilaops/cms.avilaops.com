@@ -1,0 +1,32 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Aplicativos{% endblock %}
+{% block conteudo %}
+<a class="voltar" href="/painel">← Painel</a>
+<h1>Aplicativos</h1>
+<p class="quem">{{ quem }}</p>
+{% if let Some(erro) = erro %}<p class="recado erro" role="alert">{{ erro }}</p>{% endif %}
+{% if apps.is_empty() %}
+<p>Crie o primeiro aplicativo para começar a montar as telas.</p>
+{% else %}
+<ul>
+{% for app in apps %}
+<li>
+<a href="{{ app.abrir }}"><strong>{{ app.nome }}</strong></a>
+<span class="etiquetas">{{ app.slug }} · {{ app.bundle_id }}</span>
+<span class="etiquetas">{{ app.papel }} · revisão {{ app.revisao }}</span>
+</li>
+{% endfor %}
+</ul>
+{% endif %}
+<h2>Novo aplicativo</h2>
+<form method="post" action="/painel/apps">
+<label for="nome">Nome</label>
+<input id="nome" name="nome" required maxlength="80" value="{{ nome }}">
+<label for="slug">Identificador</label>
+<input id="slug" name="slug" required maxlength="64" pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?" autocapitalize="none" spellcheck="false" value="{{ slug }}">
+<p class="dica">Usado no contrato do aplicativo. Não poderá colidir com outro projeto.</p>
+<label for="bundle_id">Bundle ID</label>
+<input id="bundle_id" name="bundle_id" required maxlength="180" pattern="[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+" autocapitalize="none" spellcheck="false" placeholder="com.empresa.aplicativo" value="{{ bundle_id }}">
+<button type="submit">Criar aplicativo</button>
+</form>
+{% endblock %}

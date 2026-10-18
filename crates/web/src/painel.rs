@@ -192,9 +192,41 @@ async fn entrar(
     }
 }
 
+async fn entrar_na_api(estado: &Estado, cabecalhos: &HeaderMap) -> Result<Conta, Box<Response>> {
+    let Some(auth) = &estado.auth else {
+        return Err(Box::new(crate::apps::erro_de_autenticacao(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "auth_unavailable",
+            "O login não está configurado.",
+        )));
+    };
+    match auth.consultar(token_de_sessao(cabecalhos)).await {
+        RespostaDoAuth::Entrou(conta) => Ok(conta),
+        RespostaDoAuth::SemSessao => Err(Box::new(crate::apps::erro_de_autenticacao(
+            StatusCode::UNAUTHORIZED,
+            "unauthenticated",
+            "Autenticação necessária.",
+        ))),
+        RespostaDoAuth::SemAcesso => Err(Box::new(crate::apps::erro_de_autenticacao(
+            StatusCode::FORBIDDEN,
+            "access_denied",
+            "Sua conta não tem acesso ao CMS.",
+        ))),
+        RespostaDoAuth::Indisponivel => Err(Box::new(crate::apps::erro_de_autenticacao(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "auth_unavailable",
+            "Não foi possível consultar o login.",
+        ))),
+    }
+}
+
 /// Formulário só vale vindo do próprio painel. O cookie do Auth chega de
 /// qualquer `*.avilaops.com`, inclusive de sites servidos por esta aplicação.
-fn veio_do_painel(configuracao: &Configuracao, host: &str, cabecalhos: &HeaderMap) -> bool {
+pub(crate) fn veio_do_painel(
+    configuracao: &Configuracao,
+    host: &str,
+    cabecalhos: &HeaderMap,
+) -> bool {
     cabecalhos
         .get(ORIGIN)
         .and_then(|valor| valor.to_str().ok())
@@ -334,6 +366,9 @@ fn aviso_da_consulta(uri: &Uri) -> Option<String> {
 enum Rota<'a> {
     Raiz,
     Sites,
+    Apps,
+    CriarApp,
+    EditarApp(&'a str),
     CriarSite,
     Convite(&'a str),
     Equipe(&'a str),
@@ -379,6 +414,9 @@ impl<'a> Rota<'a> {
         match (leitura, partes.as_slice()) {
             (true, [""]) => Some(Rota::Raiz),
             (true, ["painel"]) => Some(Rota::Sites),
+            (true, ["painel", "apps"]) => Some(Rota::Apps),
+            (false, ["painel", "apps"]) => Some(Rota::CriarApp),
+            (true, ["painel", "apps", id]) => Some(Rota::EditarApp(id)),
             (true, ["convite", token]) => Some(Rota::Convite(token)),
             (false, ["painel", "sites"]) => Some(Rota::CriarSite),
             (true, ["painel", "sites", slug, "equipe"]) => Some(Rota::Equipe(slug)),
@@ -441,6 +479,7 @@ impl<'a> Rota<'a> {
         matches!(
             self,
             Rota::CriarSite
+                | Rota::CriarApp
                 | Rota::Convidar(_)
                 | Rota::EnviarMidia(_)
                 | Rota::ApagarMidia(..)
@@ -499,12 +538,22 @@ async fn responder(
         }
         _ => {}
     }
+    if caminho == "/api/v1/apps" || caminho.starts_with("/api/v1/apps/") {
+        let conta = match entrar_na_api(estado, cabecalhos).await {
+            Ok(conta) => conta,
+            Err(resposta) => return Ok(*resposta),
+        };
+        return Ok(crate::apps::atender(estado, &conta, metodo, cabecalhos, caminho, corpo).await);
+    }
     // As fontes dos temas, para a prévia do painel sair com a cara do site.
     // São arquivos públicos: os mesmos que todo site serve.
     if let Some(fonte) = tema::fonte(caminho).filter(|_| leitura) {
         return Ok(fonte);
     }
     if let Some(recurso) = crate::cardapio::recurso(caminho).filter(|_| leitura) {
+        return Ok(recurso);
+    }
+    if let Some(recurso) = crate::construtor_de_apps::recurso(caminho).filter(|_| leitura) {
         return Ok(recurso);
     }
     let Some(rota) = Rota::ler(metodo, caminho) else {
@@ -533,6 +582,12 @@ async fn responder(
             pagina(estado, &conta, StatusCode::OK, recado).await
         }
         Rota::CriarSite => criar_site(estado, &conta, corpo).await,
+        Rota::Apps => crate::construtor_de_apps::listar(estado, &conta).await,
+        Rota::CriarApp => crate::construtor_de_apps::criar(estado, &conta, corpo).await,
+        Rota::EditarApp(id) => match id.parse() {
+            Ok(id) => crate::construtor_de_apps::editar(estado, &conta, id).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Aplicativo não encontrado.")),
+        },
         Rota::Convite(token) => aceitar_convite(estado, &conta, token).await,
         Rota::Equipe(slug) => equipe::abrir(estado, &conta, slug).await,
         Rota::Convidar(slug) => {

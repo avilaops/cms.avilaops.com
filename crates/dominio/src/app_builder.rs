@@ -7,6 +7,8 @@ use std::collections::HashSet;
 pub const SCHEMA_VERSION: &str = "1.0.0";
 pub const MAX_SCREENS: usize = 100;
 pub const MAX_COMPONENTS_PER_SCREEN: usize = 200;
+pub const MAX_DEFINITION_BYTES: usize = 512 * 1024;
+pub const JSON_SCHEMA: &str = include_str!("../../../docs/app-builder/aad-v1.schema.json");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -202,5 +204,19 @@ mod tests {
     fn rejects_unknown_fields() {
         let json = r#"{"schemaVersion":"1.0.0","appId":"x","minimumRuntimeVersion":"1.0.0","navigation":{"initialRoute":"home"},"screens":[],"script":"evil"}"#;
         assert!(serde_json::from_str::<AppDefinition>(json).is_err());
+    }
+
+    #[test]
+    fn published_json_schema_is_valid_json_and_matches_version() {
+        let schema: serde_json::Value = serde_json::from_str(JSON_SCHEMA).expect("JSON Schema");
+        assert_eq!(
+            schema["properties"]["schemaVersion"]["const"],
+            SCHEMA_VERSION
+        );
+        assert_eq!(schema["properties"]["screens"]["maxItems"], MAX_SCREENS);
+        assert_eq!(
+            schema["$defs"]["screen"]["properties"]["components"]["maxItems"],
+            MAX_COMPONENTS_PER_SCREEN
+        );
     }
 }

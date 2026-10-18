@@ -1,0 +1,47 @@
+{% extends "painel_base.html" %}
+{% block titulo %}{{ nome }} · App Builder{% endblock %}
+{% block conteudo %}
+<style>
+main{max-width:90rem}.app-cabecalho{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem}.app-cabecalho .etiquetas{display:block}.builder{display:grid;grid-template-columns:minmax(18rem,1fr) minmax(18rem,24rem);gap:1rem;align-items:start}.builder-editor,.builder-preview,.builder-card{background:var(--superficie);border:1px solid var(--borda);border-radius:.75rem;padding:1rem}.builder-editor textarea{min-height:34rem;font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2}.builder-acoes{display:flex;flex-wrap:wrap;gap:.5rem}.builder-acoes button{width:auto;margin-top:.75rem}.builder-acoes .perigo{color:var(--erro);border-color:var(--erro)}.telefone{width:min(100%,22rem);min-height:38rem;margin:.5rem auto 0;padding:2.5rem 1rem 1rem;border:10px solid var(--grafite);border-radius:2.4rem;background:var(--papel);box-shadow:0 16px 40px #0002;position:relative}.telefone:before{content:"";position:absolute;top:.65rem;left:50%;width:5rem;height:.35rem;transform:translateX(-50%);border-radius:1rem;background:var(--suave)}.previa-tela h3{margin:.25rem 0 1rem;font-size:1.35rem}.previa-componente{margin:.65rem 0}.previa-botao{display:block;text-align:center;padding:.7rem;border-radius:.55rem;background:var(--cota);color:var(--sobre-cota);font-weight:700}.previa-espaco{height:2rem;border-left:2px dotted var(--borda)}.builder-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin:1rem 0}.builder-card h2{margin-top:0}.ambientes{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}.ambiente{background:var(--papel);border:1px solid var(--borda);border-radius:.5rem;padding:.75rem}.ambiente strong{display:block}.ambiente select{margin-top:.5rem}.historico li{padding:.5rem .65rem}.status-editor{min-height:1.5rem;margin-top:.65rem}.status-editor.ok{color:var(--sucesso)}.status-editor.falha{color:var(--erro)}@media(max-width:58rem){.builder{grid-template-columns:1fr}.builder-meta,.ambientes{grid-template-columns:1fr}}
+</style>
+<a class="voltar" href="/painel/apps">← Aplicativos</a>
+<header class="app-cabecalho">
+<div><h1>{{ nome }}</h1><span class="etiquetas">{{ slug }} · {{ bundle_id }} · {{ papel }}</span></div>
+<span class="etiquetas">Rascunho r{{ revisao }}</span>
+</header>
+<div id="app-builder" data-app-id="{{ id }}" data-revision="{{ revisao }}" data-can-edit="{{ pode_editar }}" data-can-publish="{{ pode_publicar }}">
+<div class="builder">
+<section class="builder-editor" aria-labelledby="titulo-definicao">
+<h2 id="titulo-definicao">Definição AAD</h2>
+<p class="dica">Edite telas e componentes permitidos. A prévia é atualizada no navegador e não executa código remoto.</p>
+<label for="definicao">JSON do aplicativo</label>
+<textarea id="definicao" spellcheck="false" {% if !pode_editar %}readonly{% endif %}>{{ definicao }}</textarea>
+<div class="builder-acoes">
+<button type="button" id="formatar" class="secundario">Formatar</button>
+<button type="button" id="validar" class="secundario">Validar</button>
+{% if pode_editar %}<button type="button" id="salvar">Salvar rascunho</button><button type="button" id="versionar" class="secundario">Criar versão</button>{% endif %}
+</div>
+<p id="status-editor" class="status-editor" role="status" aria-live="polite"></p>
+</section>
+<aside class="builder-preview" aria-labelledby="titulo-previa">
+<h2 id="titulo-previa">Prévia de referência</h2>
+<p class="dica">Representação web do contrato AAD; não substitui a validação no runtime Apple.</p>
+<label for="tela-preview">Tela</label><select id="tela-preview"></select>
+<div class="telefone"><div id="previa" class="previa-tela"></div></div>
+</aside>
+</div>
+<div class="builder-meta">
+<section class="builder-card"><h2>Contrato</h2><p>AAD 1.0.0</p><p class="dica">Runtime mínimo 1.0.0</p></section>
+<section class="builder-card"><h2>Rascunho</h2><p id="revisao-atual">Revisão {{ revisao }}</p><p class="dica">Controle otimista com ETag</p></section>
+<section class="builder-card"><h2>Versões</h2><p>{{ versoes.len() }} snapshot(s) imutável(is)</p><p class="dica">Rollback troca o ponteiro do ambiente</p></section>
+</div>
+<section class="builder-card">
+<h2>Ambientes</h2><div class="ambientes">
+{% for ambiente in ambientes %}<div class="ambiente" data-environment="{{ ambiente.nome }}"><strong>{{ ambiente.rotulo }}</strong>{% if let Some(versao) = ambiente.versao %}<span>Versão {{ versao }}</span>{% if let Some(conta) = ambiente.atualizado_por %}<span class="etiquetas">por {{ conta }}</span>{% endif %}{% else %}<span class="etiquetas">Sem publicação</span>{% endif %}{% if pode_publicar %}<select aria-label="Versão para {{ ambiente.rotulo }}"><option value="">Escolha uma versão</option>{% for versao in versoes %}<option value="{{ versao.numero }}">Versão {{ versao.numero }}</option>{% endfor %}</select><button type="button" class="publicar secundario">Publicar</button>{% endif %}</div>{% endfor %}
+</div></section>
+<section class="builder-card"><h2>Versões imutáveis</h2>{% if versoes.is_empty() %}<p>Nenhuma versão criada.</p>{% else %}<ul>{% for versao in versoes %}<li><strong>Versão {{ versao.numero }}</strong><span class="etiquetas">AAD {{ versao.schema }} · runtime {{ versao.runtime }} · {{ versao.criado_em }} · {{ versao.criado_por }}</span></li>{% endfor %}</ul>{% endif %}</section>
+{% if pode_publicar %}<section class="builder-card"><h2>Equipe do aplicativo</h2><ul id="participantes">{% for participante in participantes %}<li data-account="{{ participante.conta }}"><strong>{{ participante.conta }}</strong><span class="etiquetas">{{ participante.papel }}</span><button type="button" class="remover-participante secundario">Remover</button></li>{% endfor %}</ul><form id="form-participante"><label for="conta-participante">Identificador da conta no Ávila Auth</label><input id="conta-participante" required maxlength="255" autocomplete="off"><label for="papel-participante">Papel</label><select id="papel-participante"><option value="viewer">Leitor</option><option value="editor">Editor</option><option value="owner">Proprietário</option></select><button type="submit">Adicionar ou atualizar</button></form></section>{% endif %}
+<section class="builder-card historico"><h2>Auditoria</h2>{% if auditoria.is_empty() %}<p>Nenhum evento.</p>{% else %}<ul>{% for evento in auditoria %}<li><strong>{{ evento.acao }}</strong><span class="etiquetas">{{ evento.criado_em }} · {{ evento.conta }} · {{ evento.correlation_id }}</span></li>{% endfor %}</ul>{% endif %}</section>
+</div>
+<script src="{{ script }}" defer></script>
+{% endblock %}
