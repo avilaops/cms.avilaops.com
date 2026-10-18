@@ -3,5 +3,8 @@
 .env
 /target
 /var
-/docs
+/docs/*
+!/docs/app-builder/
+/docs/app-builder/*
+!/docs/app-builder/aad-v1.schema.json
 *.md
