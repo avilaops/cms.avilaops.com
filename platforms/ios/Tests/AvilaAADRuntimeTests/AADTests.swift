@@ -3,7 +3,7 @@ import XCTest
 @testable import AvilaAADRuntime
 
 final class AADTests: XCTestCase {
-    let valid = """
+    private let valid = """
     {
       "schemaVersion":"1.0.0",
       "appId":"app-exemplo",
@@ -20,18 +20,81 @@ final class AADTests: XCTestCase {
     """
 
     func testDecodesMatchingRustFixture() throws {
-        let app = try AADApp(data: Data(valid.utf8))
+        let app = try AADDefinitionDecoder().decode(Data(valid.utf8))
         XCTAssertEqual(app.screens.count, 2)
         XCTAssertEqual(app.navigation.initialRoute, "home")
     }
 
+    func testAcceptsPayloadAtByteLimit() throws {
+        let source = Data(valid.utf8)
+        let padded = source + Data(repeating: 0x20, count: AADDefinitionDecoder.maximumBytes - source.count)
+        XCTAssertNoThrow(try AADDefinitionDecoder().decode(padded))
+    }
+
+    func testRejectsPayloadOneByteAboveLimitBeforeDecoding() {
+        let oversized = Data(repeating: 0x20, count: AADDefinitionDecoder.maximumBytes + 1)
+        XCTAssertThrowsError(try AADDefinitionDecoder().decode(oversized)) { error in
+            XCTAssertEqual(error as? AADError, .payloadTooLarge)
+        }
+    }
+
+    func testRejectsUnknownFieldsAtEveryObjectLevel() {
+        let mutations = [
+            valid.replacingOccurrences(of: "\"screens\":[", with: "\"unknown\":true,\"screens\":["),
+            valid.replacingOccurrences(of: "\"initialRoute\":\"home\"", with: "\"initialRoute\":\"home\",\"unknown\":true"),
+            valid.replacingOccurrences(of: "\"title\":\"Início\"", with: "\"title\":\"Início\",\"unknown\":true"),
+            valid.replacingOccurrences(of: "\"value\":\"Bem-vindo\"", with: "\"value\":\"Bem-vindo\",\"unknown\":true"),
+            valid.replacingOccurrences(of: "\"target\":\"orders\"", with: "\"target\":\"orders\",\"unknown\":true")
+        ]
+        for mutation in mutations {
+            XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(mutation.utf8)), mutation)
+        }
+    }
+
+    func testRejectsDuplicateJSONKeysAtEveryObjectLevel() {
+        let mutations = [
+            valid.replacingOccurrences(of: "\"appId\":\"app-exemplo\"", with: "\"appId\":\"app-exemplo\",\"appId\":\"outro-app\""),
+            valid.replacingOccurrences(of: "\"initialRoute\":\"home\"", with: "\"initialRoute\":\"home\",\"initialRoute\":\"orders\""),
+            valid.replacingOccurrences(of: "\"title\":\"Início\"", with: "\"title\":\"Início\",\"title\":\"Outra\""),
+            valid.replacingOccurrences(of: "\"value\":\"Bem-vindo\"", with: "\"value\":\"Bem-vindo\",\"value\":\"Outro\""),
+            valid.replacingOccurrences(of: "\"target\":\"orders\"", with: "\"target\":\"orders\",\"target\":\"home\"")
+        ]
+        for mutation in mutations {
+            XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(mutation.utf8))) { error in
+                XCTAssertEqual(error as? AADError, .duplicateJSONKey)
+            }
+        }
+    }
+
     func testRejectsUnknownTarget() {
         let changed = valid.replacingOccurrences(of: "\"target\":\"orders\"", with: "\"target\":\"missing\"")
-        XCTAssertThrowsError(try AADApp(data: Data(changed.utf8)))
+        XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(changed.utf8))) { error in
+            XCTAssertEqual(error as? AADError, .route)
+        }
     }
 
     func testRejectsUnsupportedComponent() {
         let changed = valid.replacingOccurrences(of: "\"type\":\"text\"", with: "\"type\":\"script\"")
-        XCTAssertThrowsError(try AADApp(data: Data(changed.utf8)))
+        XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(changed.utf8)))
+    }
+
+    func testRejectsNonASCIIAndOverlongIdentifiers() {
+        let nonASCII = valid.replacingOccurrences(of: "\"app-exemplo\"", with: "\"aplicação\"")
+        let overlong = valid.replacingOccurrences(of: "\"app-exemplo\"", with: "\"a\(String(repeating: "b", count: 64))\"")
+        for mutation in [nonASCII, overlong] {
+            XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(mutation.utf8))) { error in
+                XCTAssertEqual(error as? AADError, .identifier)
+            }
+        }
+    }
+
+    func testRejectsDuplicateScreenRouteAndComponentIdentifier() {
+        let duplicateRoute = valid.replacingOccurrences(of: "\"route\":\"orders\"", with: "\"route\":\"home\"")
+        let duplicateComponent = valid.replacingOccurrences(of: "\"id\":\"go-orders\"", with: "\"id\":\"intro\"")
+        for mutation in [duplicateRoute, duplicateComponent] {
+            XCTAssertThrowsError(try AADDefinitionDecoder().decode(Data(mutation.utf8))) { error in
+                XCTAssertEqual(error as? AADError, .duplicate)
+            }
+        }
     }
 }

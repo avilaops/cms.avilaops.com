@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Proof of concept: renders only the explicitly supported AAD components.
-/// Uses local navigation; it does not download manifests or execute scripts.
+/// Renders only the explicitly supported AAD components using local navigation.
+/// Networking, authentication and executable content remain outside this view.
 @available(iOS 16.0, macOS 13.0, *)
 public struct AADAppView: View {
     private let definition: AADApp
@@ -47,6 +47,7 @@ public struct AADAppView: View {
         case .button(_, let label, let target):
             Button(label) { path.append(target) }
                 .buttonStyle(.borderedProminent)
+                .accessibilityHint("Abre a tela \(target)")
         case .spacer:
             Spacer(minLength: 16)
         }

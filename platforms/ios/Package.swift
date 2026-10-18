@@ -6,7 +6,10 @@ let package = Package(
     platforms: [.iOS(.v16), .macOS(.v13)],
     products: [.library(name: "AvilaAADRuntime", targets: ["AvilaAADRuntime"])],
     targets: [
-        .target(name: "AvilaAADRuntime"),
+        .target(
+            name: "AvilaAADRuntime",
+            linkerSettings: [.linkedFramework("Security")]
+        ),
         .testTarget(name: "AvilaAADRuntimeTests", dependencies: ["AvilaAADRuntime"])
     ]
 )
