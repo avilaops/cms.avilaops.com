@@ -18,6 +18,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Xcode version
         run: xcodebuild -version
-      - name: Build and test Swift package
+      - name: Build Swift package for iOS Simulator
         working-directory: platforms/ios
+        run: xcodebuild -scheme AvilaAADRuntime -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO
+      - name: Test Swift package and render native screenshots
+        working-directory: platforms/ios
+        env:
+          AAD_SCREENSHOT_OUTPUT: ${{ github.workspace }}/artifacts/swiftui-runtime
         run: swift test
+      - name: Upload native SwiftUI screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: swiftui-runtime-screenshots
+          path: artifacts/swiftui-runtime/*.png
+          retention-days: 14
+          if-no-files-found: error
