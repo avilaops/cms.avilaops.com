@@ -65,6 +65,9 @@ public struct AADRuntimeAPIClient: @unchecked Sendable {
     }
 
     public func fetchDefinition(etag: String? = nil) async throws -> AADRuntimeFetchResult {
+        guard baseURL.scheme?.lowercased() == "https", baseURL.host != nil, baseURL.user == nil, baseURL.password == nil else {
+            throw AADRuntimeAPIError.invalidResponse
+        }
         guard
             let credentialData = try credentialStore.read(),
             let credential = try? JSONDecoder().decode(AADRuntimeCredential.self, from: credentialData),
