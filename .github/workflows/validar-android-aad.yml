@@ -1,0 +1,26 @@
+name: Validar Android AAD
+on:
+  pull_request:
+    paths:
+      - 'platforms/android/**'
+      - '.github/workflows/validar-android-aad.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-aad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test Kotlin AAD runtime
+        working-directory: platforms/android
+        run: gradle :runtime:testDebugUnitTest :runtime:assembleDebug --no-daemon
