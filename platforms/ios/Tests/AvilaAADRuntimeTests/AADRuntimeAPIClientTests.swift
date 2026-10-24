@@ -3,6 +3,30 @@ import XCTest
 @testable import AvilaAADRuntime
 
 final class AADRuntimeAPIClientTests: XCTestCase {
+    func testRejectsInsecureOrCredentialBearingBaseURLBeforeTransport() async throws {
+        for url in [
+            "http://cms.example",
+            "https://user:secret@cms.example",
+            "file:///tmp/not-an-api"
+        ] {
+            let transport = RecordingTransport(result: .success(response(status: 200)))
+            let credentials = InMemoryCredentialStore()
+            try credentials.save(try JSONEncoder().encode(AADRuntimeCredential(accessToken: "sensitive-token")))
+            let client = AADRuntimeAPIClient(
+                baseURL: URL(string: url)!,
+                appId: "app-exemplo",
+                environment: "production",
+                transport: transport,
+                credentialStore: credentials
+            )
+            await XCTAssertThrowsErrorAsync(try await client.fetchDefinition()) {
+                XCTAssertEqual($0 as? AADRuntimeAPIError, .invalidResponse)
+            }
+            let request = await transport.lastRequest
+            XCTAssertNil(request, "No request or bearer token may leave for \\(url)")
+        }
+    }
+
     func test200SendsBearerAndReturnsStrictlyValidatedDefinition() async throws {
         let transport = RecordingTransport(result: .success(response(
             status: 200,
