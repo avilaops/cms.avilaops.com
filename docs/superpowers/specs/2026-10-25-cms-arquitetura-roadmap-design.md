@@ -79,4 +79,3 @@ sem reescrever seu conteúdo.
 - Nomes de crates, rotas, integrações e responsabilidades conferidos no código.
 - Ausência de segredos e identificadores de clientes.
 - `cargo fmt --check` continua passando; a entrega documental não altera Rust.
-
