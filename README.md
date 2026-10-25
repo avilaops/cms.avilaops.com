@@ -16,7 +16,7 @@ demonstração publicado.
 |---|---|---|
 | Base | Convenções comuns em Rust: servidor, banco, login, publicação, n8n | Spec aprovada |
 | Motor | Crate `motor-web`: validação, cabeçalho, JSON-LD, imagens, sitemaps, `robots.txt`, `llms.txt` | Implementado e publicado em [avilaops/motor-web](https://github.com/avilaops/motor-web) |
-| CMS | Painel, conector MCP e renderização por host | Em implementação, por fatias |
+| CMS | Painel, conector MCP e renderização por host | Implementado |
 | Lojas | Reescrita do Lojas em Rust, por fatias de rota | Spec aprovada, código não iniciado |
 
 ### Fatias do CMS
@@ -111,6 +111,9 @@ Tomadas por Nicolas em 08 e 09/10/2026. O detalhe de cada uma está nas specs.
   cliente em código, teste ou documento.
 
 ## Documentos
+
+- [Arquitetura do CMS](docs/arquitetura-cms.md)
+- [Roadmap do CMS](docs/roadmap-cms.md)
 
 ### Tema Cardápio
 
