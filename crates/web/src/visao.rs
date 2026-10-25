@@ -39,9 +39,11 @@ pub struct Moldura {
     pub cor_de_destaque: Option<String>,
     /// A logo no cabeçalho, quando o site tem uma pronta.
     pub logo: Option<Logo>,
-    /// A versão do ícone do site, quando ele tem logo. Vai no endereço do
-    /// ícone, para o navegador buscar de novo quando a logo muda.
+    /// A versão do ícone do site, quando ele tem favicon ou logo. Vai no
+    /// endereço do ícone, para o navegador buscar de novo quando a imagem muda.
     pub icone: Option<String>,
+    /// A versão do atalho do iPhone, que pode sair de outra imagem.
+    pub icone_apple: Option<String>,
     /// A tag do Google do site, já conferida. É o único script que uma página
     /// carrega, e só quando o site informou a tag.
     pub tag_do_google: Option<TagDoGoogle>,
@@ -194,6 +196,7 @@ impl Moldura {
             cor_de_destaque: None,
             logo: None,
             icone: None,
+            icone_apple: None,
             tag_do_google: None,
         }
     }
@@ -574,6 +577,7 @@ mod testes {
             cor_de_destaque: None,
             logo: None,
             icone: None,
+            icone_apple: None,
             tag_do_google: None,
         };
         moldura.ordenar_menu(&["/servicos/".to_string(), "/blog".to_string()]);

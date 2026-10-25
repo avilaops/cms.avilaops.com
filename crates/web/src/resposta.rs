@@ -33,8 +33,9 @@ const POLITICA_COM_TAG_DO_GOOGLE: &str = "default-src 'self'; \
     frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.googletagmanager.com; \
     base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
-/// O que a página com modelo 3D acrescenta à política: o script do próprio
-/// site, que é o visualizador do CMS. Script de fora continua barrado.
+/// O que a página com modelo 3D e a tela do painel com script acrescentam à
+/// política: o script do próprio endereço, que é do CMS. Script de fora e
+/// script embutido na página continuam barrados.
 const SCRIPT_DO_SITE: &str = "script-src 'self'";
 
 fn politica_de(resposta: &Response) -> &str {
@@ -53,9 +54,10 @@ fn trocar_politica(resposta: &mut Response, politica: &str) {
     }
 }
 
-/// Deixa a página carregar o visualizador de modelo 3D. Vale só para a
-/// página que tem o bloco.
-pub fn liberar_visualizador_3d(resposta: &mut Response) {
+/// Deixa a página carregar script do próprio endereço: o visualizador de
+/// modelo 3D, só na página que tem o bloco, e o script do painel, só nas
+/// telas que o usam.
+pub fn liberar_script_proprio(resposta: &mut Response) {
     let politica = politica_de(resposta).replace("script-src 'none'", SCRIPT_DO_SITE);
     trocar_politica(resposta, &politica);
 }
@@ -223,7 +225,7 @@ mod testes {
     #[test]
     fn pagina_com_modelo_3d_carrega_so_o_script_do_proprio_site() {
         let mut pagina = html(StatusCode::OK, String::new(), true);
-        liberar_visualizador_3d(&mut pagina);
+        liberar_script_proprio(&mut pagina);
         let politica = politica_de(&pagina).to_string();
         assert!(politica.contains("script-src 'self';"));
         assert!(!politica.contains("unsafe-inline' https"));

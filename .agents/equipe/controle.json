@@ -3,6 +3,21 @@
   "application": "avila-cms",
   "members": [],
   "tasks": [],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-20261017-prs-10-11",
+      "subject": "Integração dos incrementos iniciais do App Builder",
+      "status": "mesclado",
+      "decision": "PR11 integrada à PR10 em af7d4fbd76e87564785eee430be4afcf4b1b0785; PR10 integrada à main em fd365f9f0fc03cd4cd5b04ad32987569d9e4bd4f. Árvore da main conferida idêntica ao commit validado 96968abd59e32503a2671718564a758811d3682d. Nenhum PR aberto no CMS na conferência posterior.",
+      "evidence": [
+        "https://github.com/avilaops/cms.avilaops.com/pull/10",
+        "https://github.com/avilaops/cms.avilaops.com/pull/11",
+        "https://github.com/avilaops/cms.avilaops.com/actions/runs/39022787797",
+        "CI aprovado: cargo fmt, clippy sem avisos, 175 testes Rust e quatro testes de seleção de itens; zero falhas/ignorados",
+        "Falha anterior de formatação corrigida; revisão técnica e base main atual incluídas antes da validação"
+      ],
+      "note": "Autorização do usuário para organizar e integrar CMS/CRM. Sem deploy. Esta entrega é contrato AAD experimental e política de autorização em memória; persistência, transações/último owner, endpoints, painel e runtime continuam pendentes na AVL-7 e sequência documentada. Alterações locais de domínio, painel, templates e instruções preservadas; registro local."
+    }
+  ],
   "integrations": []
 }

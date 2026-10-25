@@ -1,19 +1,28 @@
 {% extends "painel_base.html" %}
 {% block titulo %}Imagens de {{ site }}{% endblock %}
+{% block barra %}{% include "barra_do_site.html" %}{% endblock %}
+{% block lateral %}{% let dono = administra.clone() %}{% let secao = "midia" %}{% include "lateral.html" %}{% endblock %}
 {% block conteudo %}
-<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
+<div class="cabecalho-da-pagina">
+<div>
 <h1>Imagens</h1>
+<p class="dica">Toque numa imagem para ver maior e corrigir a descrição, a legenda e o crédito.</p>
+</div>
+</div>
 {%- if let Some(erro) = erro %}
 <p class="recado erro" role="alert">{{ erro }}</p>
 {%- endif %}
 {%- if let Some(aviso) = aviso %}
 <p class="recado aviso" role="status">{{ aviso }}</p>
 {%- endif %}
+<details class="cartao envio"{% if lista.total == 0 || erro.is_some() %} open{% endif %}>
+<summary><h2>Enviar imagem</h2></summary>
 <form method="post" action="/painel/sites/{{ slug }}/midia" enctype="multipart/form-data">
 <label for="arquivo">Imagem (JPG, PNG ou WebP, até 15 MB)</label>
 <input id="arquivo" name="arquivo" type="file" accept="image/jpeg,image/png,image/webp" required>
 <label for="alt">Descrição para quem não enxerga a imagem</label>
-<input id="alt" name="alt" required maxlength="300" value="{{ alt }}">
+<input id="alt" name="alt" required maxlength="300" value="{{ alt }}" aria-describedby="dica-alt">
+<p class="dica" id="dica-alt">Diga o que aparece na imagem, como "Vitrine da padaria com pães de fermentação natural".</p>
 <label class="marcar"><input type="checkbox" name="propria" value="1"> Imagem de autoria própria: crédito, autor, aviso de direitos e licença em nome de {{ dono }}</label>
 <details>
 <summary>Legenda, crédito e direitos (opcional)</summary>
@@ -36,23 +45,48 @@
 </details>
 <button type="submit">Enviar imagem</button>
 </form>
+</details>
 <h2 id="biblioteca">Biblioteca</h2>
 {%- if lista.total == 0 && lista.busca.is_empty() %}
 <p>Nenhuma imagem ainda.</p>
 {%- else %}
 {%- include "lista_busca.html" %}
-<ul>
+<ul class="grade-de-imagens">
 {%- for midia in lista.itens %}
-<li class="midia">
+<li>
+<a class="abrir-imagem" href="#imagem-{{ midia.id }}" data-abre="imagem-{{ midia.id }}">
 {%- if let Some(miniatura) = midia.miniatura %}
-<img src="{{ miniatura }}" alt="" width="72" height="72" loading="lazy">
+<img src="{{ miniatura }}" alt="" width="160" height="160" loading="lazy">
+{%- else %}
+<span class="sem-miniatura">{{ midia.situacao }}</span>
 {%- endif %}
-<div>
+<span class="texto">
 <strong>{{ midia.alt }}</strong>
 <span class="etiquetas">{{ midia.dimensoes }} · {{ midia.situacao }} · {{ midia.uso }}</span>
-<details>
-<summary>Corrigir</summary>
-<p class="dica">Identificador para o conector: <code>{{ midia.id }}</code></p>
+{%- if !midia.papeis.is_empty() %}
+<span class="papeis">{% for papel in midia.papeis %}<span class="chip ok">{{ papel }}</span>{% endfor %}</span>
+{%- endif %}
+</span>
+</a>
+<dialog class="janela" id="imagem-{{ midia.id }}" aria-labelledby="m{{ loop.index }}-titulo">
+<div class="janela-topo">
+<h2 id="m{{ loop.index }}-titulo">Corrigir imagem</h2>
+<a class="fechar" href="#biblioteca" data-fecha>Fechar</a>
+</div>
+<div class="janela-corpo">
+<figure class="janela-imagem">
+{%- if let Some(miniatura) = midia.miniatura %}
+<img src="{{ miniatura }}" alt="{{ midia.alt }}" loading="lazy">
+{%- endif %}
+<figcaption>
+{{ midia.dimensoes }} · {{ midia.situacao }} · {{ midia.uso }}
+{%- if !midia.papeis.is_empty() %}
+<span class="papeis">{% for papel in midia.papeis %}<span class="chip ok">{{ papel }}</span>{% endfor %}</span>
+{%- endif %}
+<span class="dica">Identificador para o conector: <code>{{ midia.id }}</code></span>
+</figcaption>
+</figure>
+<div>
 <form method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}">
 <label class="marcar"><input type="checkbox" name="propria" value="1"{% if midia.propria %} checked{% endif %}> Autoria própria: preenche crédito, autor, aviso de direitos e licença em nome de {{ dono }}</label>
 <label for="m{{ loop.index }}-alt">Descrição para quem não enxerga a imagem</label>
@@ -74,16 +108,25 @@
 <label for="m{{ loop.index }}-aquisicao">Página onde se pede autorização de uso (https://)</label>
 <input id="m{{ loop.index }}-aquisicao" name="aquisicao" maxlength="300" inputmode="url" value="{{ midia.aquisicao }}">
 </details>
-<button type="submit">Salvar</button>
+<div class="acoes-da-janela"><button type="submit">Salvar</button></div>
 </form>
-</details>
 {%- if midia.pode_apagar %}
-<form class="discreto" method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}/apagar"><button type="submit">Apagar</button></form>
+<form method="post" action="/painel/sites/{{ slug }}/midia/{{ midia.id }}/apagar">
+{%- if !midia.papeis.is_empty() %}
+<p class="dica">Esta imagem está na identidade do site. Apagar tira ela de lá.</p>
+{%- endif %}
+<button type="submit" class="perigo">Apagar imagem</button>
+</form>
+{%- else %}
+<p class="dica">{% if midia.uso == "sem uso" %}Só quem enviou a imagem, um editor ou o dono pode apagá-la.{% else %}Para apagar, tire a imagem das páginas e posts em que ela está.{% endif %}</p>
 {%- endif %}
 </div>
+</div>
+</dialog>
 </li>
 {%- endfor %}
 </ul>
 {%- include "lista_paginas.html" %}
 {%- endif %}
 {% endblock %}
+{% block script %}<script src="{{ script }}" defer></script>{% endblock %}

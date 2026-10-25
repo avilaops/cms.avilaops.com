@@ -621,7 +621,7 @@ pub async fn previa(
             let tem_cardapio = pagina.contains("data-cardapio-dados");
             let mut resposta = html_privado(StatusCode::OK, pagina.replace("\"/midia/", &imagens));
             if tem_cardapio {
-                crate::resposta::liberar_visualizador_3d(&mut resposta);
+                crate::resposta::liberar_script_proprio(&mut resposta);
             }
             Ok(resposta)
         }

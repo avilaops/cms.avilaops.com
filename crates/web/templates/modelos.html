@@ -1,5 +1,7 @@
 {% extends "painel_base.html" %}
 {% block titulo %}Modelos 3D de {{ site }}{% endblock %}
+{% block barra %}{% include "barra_do_site.html" %}{% endblock %}
+{% block lateral %}{% let secao = "modelos" %}{% include "lateral.html" %}{% endblock %}
 {% block conteudo %}
 <a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
 <h1>Modelos 3D</h1>

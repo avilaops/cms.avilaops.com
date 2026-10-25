@@ -12,6 +12,7 @@ use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use cms_dados::{ErroDeModelo, ModeloDoSite, NovoModelo, SiteGravado};
+use cms_dominio::conta::pode_administrar;
 use cms_dominio::{Ator, Conta, Papel};
 use motor_web::validacao::MODELO_MAXIMO_BYTES;
 use uuid::Uuid;
@@ -38,7 +39,7 @@ pub fn caminho_do_visualizador() -> &'static str {
     &CAMINHO
 }
 
-fn arquivo_pronto(bytes: impl IntoResponse, tipo: &'static str) -> Response {
+pub(crate) fn arquivo_pronto(bytes: impl IntoResponse, tipo: &'static str) -> Response {
     let mut resposta = bytes.into_response();
     let cabecalhos = resposta.headers_mut();
     cabecalhos.insert(CONTENT_TYPE, HeaderValue::from_static(tipo));
@@ -286,6 +287,8 @@ struct PaginaDeModelos {
     resumo: String,
     /// A descrição digitada, de volta no formulário quando algo é recusado.
     descricao: String,
+    /// Quem vê o menu inteiro do site.
+    dono: bool,
 }
 
 #[derive(Default)]
@@ -324,6 +327,7 @@ async fn pagina(
         resumo: lista.resumo("Nenhum modelo", "modelo", "modelos"),
         lista,
         descricao: recado.descricao,
+        dono: pode_administrar(ator),
     }
     .render()?;
     Ok(html_privado(status, corpo))

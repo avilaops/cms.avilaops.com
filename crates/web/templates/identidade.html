@@ -1,31 +1,150 @@
 {% extends "painel_base.html" %}
 {% block titulo %}Identidade de {{ site }}{% endblock %}
+{% block barra %}{% include "barra_do_site.html" %}{% endblock %}
+{% block lateral %}{% let secao = "identidade" %}{% include "lateral.html" %}{% endblock %}
 {% block conteudo %}
-<a class="voltar" href="/painel/sites/{{ slug }}">‹ {{ site }}</a>
-<h1>Identidade do site</h1>
-{%- if salvo %}
-<p class="recado aviso" role="status">Identidade salva.</p>
+<div class="largo">
+<div class="cabecalho-da-pagina">
+<div>
+<h1>Identidade e marca</h1>
+<p class="dica">O nome, a logo, os ícones, as cores e os dados da empresa. Vale para todas as páginas do site.</p>
+</div>
+</div>
+{%- if let Some(erro) = erro %}
+<p class="recado erro" role="alert">{{ erro }}</p>
 {%- endif %}
-<form method="post" action="/painel/sites/{{ slug }}/identidade">
+{%- if let Some(aviso) = aviso %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<div class="identidade">
+<aside class="previa cartao" data-previa aria-label="Prévia do site">
+<p class="rotulo">Prévia</p>
+<div class="pv-navegador">
+<div class="aba"><img data-pv="favicon" alt="" width="16" height="16"{% if let Some(previa) = previa_do_favicon %} src="{{ previa }}"{% else %} hidden{% endif %}><span data-pv="nome">{{ d.nome }}</span></div>
+<div class="pv-site" style="{% for tema in temas %}{% if tema.atual %}--fundo:{{ tema.amostra.fundo }};--texto:{{ tema.amostra.texto }};--fonte:{{ tema.amostra.fonte }};--cantos:{{ tema.amostra.cantos }};{% endif %}{% endfor %}--destaque:{{ cor_da_previa }}">
+<div class="pv-topo"><img data-pv="logo" alt=""{% if let Some(previa) = previa_da_logo %} src="{{ previa }}"{% else %} hidden{% endif %}><span class="pv-marca" data-pv="nome">{{ d.nome }}</span></div>
+<div class="pv-menu"><span>Início</span><span>Sobre</span><span>Contato</span></div>
+<div class="pv-corpo"><span class="pv-titulo">Título da página</span><span class="pv-linha"></span><span class="pv-linha"></span><span class="pv-botao">Fale conosco</span></div>
+<div class="pv-rodape" data-pv="titular">{% if d.razao_social.is_empty() %}{{ d.nome }}{% else %}{{ d.razao_social }}{% endif %}</div>
+</div>
+</div>
+<div class="pv-iphone"><img data-pv="icone-apple" alt="" width="60" height="60"{% if let Some(previa) = previa_do_icone_apple %} src="{{ previa }}"{% else %} hidden{% endif %}><span class="vazio" aria-hidden="true"></span><span data-pv="nome">{{ d.nome }}</span></div>
+</aside>
+<form id="identidade" class="identidade-campos" method="post" action="/painel/sites/{{ slug }}/identidade">
+<section class="cartao" aria-labelledby="t-logo">
+<h2 id="t-logo">Logo e ícones</h2>
+<p class="dica">Escolha uma imagem que já está em <a href="/painel/sites/{{ slug }}/midia">Imagens</a> ou envie uma nova. A imagem enviada por aqui já fica escolhida e salva; salve antes o que mudou nos outros campos.</p>
+<div class="grade-de-icones">
+<div class="icone">
+<div class="icone-topo"><h3>Logo</h3>{% if d.logo.is_empty() %}<span class="chip falta">Falta logo</span>{% else %}<span class="chip ok">Logo configurada</span>{% endif %}</div>
+<div class="quadro"><img class="logo-grande" data-pv="logo" alt="Logo do site"{% if let Some(previa) = previa_da_logo %} src="{{ previa }}"{% else %} hidden{% endif %}><span class="vazio">Sem logo</span></div>
+<p class="dica">Aparece no topo de todas as páginas. Prefira PNG com fundo transparente.</p>
+<label for="logo">Imagem da biblioteca</label>
+<select id="logo" name="logo">
+<option value="">Sem logo</option>
+{%- for imagem in imagens %}
+<option value="{{ imagem.id }}"{% if let Some(miniatura) = imagem.miniatura %} data-miniatura="{{ miniatura }}"{% endif %}{% if imagem.id == d.logo %} selected{% endif %}>{{ imagem.alt }}</option>
+{%- endfor %}
+</select>
+<details>
+<summary>Enviar uma logo nova</summary>
+<label for="logo-arquivo">Arquivo (JPG, PNG ou WebP, até 15 MB)</label>
+<input id="logo-arquivo" name="arquivo" type="file" accept="image/jpeg,image/png,image/webp" required form="enviar-logo">
+<label for="logo-alt">Descrição para quem não enxerga a imagem</label>
+<input id="logo-alt" name="alt" required maxlength="300" form="enviar-logo">
+<label class="marcar"><input type="checkbox" name="propria" value="1" form="enviar-logo"> Imagem de autoria própria</label>
+<button type="submit" class="secundario" form="enviar-logo">Enviar e usar como logo</button>
+</details>
+</div>
+<div class="icone">
+<div class="icone-topo"><h3>Favicon</h3>{% if !d.favicon.is_empty() %}<span class="chip ok">Favicon configurado</span>{% else if !d.logo.is_empty() %}<span class="chip">Usa a logo</span>{% else %}<span class="chip falta">Sem favicon</span>{% endif %}</div>
+<div class="quadro">
+<figure class="tamanho"><img class="t16" data-pv="favicon" alt="" width="16" height="16"{% if let Some(previa) = previa_do_favicon %} src="{{ previa }}"{% else %} hidden{% endif %}><figcaption>16 px</figcaption></figure>
+<figure class="tamanho"><img class="t32" data-pv="favicon" alt="" width="32" height="32"{% if let Some(previa) = previa_do_favicon %} src="{{ previa }}"{% else %} hidden{% endif %}><figcaption>32 px</figcaption></figure>
+<figure class="tamanho"><img class="t48" data-pv="favicon" alt="Favicon do site" width="48" height="48"{% if let Some(previa) = previa_do_favicon %} src="{{ previa }}"{% else %} hidden{% endif %}><figcaption>48 px</figcaption></figure>
+<span class="vazio">Sem favicon</span>
+</div>
+<p class="dica">O favicon aparece na aba do navegador e nos favoritos. Use uma imagem quadrada, de pelo menos 48 × 48 pixels: o CMS gera os tamanhos sozinho.</p>
+<label for="favicon">Imagem da biblioteca</label>
+<select id="favicon" name="favicon">
+<option value="">Usar a logo</option>
+{%- for imagem in imagens %}
+<option value="{{ imagem.id }}"{% if let Some(miniatura) = imagem.miniatura %} data-miniatura="{{ miniatura }}"{% endif %}{% if imagem.id == d.favicon %} selected{% endif %}>{{ imagem.alt }}</option>
+{%- endfor %}
+</select>
+<details>
+<summary>Enviar um favicon novo</summary>
+<label for="favicon-arquivo">Arquivo (PNG, JPG ou WebP, até 15 MB)</label>
+<input id="favicon-arquivo" name="arquivo" type="file" accept="image/png,image/jpeg,image/webp" required form="enviar-favicon">
+<label for="favicon-alt">Descrição para quem não enxerga a imagem</label>
+<input id="favicon-alt" name="alt" required maxlength="300" form="enviar-favicon">
+<label class="marcar"><input type="checkbox" name="propria" value="1" form="enviar-favicon"> Imagem de autoria própria</label>
+<button type="submit" class="secundario" form="enviar-favicon">Enviar e usar como favicon</button>
+</details>
+</div>
+<div class="icone">
+<div class="icone-topo"><h3>Ícone do iPhone</h3>{% if !d.icone_apple.is_empty() %}<span class="chip ok">Ícone configurado</span>{% else if !d.favicon.is_empty() %}<span class="chip">Usa o favicon</span>{% else if !d.logo.is_empty() %}<span class="chip">Usa a logo</span>{% else %}<span class="chip falta">Sem ícone</span>{% endif %}</div>
+<div class="quadro">
+<figure class="tamanho"><img class="t180" data-pv="icone-apple" alt="Ícone do site no iPhone" width="180" height="180"{% if let Some(previa) = previa_do_icone_apple %} src="{{ previa }}"{% else %} hidden{% endif %}><figcaption>180 px</figcaption></figure>
+<span class="vazio">Sem ícone</span>
+</div>
+<p class="dica">Aparece quando alguém salva o site na tela inicial do iPhone. Fica sobre fundo branco, em 180 × 180 pixels.</p>
+<label for="icone_apple">Imagem da biblioteca</label>
+<select id="icone_apple" name="icone_apple">
+<option value="">Usar o favicon (ou a logo)</option>
+{%- for imagem in imagens %}
+<option value="{{ imagem.id }}"{% if let Some(miniatura) = imagem.miniatura %} data-miniatura="{{ miniatura }}"{% endif %}{% if imagem.id == d.icone_apple %} selected{% endif %}>{{ imagem.alt }}</option>
+{%- endfor %}
+</select>
+<details>
+<summary>Enviar um ícone novo</summary>
+<label for="icone-apple-arquivo">Arquivo (PNG, JPG ou WebP, até 15 MB)</label>
+<input id="icone-apple-arquivo" name="arquivo" type="file" accept="image/png,image/jpeg,image/webp" required form="enviar-icone-apple">
+<label for="icone-apple-alt">Descrição para quem não enxerga a imagem</label>
+<input id="icone-apple-alt" name="alt" required maxlength="300" form="enviar-icone-apple">
+<label class="marcar"><input type="checkbox" name="propria" value="1" form="enviar-icone-apple"> Imagem de autoria própria</label>
+<button type="submit" class="secundario" form="enviar-icone-apple">Enviar e usar no iPhone</button>
+</details>
+</div>
+</div>
+</section>
+<section class="cartao" aria-labelledby="t-nome">
+<h2 id="t-nome">Nome e descrição</h2>
 <label for="nome">Nome do site</label>
 <input id="nome" name="nome" required maxlength="80" value="{{ d.nome }}">
 <label for="descricao">O que é o negócio, em uma ou duas frases</label>
 <textarea id="descricao" name="descricao" maxlength="400">{{ d.descricao }}</textarea>
-<label for="logo">Logo</label>
-{%- if let Some(logo_atual) = logo_atual %}
-<img class="logo-atual" src="{{ logo_atual }}" alt="Logo atual do site" width="72" height="72">
-{%- endif %}
-<select id="logo" name="logo">
-<option value="">Sem logo</option>
-{%- for opcao in logos %}
-<option value="{{ opcao.0 }}"{% if opcao.2 %} selected{% endif %}>{{ opcao.1 }}</option>
-{%- endfor %}
-</select>
+<p class="dica">A descrição aparece na busca do Google e quando o site é compartilhado.</p>
 <label for="cardapio">Categorias do tema Cardápio, uma por linha</label>
 <textarea id="cardapio" name="cardapio" maxlength="2400" aria-describedby="dica-cardapio">{{ d.cardapio }}</textarea>
 <p class="dica" id="dica-cardapio">Escreva o tipo e o caminho: pizza /pizzas, borda /bordas ou produto /bebidas. Use seções de planos e preços nessas páginas, com preços no formato R$ 35,00. O resumo usa o telefone do site como WhatsApp; confirme o DDI e o DDD. Frete e pagamento são combinados no atendimento.</p>
+</section>
+<section class="cartao" aria-labelledby="t-aparencia">
+<h2 id="t-aparencia">Aparência</h2>
 <fieldset>
-<legend>Quem está por trás do site</legend>
+<legend>Tema: as fontes, as cores de base e as formas do site</legend>
+<div class="grade-de-temas">
+{%- for tema in temas %}
+<label class="cartao-de-tema">
+<input type="radio" name="tema" value="{{ tema.slug }}"{% if tema.atual %} checked{% endif %}>
+<span class="miniatura-do-tema" style="--fundo:{{ tema.amostra.fundo }};--texto:{{ tema.amostra.texto }};--destaque:{{ tema.amostra.destaque }};--fonte:{{ tema.amostra.fonte }};--cantos:{{ tema.amostra.cantos }}" aria-hidden="true"><span class="mt-titulo">Aa</span><span class="mt-linha"></span><span class="mt-linha curta"></span><span class="mt-botao"></span></span>
+<span class="nome-do-tema">{{ tema.nome }}</span>
+<span class="dica">{{ tema.descricao }}</span>
+</label>
+{%- endfor %}
+</div>
+</fieldset>
+<label for="cor">Cor da marca</label>
+<div class="cor">
+<span class="amostra-da-cor" style="--destaque:{{ cor_da_previa }}" aria-hidden="true"></span>
+<input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}" aria-describedby="dica-cor">
+<input type="color" id="cor-escolha" aria-label="Escolher a cor numa paleta" hidden>
+</div>
+<p class="dica" id="dica-cor">Como #225cf2. Pinta links, botões e destaques. Em branco, vale a cor do tema.</p>
+</section>
+<details class="cartao" open>
+<summary><h2>Quem está por trás do site</h2></summary>
+<p class="dica">Aparece no rodapé de todas as páginas e nos dados que o Google lê.</p>
 <label for="razao_social">Razão social</label>
 <input id="razao_social" name="razao_social" maxlength="120" value="{{ d.razao_social }}">
 <label for="telefone">Telefone</label>
@@ -40,24 +159,12 @@
 <input id="uf" name="uf" maxlength="2" value="{{ d.uf }}">
 <label for="cep">CEP</label>
 <input id="cep" name="cep" maxlength="9" inputmode="numeric" value="{{ d.cep }}">
+<p class="dica">O endereço só aparece com rua, cidade, UF e CEP preenchidos.</p>
 <label for="perfis">Redes sociais (endereços https), uma por linha</label>
 <textarea id="perfis" name="perfis">{{ d.perfis }}</textarea>
-</fieldset>
-<label for="tema">Tema: as fontes, as cores de base e as formas do site</label>
-<select id="tema" name="tema">
-{%- for (valor, rotulo, atual) in temas %}
-<option value="{{ valor }}"{% if atual %} selected{% endif %}>{{ rotulo }}</option>
-{%- endfor %}
-</select>
-<label for="cor">Cor da marca, como #225cf2 (em branco usa a cor do tema)</label>
-<input id="cor" name="cor" maxlength="7" autocapitalize="none" spellcheck="false" pattern="#[0-9a-fA-F]{6}" value="{{ d.cor }}">
-<label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567 (em branco, o site não carrega script nenhum)</label>
-<input id="tag" name="tag" maxlength="20" autocapitalize="characters" spellcheck="false" value="{{ d.tag }}">
-<label for="licenca">Licença das imagens do site, um parágrafo por linha (em branco usa o texto padrão: todos os direitos reservados)</label>
-<textarea id="licenca" name="licenca" maxlength="2000">{{ d.licenca }}</textarea>
-<p class="dica">É o texto da página <a href="{{ pagina_da_licenca }}">{{ pagina_da_licenca }}</a> do site, para onde aponta a licença de toda imagem de autoria própria. O e-mail e o telefone de contato entram no fim dela.</p>
-<fieldset>
-<legend>Menu do topo</legend>
+</details>
+<details class="cartao" id="menu" open>
+<summary><h2>Menu do topo</h2></summary>
 {%- if paginas.is_empty() %}
 <p class="dica">O site ainda não tem página no ar para pôr no menu.</p>
 {%- else %}
@@ -72,9 +179,24 @@
 <label class="ordem"><input type="number" name="posicao" min="1" max="99" inputmode="numeric" aria-label="Posição do grupo novo no menu"><input name="pagina" maxlength="400" autocapitalize="none" spellcheck="false" placeholder="Produtos: /mail /crm" aria-label="Grupo novo: nome, dois-pontos e as páginas" aria-describedby="dica-grupo"></label>
 <p class="dica" id="dica-grupo">Grupo com submenu: escreva o nome, dois-pontos e os endereços das páginas, como Produtos: /mail /crm, e dê um número a ele. As páginas do grupo saem da lista acima. Grupo sem número sai do menu.</p>
 {%- endif %}
-</fieldset>
+</details>
+<details class="cartao">
+<summary><h2>Avançado: medição, licença e IA</h2></summary>
+<label for="tag">Tag do Google para medir visitas, como GTM-ABC1234 ou G-ABC1234567</label>
+<input id="tag" name="tag" maxlength="20" autocapitalize="characters" spellcheck="false" value="{{ d.tag }}" aria-describedby="dica-tag">
+<p class="dica" id="dica-tag">Em branco, o site não carrega script nenhum.</p>
+<label for="licenca">Licença das imagens do site, um parágrafo por linha</label>
+<textarea id="licenca" name="licenca" maxlength="2000">{{ d.licenca }}</textarea>
+<p class="dica">Em branco, vale o texto padrão: todos os direitos reservados. É o texto da página <a href="{{ pagina_da_licenca }}">{{ pagina_da_licenca }}</a> do site, para onde aponta a licença de toda imagem de autoria própria. O e-mail e o telefone de contato entram no fim dela.</p>
 <label for="diretrizes">Orientações para assistentes de IA, uma por linha</label>
 <textarea id="diretrizes" name="diretrizes">{{ d.diretrizes }}</textarea>
-<button type="submit">Salvar identidade</button>
+</details>
+<div class="barra-de-salvar"><button type="submit">Salvar identidade</button></div>
 </form>
+</div>
+<form id="enviar-logo" method="post" action="/painel/sites/{{ slug }}/identidade/logo" enctype="multipart/form-data" hidden></form>
+<form id="enviar-favicon" method="post" action="/painel/sites/{{ slug }}/identidade/favicon" enctype="multipart/form-data" hidden></form>
+<form id="enviar-icone-apple" method="post" action="/painel/sites/{{ slug }}/identidade/icone-apple" enctype="multipart/form-data" hidden></form>
+</div>
 {% endblock %}
+{% block script %}<script src="{{ script }}" defer></script>{% endblock %}

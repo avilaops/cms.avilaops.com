@@ -1,8 +1,9 @@
-//! O ícone do site (favicon), gerado da logo: quem cuida do site escolhe a
-//! logo e o ícone da aba, do atalho no celular e dos favoritos sai sozinho.
+//! O ícone do site (favicon), gerado de uma imagem da biblioteca: o favicon
+//! escolhido na identidade ou, sem ele, a logo. O atalho do iPhone pode ter
+//! imagem própria. Os tamanhos saem sozinhos da mesma imagem.
 //!
-//! A logo entra inteira num quadrado, sem cortar nem esticar. Logo quadrada dá
-//! o melhor ícone; logo larga fica pequena, porque precisa caber.
+//! A imagem entra inteira num quadrado, sem cortar nem esticar. Imagem
+//! quadrada dá o melhor ícone; imagem larga fica pequena, porque precisa caber.
 
 use std::io::{Cursor, ErrorKind};
 use std::path::Path;
@@ -36,6 +37,7 @@ impl Icone {
         let (lado, fundo_branco) = match caminho {
             "/favicon.ico" | "/favicon-48.png" => (48, false),
             "/favicon-32.png" => (32, false),
+            "/favicon-16.png" => (16, false),
             "/favicon-192.png" => (192, false),
             "/favicon-512.png" => (512, false),
             "/apple-touch-icon.png" | "/apple-touch-icon-precomposed.png" => (180, true),
@@ -44,7 +46,12 @@ impl Icone {
         Some(Self { lado, fundo_branco })
     }
 
-    /// A logo dentro de um quadrado do tamanho do ícone, em PNG.
+    /// O atalho do iPhone, que pode sair de outra imagem que não a do favicon.
+    pub fn eh_do_iphone(self) -> bool {
+        self.fundo_branco
+    }
+
+    /// A imagem dentro de um quadrado do tamanho do ícone, em PNG.
     fn montar(self, original: &[u8]) -> Option<Vec<u8>> {
         let logo = image::load_from_memory(original).ok()?;
         // `resize` mantém a proporção: a logo cabe no quadrado sem deformar.
@@ -68,18 +75,19 @@ impl Icone {
     }
 }
 
-/// Entrega o ícone do site. Sem logo, ou com logo que não abre, não há ícone.
+/// Entrega o ícone do site, montado da imagem `origem`. Sem imagem, ou com
+/// imagem que não abre, não há ícone.
 pub async fn servir(
     diretorio: &Path,
     site_id: Uuid,
-    logo: &str,
+    origem: Option<&str>,
     icone: Icone,
 ) -> Result<Response, ErroWeb> {
     let nao_tem = || Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
-    let Ok(logo_id) = Uuid::parse_str(logo) else {
+    let Some(Ok(imagem_id)) = origem.map(Uuid::parse_str) else {
         return nao_tem();
     };
-    let original = match tokio::fs::read(caminho_do_original(diretorio, site_id, logo_id)).await {
+    let original = match tokio::fs::read(caminho_do_original(diretorio, site_id, imagem_id)).await {
         Ok(bytes) => bytes,
         Err(erro) if erro.kind() == ErrorKind::NotFound => return nao_tem(),
         Err(erro) => return Err(erro.into()),
@@ -123,6 +131,22 @@ mod testes {
         assert!(Icone::do_caminho("/favicon-192.png").is_some());
         assert!(Icone::do_caminho("/favicon-64.png").is_none());
         assert!(Icone::do_caminho("/blog/favicon.ico").is_none());
+    }
+
+    #[test]
+    fn favicon_tem_16_32_e_48_e_o_atalho_do_iphone_180() {
+        for (caminho, lado) in [
+            ("/favicon-16.png", 16),
+            ("/favicon-32.png", 32),
+            ("/favicon-48.png", 48),
+            ("/apple-touch-icon.png", 180),
+        ] {
+            let icone = Icone::do_caminho(caminho).expect("ícone");
+            let png = icone.montar(&logo(64, 64)).expect("png");
+            let pronto = image::load_from_memory(&png).expect("abre");
+            assert_eq!((pronto.width(), pronto.height()), (lado, lado), "{caminho}");
+            assert_eq!(icone.eh_do_iphone(), lado == 180, "{caminho}");
+        }
     }
 
     #[test]

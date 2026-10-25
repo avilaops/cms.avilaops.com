@@ -2,7 +2,8 @@
 //! para IA) e o histórico do que foi feito nele.
 
 use askama::Template;
-use axum::http::{StatusCode, Uri};
+use axum::body::Bytes;
+use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::Response;
 use cms_dados::SiteGravado;
 use cms_dominio::conta::pode_administrar;
@@ -17,8 +18,10 @@ use uuid::Uuid;
 
 use crate::Estado;
 use crate::acesso::{Acesso, ao_site};
-use crate::painel::miniatura;
-use crate::resposta::{ErroWeb, html_privado, redirecionar, simples, texto};
+use crate::biblioteca;
+use crate::painel::{caminho_do_script, html_com_script};
+use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
+use crate::tema::{self, Amostra};
 
 /// A identidade como é digitada, no formulário do painel e nos argumentos do
 /// conector. Listas vêm com um item por linha.
@@ -51,6 +54,10 @@ pub(crate) struct DadosDaIdentidade {
     /// Os termos de uso das imagens do site, um parágrafo por linha; vazio
     /// usa o texto padrão da página de licença.
     licenca: String,
+    /// O identificador da imagem do ícone da aba; vazio usa a logo.
+    favicon: String,
+    /// O identificador da imagem do atalho do iPhone; vazio usa o favicon.
+    icone_apple: String,
 }
 
 impl DadosDaIdentidade {
@@ -83,6 +90,8 @@ impl DadosDaIdentidade {
             menu: perfil.menu.join("\n"),
             tag: perfil.tag_do_google.clone().unwrap_or_default(),
             licenca: perfil.licenca_de_imagens.clone().unwrap_or_default(),
+            favicon: perfil.favicon.clone().unwrap_or_default(),
+            icone_apple: perfil.icone_apple.clone().unwrap_or_default(),
         }
     }
 
@@ -107,6 +116,8 @@ impl DadosDaIdentidade {
             "menu" => &mut self.menu,
             "tagDoGoogle" => &mut self.tag,
             "licencaDeImagens" => &mut self.licenca,
+            "favicon" => &mut self.favicon,
+            "iconeApple" => &mut self.icone_apple,
             _ => return None,
         })
     }
@@ -117,18 +128,90 @@ impl DadosDaIdentidade {
 struct PaginaDeIdentidade {
     site: String,
     slug: String,
-    salvo: bool,
+    /// A tela é só do dono; o menu lateral mostra tudo.
+    dono: bool,
+    erro: Option<String>,
+    aviso: Option<&'static str>,
     d: DadosDaIdentidade,
-    /// Identificador, descrição e se é a logo atual.
-    logos: Vec<(String, String, bool)>,
-    /// Os temas: nome gravado, como aparece para escolher e se é o atual.
-    temas: Vec<(&'static str, String, bool)>,
-    /// A logo de agora, para a pessoa ver qual é antes de trocar.
-    logo_atual: Option<String>,
+    /// As imagens da biblioteca que podem virar logo ou ícone.
+    imagens: Vec<ImagemNaTela>,
+    temas: Vec<TemaNaTela>,
+    /// As miniaturas de agora, para a pessoa ver antes de trocar. O favicon
+    /// e o ícone do iPhone mostram a imagem de que saem, mesmo que seja a logo.
+    previa_da_logo: Option<String>,
+    previa_do_favicon: Option<String>,
+    previa_do_icone_apple: Option<String>,
+    /// A cor da marca na prévia: a escolhida ou a do tema.
+    cor_da_previa: String,
     /// As páginas que podem ir para o menu do topo, com a posição de cada uma.
     paginas: Vec<PaginaDoMenu>,
     /// O endereço da página de licença de imagens do site.
     pagina_da_licenca: String,
+    script: &'static str,
+}
+
+/// Uma imagem da biblioteca na escolha de logo e ícones.
+struct ImagemNaTela {
+    id: String,
+    alt: String,
+    miniatura: Option<String>,
+}
+
+/// Um tema para escolher, com a miniatura dele.
+struct TemaNaTela {
+    slug: &'static str,
+    nome: &'static str,
+    descricao: &'static str,
+    atual: bool,
+    amostra: Amostra,
+}
+
+/// A imagem que a tela de identidade envia e já escolhe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ImagemDaIdentidade {
+    Logo,
+    Favicon,
+    IconeApple,
+}
+
+impl ImagemDaIdentidade {
+    /// Pelo fim do endereço do envio, que é também o recado da volta.
+    fn do_caminho(caminho: &str) -> Option<Self> {
+        match caminho {
+            "logo" => Some(Self::Logo),
+            "favicon" => Some(Self::Favicon),
+            "icone-apple" => Some(Self::IconeApple),
+            _ => None,
+        }
+    }
+
+    fn caminho(self) -> &'static str {
+        match self {
+            Self::Logo => "logo",
+            Self::Favicon => "favicon",
+            Self::IconeApple => "icone-apple",
+        }
+    }
+
+    fn aviso(self) -> &'static str {
+        match self {
+            Self::Logo => "Logo enviada e escolhida. Ela fica pronta em instantes.",
+            Self::Favicon => "Favicon enviado e escolhido. Ele já aparece na aba do navegador.",
+            Self::IconeApple => "Ícone do iPhone enviado e escolhido.",
+        }
+    }
+}
+
+/// O recado que volta pelo endereço depois de salvar ou de enviar imagem.
+fn aviso_da_consulta(uri: &Uri) -> Option<&'static str> {
+    let resultado = uri
+        .query()?
+        .split('&')
+        .find_map(|par| par.strip_prefix("r="))?;
+    match resultado {
+        "salvo" => Some("Identidade salva."),
+        outro => ImagemDaIdentidade::do_caminho(outro).map(ImagemDaIdentidade::aviso),
+    }
 }
 
 /// Uma página na lista do menu do topo.
@@ -259,7 +342,30 @@ pub async fn abrir(
         Err(resposta) => return Ok(resposta),
     };
     let dados = DadosDaIdentidade::do_perfil(&site.perfil);
-    let paginas = paginas_do_menu(estado, &site).await?;
+    let recado = Recado {
+        aviso: aviso_da_consulta(uri),
+        ..Recado::default()
+    };
+    pagina(estado, &site, StatusCode::OK, recado, dados).await
+}
+
+/// O que a tela diz em cima do formulário.
+#[derive(Default)]
+struct Recado {
+    erro: Option<String>,
+    aviso: Option<&'static str>,
+}
+
+/// A tela com `dados` no formulário: o que está gravado ou, depois de uma
+/// recusa, o que a pessoa digitou.
+async fn pagina(
+    estado: &Estado,
+    site: &SiteGravado,
+    status: StatusCode,
+    recado: Recado,
+    dados: DadosDaIdentidade,
+) -> Result<Response, ErroWeb> {
+    let paginas = paginas_do_menu(estado, site).await?;
     let configuracao = &estado.configuracao;
     let origem = origem_do_site(
         &configuracao.esquema,
@@ -267,39 +373,74 @@ pub async fn abrir(
         &site.slug,
         site.dominio_ativo.as_deref(),
     );
+    let imagens: Vec<ImagemNaTela> = cms_dados::midias_do_site(&estado.pool, site.id)
+        .await?
+        .into_iter()
+        .filter(|midia| midia.situacao != "falhou")
+        .map(|midia| ImagemNaTela {
+            id: midia.id.to_string(),
+            alt: midia.alt,
+            miniatura: midia
+                .miniatura
+                .map(|arquivo| format!("/painel/sites/{}/midia/arquivo/{arquivo}", site.slug)),
+        })
+        .collect();
+    let previa = |id: Option<&str>| {
+        imagens
+            .iter()
+            .find(|imagem| Some(imagem.id.as_str()) == id)
+            .and_then(|imagem| imagem.miniatura.clone())
+    };
+    let perfil = &site.perfil;
+    let tema_atual = perfil.tema;
     let corpo = PaginaDeIdentidade {
         pagina_da_licenca: format!("{origem}{CAMINHO_DA_LICENCA_DE_IMAGENS}"),
-        logo_atual: miniatura(&site.perfil.logo, &site.slug),
+        previa_da_logo: previa(Some(perfil.logo.id.as_str())),
+        previa_do_favicon: previa(perfil.origem_do_favicon()),
+        previa_do_icone_apple: previa(perfil.origem_do_icone_apple()),
+        // A cor vai num atributo de estilo: só a que passa na conferência.
+        cor_da_previa: perfil
+            .cor_de_destaque
+            .as_deref()
+            .and_then(|cor| conferir_cor(cor).ok())
+            .unwrap_or_else(|| tema::amostra(tema_atual).destaque.to_string()),
         temas: Tema::TODOS
             .into_iter()
-            .map(|tema| {
-                let rotulo = format!("{}: {}", tema.nome(), tema.descricao());
-                (tema.slug(), rotulo, dados.tema.trim() == tema.slug())
+            .map(|tema| TemaNaTela {
+                slug: tema.slug(),
+                nome: tema.nome(),
+                descricao: tema.descricao(),
+                atual: tema == tema_atual,
+                amostra: tema::amostra(tema),
             })
             .collect(),
+        imagens,
         paginas,
-        site: site.perfil.nome,
-        slug: site.slug,
-        salvo: uri
-            .query()
-            .is_some_and(|consulta| consulta.contains("r=salvo")),
-        logos: cms_dados::midias_do_site(&estado.pool, site.id)
-            .await?
-            .into_iter()
-            .filter(|midia| midia.situacao != "falhou")
-            .map(|midia| {
-                let id = midia.id.to_string();
-                let atual = id == dados.logo;
-                (id, midia.alt, atual)
-            })
-            .collect(),
+        site: perfil.nome.clone(),
+        slug: site.slug.clone(),
+        dono: true,
+        erro: recado.erro,
+        aviso: recado.aviso,
         d: dados,
+        script: caminho_do_script(),
     }
     .render()?;
-    Ok(html_privado(StatusCode::OK, corpo))
+    Ok(html_com_script(status, corpo))
 }
 
 const SO_O_DONO: &str = "Só o dono do site mexe na identidade.";
+
+/// A imagem da biblioteca do site com este identificador, se houver.
+async fn imagem_do_site(
+    estado: &Estado,
+    site: &SiteGravado,
+    id: &str,
+) -> Result<Option<motor_web::tipos::Midia>, ErroWeb> {
+    Ok(match Uuid::parse_str(id.trim()) {
+        Ok(id) => cms_dados::midia_para_conteudo(&estado.pool, site.id, id).await?,
+        Err(_) => None,
+    })
+}
 
 fn opcional(texto: &str) -> Option<String> {
     Some(texto.trim().to_string()).filter(|texto| !texto.is_empty())
@@ -354,11 +495,17 @@ pub(crate) async fn aplicar(
         None => None,
     };
     dados.tag = tag_do_google.clone().unwrap_or_default();
-    // A logo é da biblioteca do site; qualquer outra coisa fica sem logo.
-    let logo = match Uuid::parse_str(dados.logo.trim()) {
-        Ok(id) => cms_dados::midia_para_conteudo(&estado.pool, site.id, id).await?,
-        Err(_) => None,
-    };
+    // A logo e os ícones são da biblioteca do site; qualquer outra coisa
+    // fica sem imagem.
+    let logo = imagem_do_site(estado, site, &dados.logo).await?;
+    let favicon = imagem_do_site(estado, site, &dados.favicon)
+        .await?
+        .map(|midia| midia.id);
+    let icone_apple = imagem_do_site(estado, site, &dados.icone_apple)
+        .await?
+        .map(|midia| midia.id);
+    dados.favicon = favicon.clone().unwrap_or_default();
+    dados.icone_apple = icone_apple.clone().unwrap_or_default();
     // Endereço só entra inteiro: pela metade, o dado estruturado sairia errado.
     let endereco = match (
         opcional(&dados.logradouro),
@@ -394,6 +541,8 @@ pub(crate) async fn aplicar(
         paginas_do_cardapio,
         tag_do_google,
         licenca_de_imagens: opcional(&dados.licenca),
+        favicon,
+        icone_apple,
         // Só caminho do site ou grupo de caminhos entra na ordem do menu.
         menu: linhas(&dados.menu)
             .iter()
@@ -422,17 +571,94 @@ pub async fn gravar(
     let mut dados = serde_urlencoded::from_bytes::<DadosDaIdentidade>(corpo).unwrap_or_default();
     // Na tela o menu vem como posições; no conector, como lista de caminhos.
     dados.menu = menu_da_tela(corpo).unwrap_or_else(|| site.perfil.menu.join("\n"));
-    Ok(match aplicar(estado, &site, &ator, &mut dados).await? {
-        Ok(()) => redirecionar(
+    match aplicar(estado, &site, &ator, &mut dados).await? {
+        Ok(()) => Ok(redirecionar(
             StatusCode::SEE_OTHER,
             &format!("/painel/sites/{}/identidade?r=salvo", site.slug),
+        )),
+        Err(motivo) => {
+            let recado = Recado {
+                erro: Some(motivo),
+                ..Recado::default()
+            };
+            pagina(
+                estado,
+                &site,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                recado,
+                dados,
+            )
+            .await
+        }
+    }
+}
+
+/// Envia uma imagem para a biblioteca, com a mesma conferência da tela de
+/// imagens, e já a põe como logo, favicon ou ícone do iPhone. O resto da
+/// identidade fica como está gravado.
+pub async fn enviar_imagem(
+    estado: &Estado,
+    conta: &Conta,
+    slug: &str,
+    papel: &str,
+    cabecalhos: &HeaderMap,
+    corpo: &Bytes,
+) -> Result<Response, ErroWeb> {
+    let (site, ator) = match do_dono(estado, conta, slug).await? {
+        Ok(acesso) => acesso,
+        Err(resposta) => return Ok(resposta),
+    };
+    let Some(papel) = ImagemDaIdentidade::do_caminho(papel) else {
+        return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
+    };
+    let Some((mut envio, propria)) = biblioteca::ler_envio(cabecalhos, corpo.clone()).await else {
+        return Ok(simples(StatusCode::BAD_REQUEST, "Formulário inválido."));
+    };
+    if propria {
+        (envio.credito, envio.direitos) = biblioteca::autoria_propria(&site);
+    }
+    let midia_id = match biblioteca::registrar(estado, &site, &ator, envio).await? {
+        Ok(id) => id,
+        Err(motivo) => {
+            let recado = Recado {
+                erro: Some(motivo),
+                ..Recado::default()
+            };
+            let dados = DadosDaIdentidade::do_perfil(&site.perfil);
+            return pagina(
+                estado,
+                &site,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                recado,
+                dados,
+            )
+            .await;
+        }
+    };
+    let mut perfil = site.perfil.clone();
+    match papel {
+        ImagemDaIdentidade::Logo => {
+            if let Some(logo) =
+                cms_dados::midia_para_conteudo(&estado.pool, site.id, midia_id).await?
+            {
+                perfil.logo = logo;
+            }
+        }
+        ImagemDaIdentidade::Favicon => perfil.favicon = Some(midia_id.to_string()),
+        ImagemDaIdentidade::IconeApple => perfil.icone_apple = Some(midia_id.to_string()),
+    }
+    if !cms_dados::atualizar_perfil(&estado.pool, site.id, &ator, &perfil).await? {
+        return Ok(simples(StatusCode::FORBIDDEN, SO_O_DONO));
+    }
+    estado.cache.invalidar_site(site.id);
+    Ok(redirecionar(
+        StatusCode::SEE_OTHER,
+        &format!(
+            "/painel/sites/{}/identidade?r={}",
+            site.slug,
+            papel.caminho()
         ),
-        Err(motivo) => texto(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            "text/plain; charset=utf-8",
-            motivo,
-        ),
-    })
+    ))
 }
 
 #[derive(Template)]

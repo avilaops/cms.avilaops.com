@@ -127,6 +127,14 @@ pub struct PerfilDoSite {
     /// direitos reservados.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub licenca_de_imagens: Option<String>,
+    /// A imagem da biblioteca que vira o ícone da aba e dos favoritos, pelo
+    /// identificador. Sem ela, o ícone sai da logo.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub favicon: Option<String>,
+    /// A imagem da biblioteca que vira o atalho na tela inicial do iPhone,
+    /// pelo identificador. Sem ela, vale o favicon e depois a logo.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icone_apple: Option<String>,
 }
 
 /// A tag do Google não tem o formato de um contêiner nem de uma propriedade.
@@ -240,12 +248,25 @@ impl PerfilDoSite {
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,
+            favicon: None,
+            icone_apple: None,
         }
     }
 
     /// Quem responde pelo site: a razão social, ou o nome do site sem ela.
     pub fn titular(&self) -> &str {
         preenchido(&self.organizacao.razao_social).unwrap_or(&self.nome)
+    }
+
+    /// De qual imagem sai o ícone da aba: o favicon escolhido, ou a logo.
+    pub fn origem_do_favicon(&self) -> Option<&str> {
+        preenchido(&self.favicon).or_else(|| Some(self.logo.id.trim()).filter(|id| !id.is_empty()))
+    }
+
+    /// De qual imagem sai o atalho do iPhone: o ícone escolhido para ele, ou
+    /// o mesmo do favicon.
+    pub fn origem_do_icone_apple(&self) -> Option<&str> {
+        preenchido(&self.icone_apple).or_else(|| self.origem_do_favicon())
     }
 
     /// O texto da página de licença de imagens, um parágrafo por item: os
@@ -327,6 +348,8 @@ impl From<Site> for PerfilDoSite {
             menu: Vec::new(),
             tag_do_google: None,
             licenca_de_imagens: None,
+            favicon: None,
+            icone_apple: None,
         }
     }
 }
@@ -436,6 +459,37 @@ mod testes {
                 "Para pedir autorização de uso, escreva para contato@padaria.example.",
             ]
         );
+    }
+
+    #[test]
+    fn icones_saem_da_imagem_escolhida_ou_da_logo() {
+        let mut perfil = PerfilDoSite::inicial("Padaria da Ana");
+        assert_eq!(perfil.origem_do_favicon(), None);
+        assert_eq!(perfil.origem_do_icone_apple(), None);
+
+        perfil.logo.id = "logo".to_string();
+        assert_eq!(perfil.origem_do_favicon(), Some("logo"));
+        assert_eq!(perfil.origem_do_icone_apple(), Some("logo"));
+
+        perfil.favicon = Some("aba".to_string());
+        assert_eq!(perfil.origem_do_favicon(), Some("aba"));
+        assert_eq!(perfil.origem_do_icone_apple(), Some("aba"));
+
+        perfil.icone_apple = Some("atalho".to_string());
+        perfil.favicon = Some("  ".to_string());
+        assert_eq!(perfil.origem_do_favicon(), Some("logo"));
+        assert_eq!(perfil.origem_do_icone_apple(), Some("atalho"));
+    }
+
+    #[test]
+    fn perfil_gravado_antes_dos_icones_continua_valendo() {
+        let mut gravado = serde_json::to_value(PerfilDoSite::inicial("Padaria")).expect("json");
+        assert!(gravado.get("favicon").is_none());
+        assert!(gravado.get("iconeApple").is_none());
+        gravado["favicon"] = serde_json::json!("aba");
+        let lido: PerfilDoSite = serde_json::from_value(gravado).expect("lê");
+        assert_eq!(lido.favicon.as_deref(), Some("aba"));
+        assert_eq!(lido.icone_apple, None);
     }
 
     #[test]

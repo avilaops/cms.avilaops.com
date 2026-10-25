@@ -13,8 +13,9 @@ use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::Response;
 use chrono::{Datelike, Utc};
 use cms_dados::{DescricaoDaMidia, ErroDeMidia, MidiaDoSite, NovaMidia, SiteGravado};
+use cms_dominio::conta::pode_administrar;
 use cms_dominio::site::CAMINHO_DA_LICENCA_DE_IMAGENS;
-use cms_dominio::{Ator, Conta, Papel};
+use cms_dominio::{Ator, Conta, Papel, PerfilDoSite};
 use motor_web::tipos::Direitos;
 use motor_web::validacao::validar_upload;
 use serde::Deserialize;
@@ -22,7 +23,8 @@ use uuid::Uuid;
 
 use crate::acesso::ao_site;
 use crate::lista::{Consulta, Lista};
-use crate::resposta::{ErroWeb, html_privado, simples};
+use crate::painel::{caminho_do_script, html_com_script};
+use crate::resposta::{ErroWeb, simples};
 use crate::{Estado, midia};
 
 struct Linha {
@@ -45,12 +47,25 @@ struct Linha {
     de_terceiros: bool,
     /// A página não escreve o crédito embaixo da imagem.
     ocultar_credito: bool,
+    /// O que a imagem é na identidade do site: logo, favicon, ícone do iPhone.
+    papeis: Vec<&'static str>,
 }
 
 impl Linha {
-    fn nova(midia: MidiaDoSite, slug: &str, ator: &Ator) -> Self {
+    fn nova(midia: MidiaDoSite, slug: &str, ator: &Ator, perfil: &PerfilDoSite) -> Self {
         let propria = midia.licenca.as_deref() == Some(CAMINHO_DA_LICENCA_DE_IMAGENS);
+        let id = midia.id.to_string();
+        let papeis = [
+            (Some(perfil.logo.id.as_str()), "Logo do site"),
+            (perfil.favicon.as_deref(), "Favicon"),
+            (perfil.icone_apple.as_deref(), "Ícone do iPhone"),
+        ]
+        .into_iter()
+        .filter(|(escolhida, _)| *escolhida == Some(id.as_str()))
+        .map(|(_, papel)| papel)
+        .collect();
         Self {
+            papeis,
             propria,
             de_terceiros: !propria && (midia.licenca.is_some() || midia.aquisicao.is_some()),
             ocultar_credito: midia.ocultar_credito,
@@ -97,6 +112,9 @@ struct PaginaDeMidia {
     alt: String,
     /// Em nome de quem fica a imagem marcada como de autoria própria.
     dono: String,
+    /// Quem vê o menu inteiro do site: o dono.
+    administra: bool,
+    script: &'static str,
 }
 
 #[derive(Default)]
@@ -119,7 +137,7 @@ async fn pagina(
         .into_iter()
         // A busca olha a descrição, o nome do arquivo e o identificador.
         .filter(|midia| consulta.casa(&format!("{} {} {}", midia.alt, midia.nome, midia.id)))
-        .map(|midia| Linha::nova(midia, &site.slug, ator))
+        .map(|midia| Linha::nova(midia, &site.slug, ator, &site.perfil))
         .collect();
     let lista = consulta.recortar(midias, &format!("/painel/sites/{}/midia", site.slug));
     let corpo = PaginaDeMidia {
@@ -131,9 +149,11 @@ async fn pagina(
         lista,
         alt: recado.alt,
         dono: site.perfil.titular().to_string(),
+        administra: pode_administrar(ator),
+        script: caminho_do_script(),
     }
     .render()?;
-    Ok(html_privado(status, corpo))
+    Ok(html_com_script(status, corpo))
 }
 
 pub async fn abrir(
@@ -203,7 +223,7 @@ pub(crate) fn autoria_propria(site: &SiteGravado) -> (String, Direitos) {
 
 /// Lê o formulário de envio, e se a pessoa marcou a imagem como de autoria
 /// própria. `None` para o que não é um formulário válido.
-async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<(Envio, bool)> {
+pub(crate) async fn ler_envio(cabecalhos: &HeaderMap, corpo: Bytes) -> Option<(Envio, bool)> {
     let tipo = cabecalhos.get(CONTENT_TYPE)?.to_str().ok()?;
     let limite = multer::parse_boundary(tipo).ok()?;
     let fluxo = futures_util::stream::once(async move { Ok::<Bytes, std::io::Error>(corpo) });

@@ -1,0 +1,34 @@
+<input type="checkbox" id="menu-do-site" class="alternar" aria-label="Abrir o menu do site">
+<aside class="lateral" aria-label="Menu do site">
+<label for="menu-do-site" class="fechar-menu">Fechar</label>
+<a class="aos-sites" href="/painel">‹ Meus sites</a>
+<p class="nome-do-site">{{ site }}</p>
+<nav aria-label="Seções de {{ site }}">
+<p class="grupo">Conteúdo</p>
+<ul>
+<li><a href="/painel/sites/{{ slug }}"{% if secao == "conteudo" %} aria-current="page"{% endif %}>Páginas e posts</a></li>
+<li><a href="/painel/sites/{{ slug }}/catalogo"{% if secao == "catalogo" %} aria-current="page"{% endif %}>Autores e categorias</a></li>
+<li><a href="/painel/sites/{{ slug }}/mensagens"{% if secao == "mensagens" %} aria-current="page"{% endif %}>Mensagens</a></li>
+</ul>
+<p class="grupo">Mídia</p>
+<ul>
+<li><a href="/painel/sites/{{ slug }}/midia"{% if secao == "midia" %} aria-current="page"{% endif %}>Imagens</a></li>
+<li><a href="/painel/sites/{{ slug }}/modelos"{% if secao == "modelos" %} aria-current="page"{% endif %}>Modelos 3D</a></li>
+</ul>
+{%- if dono %}
+<p class="grupo">Marca e navegação</p>
+<ul>
+<li><a href="/painel/sites/{{ slug }}/identidade"{% if secao == "identidade" %} aria-current="page"{% endif %}>Identidade, logo e ícones</a></li>
+<li><a href="/painel/sites/{{ slug }}/identidade#menu">Menu do topo</a></li>
+</ul>
+<p class="grupo">Configurações</p>
+<ul>
+<li><a href="/painel/sites/{{ slug }}/dominio"{% if secao == "dominio" %} aria-current="page"{% endif %}>Endereço e domínio</a></li>
+<li><a href="/painel/sites/{{ slug }}/equipe"{% if secao == "equipe" %} aria-current="page"{% endif %}>Equipe</a></li>
+<li><a href="/painel/sites/{{ slug }}/historico"{% if secao == "historico" %} aria-current="page"{% endif %}>Histórico</a></li>
+</ul>
+{%- endif %}
+</nav>
+<div class="fim"><a href="/painel/conector">Assistentes de IA</a></div>
+</aside>
+<label for="menu-do-site" class="fundo-do-menu" aria-hidden="true"></label>

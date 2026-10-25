@@ -86,6 +86,56 @@ img,iframe,modelo-3d,.chamada{border-radius:1rem}
 header.topo{border-bottom:0;box-shadow:0 1px 0 var(--linha)}
 "#;
 
+/// O tema em miniatura, para a escolha na tela de identidade: as cores de
+/// base e a fonte dos títulos, as mesmas do estilo do tema.
+pub struct Amostra {
+    pub fundo: &'static str,
+    pub texto: &'static str,
+    pub destaque: &'static str,
+    pub fonte: &'static str,
+    pub cantos: &'static str,
+}
+
+pub fn amostra(tema: Tema) -> Amostra {
+    match tema {
+        Tema::Classico => Amostra {
+            fundo: "#fff",
+            texto: "#1c1917",
+            destaque: "#9a3412",
+            fonte: "system-ui,sans-serif",
+            cantos: ".375rem",
+        },
+        Tema::Industrial => Amostra {
+            fundo: "#fff",
+            texto: "#111827",
+            destaque: "#b45309",
+            fonte: "\"Oswald\",system-ui,sans-serif",
+            cantos: ".125rem",
+        },
+        Tema::Editorial => Amostra {
+            fundo: "#fbfaf7",
+            texto: "#1f2937",
+            destaque: "#7c2d12",
+            fonte: "\"IBM Plex Serif\",Georgia,serif",
+            cantos: ".25rem",
+        },
+        Tema::Moderno => Amostra {
+            fundo: "#fff",
+            texto: "#0f172a",
+            destaque: "#1d4ed8",
+            fonte: "\"Archivo\",system-ui,sans-serif",
+            cantos: "1rem",
+        },
+        Tema::Cardapio => Amostra {
+            fundo: "#f8f5ee",
+            texto: "#24332a",
+            destaque: "#31513c",
+            fonte: "\"Plex Serif\",Georgia,serif",
+            cantos: "8px",
+        },
+    }
+}
+
 /// O estilo que o tema põe por cima do estilo de base. O clássico é o
 /// próprio estilo de base.
 pub fn estilo(tema: Tema) -> &'static str {
@@ -118,6 +168,25 @@ mod testes {
         for (arquivo, bytes) in FONTES {
             assert!(todos.contains(arquivo), "{arquivo}");
             assert!(bytes.starts_with(b"wOF2"), "{arquivo}");
+        }
+    }
+
+    #[test]
+    fn amostra_tem_as_cores_do_estilo_do_tema() {
+        for tema in [Tema::Industrial, Tema::Editorial, Tema::Moderno] {
+            let amostra = amostra(tema);
+            let estilo = estilo(tema);
+            for (variavel, cor) in [
+                ("fundo", amostra.fundo),
+                ("texto", amostra.texto),
+                ("destaque", amostra.destaque),
+            ] {
+                assert!(
+                    estilo.contains(&format!("--{variavel}:{cor}")),
+                    "{}: --{variavel}",
+                    tema.slug()
+                );
+            }
         }
     }
 

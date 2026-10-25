@@ -587,6 +587,14 @@ const IDENTIDADE: &[(&str, &str)] = &[
         "O id da imagem na biblioteca (listar_midia). Vazio tira a logo.",
     ),
     (
+        "favicon",
+        "O id da imagem na biblioteca (listar_midia) que vira o ícone da aba e dos favoritos, em 16, 32 e 48 pixels. Imagem quadrada dá o melhor ícone. Vazio usa a logo.",
+    ),
+    (
+        "iconeApple",
+        "O id da imagem na biblioteca (listar_midia) que vira o atalho na tela inicial do iPhone, em 180 pixels com fundo branco. Vazio usa o favicon e, sem ele, a logo.",
+    ),
+    (
         "razaoSocial",
         "A razão social de quem está por trás do site.",
     ),

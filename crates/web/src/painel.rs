@@ -15,13 +15,34 @@ use cms_integracoes::auth::{COOKIE_DE_SESSAO, RespostaDoAuth};
 use motor_web::tipos::{Formato, Midia};
 use serde::Deserialize;
 
-use crate::resposta::{ErroWeb, html_privado, redirecionar, simples};
+use crate::resposta::{ErroWeb, html_privado, liberar_script_proprio, redirecionar, simples};
 use crate::{Configuracao, Estado};
 use crate::{
     biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens, modelos, tema,
 };
 
 const CAMINHO: &str = "/painel";
+
+/// O script do painel: a prévia ao vivo da identidade e a janela de cada
+/// imagem. Só as telas que o usam liberam script, e elas funcionam sem ele.
+const SCRIPT_DO_PAINEL: &str = include_str!("../recursos/painel.js");
+
+/// O endereço do script do painel. Leva o resumo do conteúdo: mudou o
+/// script, mudou o endereço, e o cache longo não segura versão antiga.
+pub(crate) fn caminho_do_script() -> &'static str {
+    static CAMINHO_DO_SCRIPT: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        let resumo = cms_dados::hash_de_conteudo(SCRIPT_DO_PAINEL.as_bytes());
+        format!("/recursos/painel-{}.js", &resumo[..12])
+    });
+    &CAMINHO_DO_SCRIPT
+}
+
+/// A tela pronta, com o script do painel liberado.
+pub(crate) fn html_com_script(status: StatusCode, corpo: String) -> Response {
+    let mut resposta = html_privado(status, corpo);
+    liberar_script_proprio(&mut resposta);
+    resposta
+}
 
 struct LinhaDeSite {
     nome: String,
@@ -401,6 +422,8 @@ enum Rota<'a> {
     GravarDominio(&'a str, dominio::Pedido),
     Identidade(&'a str),
     GravarIdentidade(&'a str),
+    /// Envia uma imagem e já a põe como logo, favicon ou ícone do iPhone.
+    EnviarImagemDaIdentidade(&'a str, &'a str),
     Historico(&'a str),
 }
 
@@ -448,6 +471,9 @@ impl<'a> Rota<'a> {
             }
             (true, ["painel", "sites", slug, "identidade"]) => Some(Rota::Identidade(slug)),
             (false, ["painel", "sites", slug, "identidade"]) => Some(Rota::GravarIdentidade(slug)),
+            (false, ["painel", "sites", slug, "identidade", papel]) => {
+                Some(Rota::EnviarImagemDaIdentidade(slug, papel))
+            }
             (true, ["painel", "sites", slug, "historico"]) => Some(Rota::Historico(slug)),
             (true, ["oauth", "authorize"]) => Some(Rota::Autorizar),
             (false, ["oauth", "authorize"]) => Some(Rota::Decidir),
@@ -496,6 +522,7 @@ impl<'a> Rota<'a> {
                 | Rota::RevogarConexao(_)
                 | Rota::GravarDominio(..)
                 | Rota::GravarIdentidade(_)
+                | Rota::EnviarImagemDaIdentidade(..)
         )
     }
 }
@@ -591,6 +618,12 @@ async fn responder(
     if let Some(recurso) = crate::construtor_de_apps::recurso(caminho).filter(|_| leitura) {
         return Ok(recurso);
     }
+    if leitura && caminho == caminho_do_script() {
+        return Ok(modelos::arquivo_pronto(
+            SCRIPT_DO_PAINEL,
+            "text/javascript; charset=utf-8",
+        ));
+    }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };
@@ -674,6 +707,9 @@ async fn responder(
         Rota::RevogarConexao(id) => conector::revogar(estado, &conta, id).await,
         Rota::Identidade(slug) => identidade::abrir(estado, &conta, slug, uri).await,
         Rota::GravarIdentidade(slug) => identidade::gravar(estado, &conta, slug, corpo).await,
+        Rota::EnviarImagemDaIdentidade(slug, papel) => {
+            identidade::enviar_imagem(estado, &conta, slug, papel, cabecalhos, corpo).await
+        }
         Rota::Historico(slug) => identidade::historico(estado, &conta, slug).await,
         Rota::Dominio(slug) => dominio::abrir(estado, &conta, slug, uri).await,
         Rota::GravarDominio(slug, pedido) => {

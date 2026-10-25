@@ -31,7 +31,7 @@ use crate::icone::{self, Icone};
 use crate::midia;
 use crate::modelos;
 use crate::resposta::{
-    ErroWeb, html, liberar_tag_do_google, liberar_visualizador_3d, redirecionar, simples, texto,
+    ErroWeb, html, liberar_script_proprio, liberar_tag_do_google, redirecionar, simples, texto,
 };
 use crate::tema;
 use crate::visao::logo_do_cabecalho;
@@ -243,10 +243,16 @@ async fn responder(
                 }
             }
             (None, Some(icone_pedido)) => {
+                let perfil = &pedido.gravado.perfil;
+                let origem = if icone_pedido.eh_do_iphone() {
+                    perfil.origem_do_icone_apple()
+                } else {
+                    perfil.origem_do_favicon()
+                };
                 icone::servir(
                     &configuracao.diretorio_de_midia,
                     pedido.gravado.id,
-                    &pedido.site.logo.id,
+                    origem,
                     icone_pedido,
                 )
                 .await
@@ -419,6 +425,14 @@ fn ajustar_indexacao(documento: &mut Documento, indexavel: bool) {
     }
 }
 
+/// A versão que vai no endereço do ícone: o começo do identificador da
+/// imagem de que ele sai. Sem imagem válida, não há ícone.
+fn versao_do_icone(origem: Option<&str>) -> Option<String> {
+    origem
+        .and_then(|id| uuid::Uuid::parse_str(id).ok())
+        .map(|id| id.simple().to_string()[..8].to_string())
+}
+
 async fn moldura(
     estado: &Estado,
     pedido: &Pedido,
@@ -440,10 +454,11 @@ async fn moldura(
         .as_deref()
         .and_then(|tag| conferir_tag_do_google(tag).ok())
         .map(TagDoGoogle::nova);
-    // Com logo, o site tem ícone. A versão no endereço troca junto com a logo.
-    moldura.icone = uuid::Uuid::parse_str(&pedido.site.logo.id)
-        .ok()
-        .map(|id| id.simple().to_string()[..8].to_string());
+    // Com favicon ou logo, o site tem ícone. A versão no endereço troca junto
+    // com a imagem de que ele sai.
+    let perfil = &pedido.gravado.perfil;
+    moldura.icone = versao_do_icone(perfil.origem_do_favicon());
+    moldura.icone_apple = versao_do_icone(perfil.origem_do_icone_apple());
     // A logo pode ter sido escolhida enquanto ainda era convertida: o que
     // ficou gravado não tem variante, e a biblioteca já tem.
     if moldura.logo.is_none() {
@@ -585,7 +600,7 @@ async fn documento(
         pedido.indexavel && documento.seo().indexar,
     );
     if documento.tem_modelo_3d() || tem_cardapio {
-        liberar_visualizador_3d(&mut resposta);
+        liberar_script_proprio(&mut resposta);
     }
     Ok(resposta)
 }
