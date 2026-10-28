@@ -3,6 +3,10 @@
 mod acesso;
 mod admin;
 mod apps;
+mod app_contract_types;
+mod app_routes;
+#[cfg(feature = "contracts")]
+pub mod contratos;
 mod biblioteca;
 mod cache;
 mod cardapio;

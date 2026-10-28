@@ -6,6 +6,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
+schemars = { workspace = true, optional = true }
 askama.workspace = true
 axum.workspace = true
 base64.workspace = true
@@ -31,3 +32,10 @@ uuid.workspace = true
 [dev-dependencies]
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
+
+[features]
+contracts = ["dep:schemars", "cms-dominio/contracts"]
+
+[[example]]
+name = "exportar-contratos"
+required-features = ["contracts"]

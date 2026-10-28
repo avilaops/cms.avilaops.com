@@ -9,33 +9,37 @@ use cms_dominio::Conta;
 use cms_dominio::app_builder::{AppDefinition, MAX_DEFINITION_BYTES};
 use cms_dominio::app_registry::AppRole;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use uuid::Uuid;
 
 use crate::Estado;
+use crate::app_contract_types::*;
 
 #[derive(Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct NovoApp {
+pub(crate) struct NovoApp {
     slug: String,
     name: String,
     bundle_id: String,
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
-struct AppJson {
+pub(crate) struct AppJson {
     id: Uuid,
     slug: String,
     name: String,
     bundle_id: String,
     draft_revision: i64,
-    role: &'static str,
+    role: AppRole,
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
-struct VersaoJson {
+pub(crate) struct VersaoJson {
     id: Uuid,
     number: i32,
     schema_version: String,
@@ -58,8 +62,9 @@ impl From<VersaoListadaDoApp> for VersaoJson {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
-struct AmbienteJson {
+pub(crate) struct AmbienteJson {
     name: String,
     version_id: Uuid,
     version: i32,
@@ -80,8 +85,9 @@ impl From<AmbienteDoApp> for AmbienteJson {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
-struct AuditoriaJson {
+pub(crate) struct AuditoriaJson {
     id: i64,
     account: String,
     action: String,
@@ -91,10 +97,11 @@ struct AuditoriaJson {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase")]
-struct ParticipanteJson {
+pub(crate) struct ParticipanteJson {
     account: String,
-    role: &'static str,
+    role: AppRole,
     created_at: String,
 }
 
@@ -102,11 +109,7 @@ impl From<ParticipanteDoApp> for ParticipanteJson {
     fn from(participante: ParticipanteDoApp) -> Self {
         Self {
             account: participante.conta,
-            role: match participante.papel {
-                AppRole::Owner => "owner",
-                AppRole::Editor => "editor",
-                AppRole::Viewer => "viewer",
-            },
+            role: participante.papel,
             created_at: participante.criado_em.to_rfc3339(),
         }
     }
@@ -133,11 +136,7 @@ impl From<AppDaConta> for AppJson {
             name: app.nome,
             bundle_id: app.bundle_id,
             draft_revision: app.revisao_do_rascunho,
-            role: match app.papel {
-                AppRole::Owner => "owner",
-                AppRole::Editor => "editor",
-                AppRole::Viewer => "viewer",
-            },
+            role: app.papel,
         }
     }
 }
@@ -154,7 +153,7 @@ fn json_response(status: StatusCode, valor: Value) -> Response {
 fn erro(status: StatusCode, codigo: &'static str, mensagem: impl ToString) -> Response {
     json_response(
         status,
-        json!({ "error": { "code": codigo, "message": mensagem.to_string() } }),
+        valor(ErroJson { error: DetalheErro { code: codigo.to_string(), message: mensagem.to_string() } }),
     )
 }
 
@@ -292,10 +291,7 @@ async fn obter_rascunho(estado: &Estado, conta: &Conta, app_id: Uuid) -> Respons
         Ok(rascunho) => {
             let mut resposta = json_response(
                 StatusCode::OK,
-                json!({
-                    "draftRevision": rascunho.revisao,
-                    "definition": rascunho.definicao,
-                }),
+                valor(RascunhoJson { draft_revision: rascunho.revisao, definition: rascunho.definicao }),
             );
             resposta.headers_mut().insert(
                 "etag",
@@ -328,7 +324,7 @@ async fn obter_versao(estado: &Estado, conta: &Conta, app_id: Uuid, numero: i32)
     match cms_dados::definicao_da_versao(&estado.pool, conta, app_id, numero).await {
         Ok(definicao) => json_response(
             StatusCode::OK,
-            json!({ "number": numero, "definition": definicao }),
+            valor(DefinicaoVersionadaJson { number: numero, definition: definicao }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -367,8 +363,9 @@ async fn listar_auditoria(estado: &Estado, conta: &Conta, app_id: Uuid) -> Respo
 }
 
 #[derive(Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct AlteracaoDeParticipante {
+pub(crate) struct AlteracaoDeParticipante {
     account: String,
     role: Option<AppRole>,
 }
@@ -435,7 +432,7 @@ async fn membros(
                 .await
             };
             match resultado {
-                Ok(()) => json_response(StatusCode::OK, json!({ "updated": true })),
+                Ok(()) => json_response(StatusCode::OK, valor(AtualizadoJson { updated: true })),
                 Err(erro_app) => resposta_de_erro(erro_app),
             }
         }
@@ -491,7 +488,7 @@ async fn salvar_rascunho(
     .await
     {
         Ok(revisao) => {
-            let mut resposta = json_response(StatusCode::OK, json!({ "draftRevision": revisao }));
+            let mut resposta = json_response(StatusCode::OK, valor(RevisaoJson { draft_revision: revisao }));
             resposta.headers_mut().insert(
                 "etag",
                 HeaderValue::from_str(&format!("\"{revisao}\"")).expect("revisão é cabeçalho"),
@@ -507,20 +504,20 @@ fn definicao_valida(rascunho: &cms_dados::RascunhoDoApp) -> Result<AppDefinition
         |erro_json| {
             Box::new(json_response(
                 StatusCode::UNPROCESSABLE_ENTITY,
-                json!({ "valid": false, "errors": [{ "code": "invalid_schema", "message": erro_json.to_string() }] }),
+                validacao_invalida("invalid_schema", erro_json),
             ))
         },
     )?;
     if definicao.app_id != rascunho.slug {
         return Err(Box::new(json_response(
             StatusCode::UNPROCESSABLE_ENTITY,
-            json!({ "valid": false, "errors": [{ "code": "app_id_mismatch", "message": "appId deve ser igual ao slug do aplicativo." }] }),
+            validacao_invalida("app_id_mismatch", "appId deve ser igual ao slug do aplicativo."),
         )));
     }
     if let Err(erro_validacao) = definicao.validate() {
         return Err(Box::new(json_response(
             StatusCode::UNPROCESSABLE_ENTITY,
-            json!({ "valid": false, "errors": [{ "code": "invalid_definition", "message": erro_validacao.to_string() }] }),
+            validacao_invalida("invalid_definition", erro_validacao),
         )));
     }
     Ok(definicao)
@@ -559,7 +556,7 @@ async fn validar_rascunho(
     match cms_dados::auditar_validacao(&estado.pool, conta, app_id, correlation_id).await {
         Ok(()) => json_response(
             StatusCode::OK,
-            json!({ "valid": true, "draftRevision": rascunho.revisao, "errors": [] }),
+            valor(ValidacaoValidaJson { valid: true, draft_revision: rascunho.revisao, errors: vec![] }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -586,15 +583,16 @@ async fn criar_versao(
             } else {
                 StatusCode::OK
             },
-            json!({ "id": versao.id, "number": versao.numero }),
+            valor(VersaoCriadaJson { id: versao.id, number: versao.numero }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
 }
 
 #[derive(Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
-struct Publicacao {
+pub(crate) struct Publicacao {
     version: i32,
 }
 
@@ -625,7 +623,7 @@ async fn publicar(
     {
         Ok(versao_id) => json_response(
             StatusCode::OK,
-            json!({ "environment": ambiente, "version": publicacao.version, "versionId": versao_id }),
+            valor(PublicadoJson { environment: ambiente.to_string(), version: publicacao.version, version_id: versao_id }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -640,130 +638,48 @@ pub async fn atender(
     corpo: &Bytes,
 ) -> Response {
     let correlation_id = Uuid::new_v4();
-    let partes: Vec<&str> = caminho.split('/').skip(1).collect();
-    let resposta = match (metodo, partes.as_slice()) {
-        (_, ["api", "v1", "apps"]) => {
-            raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await
+    use crate::app_routes::{Operacao, localizar};
+    let resposta = if let Some(rota) = localizar(metodo, caminho)
+        .filter(|rota| rota.endpoint.operation != Operacao::GetRuntime)
+    {
+        tracing::debug!(operation = rota.endpoint.id, "operação da API de apps");
+        match rota.endpoint.operation {
+            Operacao::ListApps | Operacao::CreateApp => {
+                raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await
+            }
+            operation => match rota.parametro("appId").and_then(|id| id.parse::<Uuid>().ok()) {
+                Some(app_id) => match operation {
+                    Operacao::GetApp => obter_app(estado, conta, app_id).await,
+                    Operacao::GetDraft => obter_rascunho(estado, conta, app_id).await,
+                    Operacao::SaveDraft => salvar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await,
+                    Operacao::ValidateDraft => validar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await,
+                    Operacao::ListVersions => listar_versoes(estado, conta, app_id).await,
+                    Operacao::CreateVersion => criar_versao(estado, conta, app_id, cabecalhos, correlation_id).await,
+                    Operacao::GetVersion => match rota.parametro("number").and_then(|number| number.parse().ok()) {
+                        Some(number) => obter_versao(estado, conta, app_id, number).await,
+                        None => erro(StatusCode::NOT_FOUND, "version_not_found", "Versão não encontrada."),
+                    },
+                    Operacao::ListEnvironments => listar_ambientes(estado, conta, app_id).await,
+                    Operacao::PublishVersion => publicar(estado, conta, app_id, rota.parametro("environment").expect("ambiente da rota"), cabecalhos, corpo, correlation_id).await,
+                    Operacao::ListMembers | Operacao::PutMember | Operacao::DeleteMember => membros(estado, conta, app_id, metodo, cabecalhos, corpo, correlation_id).await,
+                    Operacao::ListAudit => listar_auditoria(estado, conta, app_id).await,
+                    Operacao::ListApps | Operacao::CreateApp | Operacao::GetRuntime => unreachable!("operações tratadas antes do identificador"),
+                },
+                None if operation == Operacao::GetVersion => erro(StatusCode::NOT_FOUND, "version_not_found", "Versão não encontrada."),
+                None => erro(StatusCode::NOT_FOUND, "app_not_found", "Aplicativo não encontrado."),
+            },
         }
-        (&Method::GET, ["api", "v1", "apps", app_id]) => match app_id.parse() {
-            Ok(app_id) => obter_app(estado, conta, app_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::GET, ["api", "v1", "apps", app_id, "draft"]) => match app_id.parse() {
-            Ok(app_id) => obter_rascunho(estado, conta, app_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::PUT, ["api", "v1", "apps", app_id, "draft"]) => match app_id.parse() {
-            Ok(app_id) => {
-                salvar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await
-            }
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::POST, ["api", "v1", "apps", app_id, "validate"]) => match app_id.parse() {
-            Ok(app_id) => {
-                validar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await
-            }
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::POST, ["api", "v1", "apps", app_id, "versions"]) => match app_id.parse() {
-            Ok(app_id) => criar_versao(estado, conta, app_id, cabecalhos, correlation_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::GET, ["api", "v1", "apps", app_id, "versions"]) => match app_id.parse() {
-            Ok(app_id) => listar_versoes(estado, conta, app_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::GET, ["api", "v1", "apps", app_id, "versions", numero]) => {
-            match (app_id.parse(), numero.parse()) {
-                (Ok(app_id), Ok(numero)) => obter_versao(estado, conta, app_id, numero).await,
-                _ => erro(
-                    StatusCode::NOT_FOUND,
-                    "version_not_found",
-                    "Versão não encontrada.",
-                ),
-            }
+    } else {
+        // Preserva 405 nas duas famílias que já distinguiam método de caminho.
+        let partes: Vec<&str> = caminho.split('/').skip(1).collect();
+        match partes.as_slice() {
+            ["api", "v1", "apps"] => raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await,
+            ["api", "v1", "apps", app_id, "members"] => match app_id.parse() {
+                Ok(app_id) => membros(estado, conta, app_id, metodo, cabecalhos, corpo, correlation_id).await,
+                Err(_) => erro(StatusCode::NOT_FOUND, "app_not_found", "Aplicativo não encontrado."),
+            },
+            _ => erro(StatusCode::NOT_FOUND, "not_found", "Não encontrado."),
         }
-        (&Method::GET, ["api", "v1", "apps", app_id, "environments"]) => match app_id.parse() {
-            Ok(app_id) => listar_ambientes(estado, conta, app_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::GET, ["api", "v1", "apps", app_id, "audit"]) => match app_id.parse() {
-            Ok(app_id) => listar_auditoria(estado, conta, app_id).await,
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (_, ["api", "v1", "apps", app_id, "members"]) => match app_id.parse() {
-            Ok(app_id) => {
-                membros(
-                    estado,
-                    conta,
-                    app_id,
-                    metodo,
-                    cabecalhos,
-                    corpo,
-                    correlation_id,
-                )
-                .await
-            }
-            Err(_) => erro(
-                StatusCode::NOT_FOUND,
-                "app_not_found",
-                "Aplicativo não encontrado.",
-            ),
-        },
-        (&Method::PUT, ["api", "v1", "apps", app_id, "environments", ambiente]) => {
-            match app_id.parse() {
-                Ok(app_id) => {
-                    publicar(
-                        estado,
-                        conta,
-                        app_id,
-                        ambiente,
-                        cabecalhos,
-                        corpo,
-                        correlation_id,
-                    )
-                    .await
-                }
-                Err(_) => erro(
-                    StatusCode::NOT_FOUND,
-                    "app_not_found",
-                    "Aplicativo não encontrado.",
-                ),
-            }
-        }
-        _ => erro(StatusCode::NOT_FOUND, "not_found", "Não encontrado."),
     };
     let mut resposta = resposta;
     if let Ok(valor) = HeaderValue::from_str(&correlation_id.to_string()) {

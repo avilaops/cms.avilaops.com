@@ -6,10 +6,10 @@ use axum::http::header::{
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode};
 use axum::response::{IntoResponse, Response};
 use cms_dados::{PublishedRuntimeDefinition, RUNTIME_READ_SCOPE};
-use serde_json::json;
 use uuid::Uuid;
 
 use crate::Estado;
+use crate::app_contract_types::{DetalheErro, ErroJson, RuntimeJson, valor};
 
 fn add_common_headers(response: &mut Response, correlation_id: Uuid) {
     response
@@ -24,7 +24,7 @@ fn add_common_headers(response: &mut Response, correlation_id: Uuid) {
 fn json_response(status: StatusCode, code: &str, message: &str) -> Response {
     let mut response = (
         status,
-        json!({ "error": { "code": code, "message": message } }).to_string(),
+        valor(ErroJson { error: DetalheErro { code: code.to_string(), message: message.to_string() } }).to_string(),
     )
         .into_response();
     response
@@ -57,11 +57,11 @@ fn bearer(headers: &HeaderMap) -> Option<&str> {
 fn successful(definition: PublishedRuntimeDefinition, etag: &str) -> Response {
     let mut response = (
         StatusCode::OK,
-        json!({
-            "appId": definition.slug,
-            "environment": definition.environment,
-            "version": definition.version,
-            "definition": definition.definition,
+        valor(RuntimeJson {
+            app_id: definition.slug,
+            environment: definition.environment,
+            version: definition.version,
+            definition: definition.definition,
         })
         .to_string(),
     )
@@ -84,23 +84,18 @@ pub async fn serve(
     path: &str,
 ) -> Response {
     let correlation_id = Uuid::new_v4();
-    let parts: Vec<&str> = path.split('/').skip(1).collect();
     let mut response = if method != Method::GET {
         json_response(
             StatusCode::METHOD_NOT_ALLOWED,
             "method_not_allowed",
             "Use GET.",
         )
-    } else if let [
-        "api",
-        "runtime",
-        "v1",
-        "apps",
-        slug,
-        "environments",
-        environment,
-    ] = parts.as_slice()
+    } else if let Some(route) = crate::app_routes::localizar(method, path)
+        .filter(|route| route.endpoint.operation == crate::app_routes::Operacao::GetRuntime)
     {
+        tracing::debug!(operation = route.endpoint.id, "operação do runtime");
+        let slug = route.parametro("slug").expect("slug da rota runtime");
+        let environment = route.parametro("environment").expect("ambiente da rota runtime");
         let Some(access_token) = bearer(headers) else {
             let mut response = unauthorized(origin);
             add_common_headers(&mut response, correlation_id);
