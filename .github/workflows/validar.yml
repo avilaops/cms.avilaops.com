@@ -12,23 +12,6 @@ concurrency:
   group: validar-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  langfuse-metadata:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - run: cargo metadata --format-version 1 > /dev/null && cargo fmt --all
-      - uses: actions/upload-artifact@v4
-        with:
-          name: langfuse-rust-metadata
-          path: |
-            Cargo.lock
-            crates/web/src/langfuse.rs
-            crates/web/src/lib.rs
-            crates/web/src/conector.rs
-            crates/servidor/src/main.rs
   validar:
     runs-on: ubuntu-latest
     timeout-minutes: 45
