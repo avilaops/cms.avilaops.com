@@ -46,7 +46,7 @@ fn json_com(status: StatusCode, corpo: Value) -> Response {
 fn erro_oauth(status: StatusCode, codigo: &str, descricao: &str) -> Response {
     json_com(
         status,
-        json!({ "error": codigo, "error_description": descricao }),
+        valor(OAuthError { error: codigo.to_string(), error_description: descricao.to_string() }),
     )
 }
 
@@ -54,16 +54,16 @@ fn erro_oauth(status: StatusCode, codigo: &str, descricao: &str) -> Response {
 pub fn metadados(origem: &str) -> Response {
     json_com(
         StatusCode::OK,
-        json!({
-            "issuer": origem,
-            "authorization_endpoint": format!("{origem}/oauth/authorize"),
-            "token_endpoint": format!("{origem}/oauth/token"),
-            "registration_endpoint": format!("{origem}/oauth/register"),
-            "response_types_supported": ["code"],
-            "grant_types_supported": ["authorization_code", "refresh_token"],
-            "code_challenge_methods_supported": ["S256"],
-            "token_endpoint_auth_methods_supported": ["none"],
-            "scopes_supported": ESCOPOS.iter().map(|(escopo, _)| *escopo).collect::<Vec<_>>(),
+        valor(AuthorizationMetadata {
+            issuer: origem.to_string(),
+            authorization_endpoint: format!("{origem}/oauth/authorize"),
+            token_endpoint: format!("{origem}/oauth/token"),
+            registration_endpoint: Some(format!("{origem}/oauth/register")),
+            response_types_supported: vec!["code".into()],
+            grant_types_supported: vec!["authorization_code".into(), "refresh_token".into()],
+            code_challenge_methods_supported: vec!["S256".into()],
+            token_endpoint_auth_methods_supported: vec!["none".into()],
+            scopes_supported: ESCOPOS.iter().map(|(escopo, _)| escopo.to_string()).collect(),
         }),
     )
 }
@@ -71,12 +71,13 @@ pub fn metadados(origem: &str) -> Response {
 pub fn recurso_protegido(origem: &str) -> Response {
     json_com(
         StatusCode::OK,
-        json!({ "resource": format!("{origem}/mcp"), "authorization_servers": [origem] }),
+        valor(ResourceMetadata { resource: format!("{origem}/mcp"), authorization_servers: vec![origem.to_string()], scopes_supported: None }),
     )
 }
 
 #[derive(Deserialize)]
-struct PedidoDeRegistro {
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+pub(crate) struct PedidoDeRegistro {
     #[serde(default)]
     client_name: String,
     #[serde(default)]
@@ -127,13 +128,10 @@ pub async fn registrar(estado: &Estado, corpo: &[u8]) -> Result<Response, ErroWe
     let id = cms_dados::registrar_cliente(&estado.pool, &nome, &pedido.redirect_uris).await?;
     Ok(json_com(
         StatusCode::CREATED,
-        json!({
-            "client_id": id,
-            "client_name": nome,
-            "redirect_uris": pedido.redirect_uris,
-            "grant_types": ["authorization_code", "refresh_token"],
-            "response_types": ["code"],
-            "token_endpoint_auth_method": "none",
+        valor(RegistrationResponse {
+            client_id: id, client_name: nome, redirect_uris: pedido.redirect_uris,
+            grant_types: vec!["authorization_code".into(), "refresh_token".into()],
+            response_types: vec!["code".into()], token_endpoint_auth_method: "none".into(),
         }),
     ))
 }
@@ -141,8 +139,9 @@ pub async fn registrar(estado: &Estado, corpo: &[u8]) -> Result<Response, ErroWe
 /// Os parâmetros do pedido de autorização, vindos da consulta ou do
 /// formulário de consentimento.
 #[derive(Deserialize, Default, Clone)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(default)]
-struct PedidoDeAutorizacao {
+pub(crate) struct PedidoDeAutorizacao {
     response_type: String,
     client_id: String,
     redirect_uri: String,
@@ -295,8 +294,9 @@ pub async fn autorizar(estado: &Estado, conta: &Conta, corpo: &[u8]) -> Result<R
 }
 
 #[derive(Deserialize, Default)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(default)]
-struct PedidoDeToken {
+pub(crate) struct PedidoDeToken {
     grant_type: String,
     code: String,
     code_verifier: String,
@@ -308,12 +308,9 @@ struct PedidoDeToken {
 fn tokens_em_json(tokens: Tokens) -> Response {
     json_com(
         StatusCode::OK,
-        json!({
-            "access_token": tokens.acesso,
-            "token_type": "Bearer",
-            "expires_in": tokens.expira_em_segundos,
-            "refresh_token": tokens.renovacao,
-            "scope": tokens.escopos.join(" "),
+        valor(TokenResponse { access_token: tokens.acesso, token_type: "Bearer".into(),
+            expires_in: tokens.expira_em_segundos, refresh_token: tokens.renovacao,
+            scope: tokens.escopos.join(" "),
         }),
     )
 }

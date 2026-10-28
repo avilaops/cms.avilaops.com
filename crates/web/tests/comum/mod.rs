@@ -86,12 +86,55 @@ pub async fn postar(
 pub async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
     #[cfg(feature = "contracts")]
     let contrato_pedido = (pedido.method().to_string(), pedido.uri().path().to_string());
+    #[cfg(feature = "contracts")]
+    let (pedido, grant_type) = if contrato_pedido.0 == "POST"
+        && matches!(contrato_pedido.1.as_str(), "/oauth/token" | "/oauth/runtime/token")
+    {
+        let (parts, body) = pedido.into_parts();
+        let bytes = body.collect().await.expect("formulário OAuth lido").to_bytes();
+        let fields = serde_urlencoded::from_bytes::<Vec<(String, String)>>(&bytes).unwrap_or_default();
+        let grants: Vec<_> = fields.iter().filter(|(name, _)| name == "grant_type").collect();
+        let grant = if grants.len() == 1
+            && matches!(grants[0].1.as_str(), "authorization_code" | "refresh_token")
+        { Some(grants[0].1.clone()) } else { None };
+        (Request::from_parts(parts, Body::from(bytes)), grant)
+    } else { (pedido, None) };
     let resposta = roteador(estado)
         .oneshot(pedido)
         .await
         .expect("o roteador responde");
     let (partes, corpo) = resposta.into_parts();
     let bytes = corpo.collect().await.expect("corpo lido").to_bytes();
+    #[cfg(feature = "contracts")]
+    if let Ok(directory) = std::env::var("CMS_OAUTH_RESPONSES")
+        && (contrato_pedido.1.starts_with("/oauth/")
+            || contrato_pedido.1.starts_with("/.well-known/oauth-"))
+    {
+        let mut headers: serde_json::Map<String, serde_json::Value> =
+            ["content-type", "cache-control"].into_iter().filter_map(|name| {
+                partes.headers.get(name).and_then(|value| value.to_str().ok())
+                    .map(|value| (name.to_string(), serde_json::json!(value)))
+            }).collect();
+        if partes.headers.contains_key("location") {
+            headers.insert("location".to_string(), serde_json::json!("[REDACTED]"));
+        }
+        let json = partes.headers.get("content-type").and_then(|value| value.to_str().ok())
+            .is_some_and(|content_type| content_type.contains("application/json"));
+        let body = if bytes.is_empty() { serde_json::Value::Null }
+            else if json { cms_web::contratos_oauth::redact_body(serde_json::from_slice(&bytes).expect("OAuth JSON")) }
+            else { serde_json::json!("[CONTENT REDACTED]") };
+        let record = serde_json::json!({
+            "executionRevision": std::env::var("CMS_CONTRACT_REVISION").ok(),
+            "runId": std::env::var("CMS_CONTRACT_RUN").ok(),
+            "method": contrato_pedido.0, "path": contrato_pedido.1,
+            "status": partes.status.as_u16(), "headers": headers, "body": body,
+            "contentRedacted": true,
+            "grantType": grant_type,
+        });
+        std::fs::create_dir_all(&directory).expect("diretório OAuth");
+        let file = std::path::Path::new(&directory).join(format!("{}.json", uuid::Uuid::new_v4()));
+        std::fs::write(file, record.to_string()).expect("captura OAuth sanitizada");
+    }
     #[cfg(feature = "contracts")]
     if let Ok(directory) = std::env::var("CMS_CONTRACT_RESPONSES")
         && (contrato_pedido.1.starts_with("/api/v1/apps")

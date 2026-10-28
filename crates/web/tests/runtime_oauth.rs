@@ -198,6 +198,13 @@ async fn native_code_exchange_and_refresh_preserve_state_and_oauth_errors(pool: 
     )
     .await;
     assert_eq!(refreshed.status, StatusCode::OK, "{}", refreshed.corpo);
+    let refresh_replay = request(
+        &pool, "POST", "/oauth/runtime/token", false,
+        &format!("grant_type=refresh_token&refresh_token={refresh}&client_id={client}"),
+    ).await;
+    assert_eq!(refresh_replay.status, StatusCode::BAD_REQUEST);
+    let error: Value = serde_json::from_str(&refresh_replay.corpo).expect("OAuth error");
+    assert_eq!(error["error"], "invalid_grant");
 
     let reused = request(&pool, "POST", "/oauth/runtime/token", false, &token_body).await;
     assert_eq!(reused.status, StatusCode::BAD_REQUEST);

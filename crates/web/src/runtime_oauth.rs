@@ -8,10 +8,12 @@ use axum::response::{IntoResponse, Response};
 use cms_dados::{RUNTIME_READ_SCOPE, RuntimeAuthorization, RuntimeOAuthError, RuntimeTokens};
 use cms_dominio::Conta;
 use serde::Deserialize;
-use serde_json::{Value, json};
+use serde_json::Value;
 use uuid::Uuid;
 
 use crate::Estado;
+use crate::app_contract_types::valor;
+use crate::oauth_types::{AuthorizationMetadata, ResourceMetadata, OAuthError, TokenResponse};
 use crate::resposta::{ErroWeb, html_privado_com_retorno, redirecionar, simples};
 
 fn json_response(status: StatusCode, body: Value) -> Response {
@@ -28,22 +30,22 @@ fn json_response(status: StatusCode, body: Value) -> Response {
 fn oauth_error(status: StatusCode, code: &str, description: &str) -> Response {
     json_response(
         status,
-        json!({ "error": code, "error_description": description }),
+        valor(OAuthError { error: code.to_string(), error_description: description.to_string() }),
     )
 }
 
 pub fn authorization_metadata(origin: &str) -> Response {
     json_response(
         StatusCode::OK,
-        json!({
-            "issuer": origin,
-            "authorization_endpoint": format!("{origin}/oauth/runtime/authorize"),
-            "token_endpoint": format!("{origin}/oauth/runtime/token"),
-            "response_types_supported": ["code"],
-            "grant_types_supported": ["authorization_code", "refresh_token"],
-            "code_challenge_methods_supported": ["S256"],
-            "token_endpoint_auth_methods_supported": ["none"],
-            "scopes_supported": [RUNTIME_READ_SCOPE],
+        valor(AuthorizationMetadata {
+            issuer: origin.to_string(),
+            authorization_endpoint: format!("{origin}/oauth/runtime/authorize"),
+            token_endpoint: format!("{origin}/oauth/runtime/token"), registration_endpoint: None,
+            response_types_supported: vec!["code".into()],
+            grant_types_supported: vec!["authorization_code".into(), "refresh_token".into()],
+            code_challenge_methods_supported: vec!["S256".into()],
+            token_endpoint_auth_methods_supported: vec!["none".into()],
+            scopes_supported: vec![RUNTIME_READ_SCOPE.into()],
         }),
     )
 }
@@ -51,17 +53,16 @@ pub fn authorization_metadata(origin: &str) -> Response {
 pub fn protected_resource_metadata(origin: &str) -> Response {
     json_response(
         StatusCode::OK,
-        json!({
-            "resource": format!("{origin}/api/runtime"),
-            "authorization_servers": [origin],
-            "scopes_supported": [RUNTIME_READ_SCOPE],
+        valor(ResourceMetadata { resource: format!("{origin}/api/runtime"),
+            authorization_servers: vec![origin.to_string()], scopes_supported: Some(vec![RUNTIME_READ_SCOPE.into()]),
         }),
     )
 }
 
 #[derive(Deserialize, Default, Clone)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(default)]
-struct AuthorizationRequest {
+pub(crate) struct AuthorizationRequest {
     response_type: String,
     client_id: String,
     redirect_uri: String,
@@ -214,8 +215,9 @@ pub async fn authorize(state: &Estado, account: &Conta, body: &[u8]) -> Result<R
 }
 
 #[derive(Deserialize, Default)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(default)]
-struct TokenRequest {
+pub(crate) struct TokenRequest {
     grant_type: String,
     code: String,
     code_verifier: String,
@@ -227,12 +229,9 @@ struct TokenRequest {
 fn tokens_json(tokens: RuntimeTokens) -> Response {
     json_response(
         StatusCode::OK,
-        json!({
-            "access_token": tokens.access,
-            "token_type": "Bearer",
-            "expires_in": tokens.expires_in_seconds,
-            "refresh_token": tokens.refresh,
-            "scope": tokens.scopes.join(" "),
+        valor(TokenResponse { access_token: tokens.access, token_type: "Bearer".into(),
+            expires_in: tokens.expires_in_seconds, refresh_token: tokens.refresh,
+            scope: tokens.scopes.join(" "),
         }),
     )
 }

@@ -24,6 +24,10 @@ mod mensagens;
 mod midia;
 mod modelos;
 mod painel;
+mod oauth_types;
+mod oauth_routes;
+#[cfg(feature = "contracts")]
+pub mod contratos_oauth;
 mod publico;
 mod resposta;
 mod runtime_apps;
