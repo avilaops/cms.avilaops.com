@@ -1,8 +1,38 @@
 {
   "schemaVersion": 1,
   "application": "avila-cms",
-  "members": [],
-  "tasks": [],
+  "members": [
+    {
+      "id": "codex-cms",
+      "name": "Codex",
+      "role": "Responsável pelo módulo CMS",
+      "evidence": "Instrução do proprietário em 28/10/2026: demandas sem responsável são do dono do projeto, neste módulo Codex."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T-20261028-mlops",
+      "title": "Estruturar desenvolvimento do módulo CMS no padrão MLOps",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-revisao",
+      "objective": "Vincular regras, critérios, fontes, testes e evidências por commit no workflow existente.",
+      "acceptance": [
+        "Catálogo e manifesto versionados com responsável e referências de teste.",
+        "Gate recusa referências inconsistentes e alterações não revisadas das fontes.",
+        "CI executa testes e preserva relatório inclusive em falha.",
+        "Resultado da revisão exata registrado sem inferir implantação."
+      ],
+      "evidence": [
+        "https://linear.app/avilaops/issue/AVL-355",
+        "docs/mlops/README.md",
+        "docs/superpowers/plans/2026-10-28-mlops-foundation.md",
+        "https://github.com/avilaops/cms.avilaops.com/pull/21",
+        "https://linear.app/avilaops/document/cms-estrutura-de-desenvolvimento-mlops-e-inventario-de-politicas-50671a53f963"
+      ],
+      "next": "Verificar a execução da CI e cadastrar o recorte no registro privado MLOps."
+    }
+  ],
   "decisions": [
     {
       "id": "D-20261017-prs-10-11",
