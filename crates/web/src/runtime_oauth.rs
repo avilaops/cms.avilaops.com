@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use crate::Estado;
 use crate::app_contract_types::valor;
-use crate::oauth_types::{AuthorizationMetadata, ResourceMetadata, OAuthError, TokenResponse};
+use crate::oauth_types::{AuthorizationMetadata, OAuthError, ResourceMetadata, TokenResponse};
 use crate::resposta::{ErroWeb, html_privado_com_retorno, redirecionar, simples};
 
 fn json_response(status: StatusCode, body: Value) -> Response {
@@ -30,7 +30,10 @@ fn json_response(status: StatusCode, body: Value) -> Response {
 fn oauth_error(status: StatusCode, code: &str, description: &str) -> Response {
     json_response(
         status,
-        valor(OAuthError { error: code.to_string(), error_description: description.to_string() }),
+        valor(OAuthError {
+            error: code.to_string(),
+            error_description: description.to_string(),
+        }),
     )
 }
 
@@ -40,7 +43,8 @@ pub fn authorization_metadata(origin: &str) -> Response {
         valor(AuthorizationMetadata {
             issuer: origin.to_string(),
             authorization_endpoint: format!("{origin}/oauth/runtime/authorize"),
-            token_endpoint: format!("{origin}/oauth/runtime/token"), registration_endpoint: None,
+            token_endpoint: format!("{origin}/oauth/runtime/token"),
+            registration_endpoint: None,
             response_types_supported: vec!["code".into()],
             grant_types_supported: vec!["authorization_code".into(), "refresh_token".into()],
             code_challenge_methods_supported: vec!["S256".into()],
@@ -53,8 +57,10 @@ pub fn authorization_metadata(origin: &str) -> Response {
 pub fn protected_resource_metadata(origin: &str) -> Response {
     json_response(
         StatusCode::OK,
-        valor(ResourceMetadata { resource: format!("{origin}/api/runtime"),
-            authorization_servers: vec![origin.to_string()], scopes_supported: Some(vec![RUNTIME_READ_SCOPE.into()]),
+        valor(ResourceMetadata {
+            resource: format!("{origin}/api/runtime"),
+            authorization_servers: vec![origin.to_string()],
+            scopes_supported: Some(vec![RUNTIME_READ_SCOPE.into()]),
         }),
     )
 }
@@ -229,8 +235,11 @@ pub(crate) struct TokenRequest {
 fn tokens_json(tokens: RuntimeTokens) -> Response {
     json_response(
         StatusCode::OK,
-        valor(TokenResponse { access_token: tokens.access, token_type: "Bearer".into(),
-            expires_in: tokens.expires_in_seconds, refresh_token: tokens.refresh,
+        valor(TokenResponse {
+            access_token: tokens.access,
+            token_type: "Bearer".into(),
+            expires_in: tokens.expires_in_seconds,
+            refresh_token: tokens.refresh,
             scope: tokens.scopes.join(" "),
         }),
     )

@@ -1933,9 +1933,13 @@ async fn assistente_escreve_valida_e_envia_para_revisao_sem_publicar(pool: PgPoo
         ])
         .await;
     assert_eq!(status, StatusCode::OK, "{novos}");
-    let (replay_status, replay) = painel.trocar(&[
-        ("grant_type", "refresh_token"), ("refresh_token", &renovacao), ("client_id", &cliente),
-    ]).await;
+    let (replay_status, replay) = painel
+        .trocar(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", &renovacao),
+            ("client_id", &cliente),
+        ])
+        .await;
     assert_eq!(replay_status, StatusCode::BAD_REQUEST);
     assert_eq!(replay["error"], "invalid_grant");
     let novo = novos["access_token"].as_str().expect("token").to_string();

@@ -13,6 +13,8 @@ mod construtor_de_apps;
 mod conteudo;
 #[cfg(feature = "contracts")]
 pub mod contratos;
+#[cfg(feature = "contracts")]
+pub mod contratos_oauth;
 mod descoberta;
 mod dominio;
 mod editor;
@@ -23,11 +25,9 @@ mod lista;
 mod mensagens;
 mod midia;
 mod modelos;
-mod painel;
-mod oauth_types;
 mod oauth_routes;
-#[cfg(feature = "contracts")]
-pub mod contratos_oauth;
+mod oauth_types;
+mod painel;
 mod publico;
 mod resposta;
 mod runtime_apps;

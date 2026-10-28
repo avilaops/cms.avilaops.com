@@ -8,6 +8,10 @@ export function consumeOAuth(id, body, status, headers) {
   }
   if (typeof body === 'string') {
     if (body !== '[CONTENT REDACTED]') throw new Error('Conteúdo de navegador não foi suprimido.');
+    if (status === 200) {
+      assert.ok(headers['content-type']?.includes('text/html'));
+      assert.ok(headers['cache-control']?.includes('no-store'));
+    }
     return;
   }
   assert.ok(body && typeof body === 'object');

@@ -22,10 +22,23 @@ pub fn redact_body(mut body: Value) -> Value {
             Value::Array(items) => items.iter_mut().for_each(visit),
             Value::Object(fields) => {
                 for (key, value) in fields {
-                    if ["access_token", "refresh_token", "client_secret", "password", "code",
-                        "code_verifier", "code_challenge", "state", "redirect_uris"].contains(&key.as_str()) {
+                    if [
+                        "access_token",
+                        "refresh_token",
+                        "client_secret",
+                        "password",
+                        "code",
+                        "code_verifier",
+                        "code_challenge",
+                        "state",
+                        "redirect_uris",
+                    ]
+                    .contains(&key.as_str())
+                    {
                         mask(value);
-                    } else { visit(value); }
+                    } else {
+                        visit(value);
+                    }
                 }
             }
             _ => {}
@@ -84,7 +97,7 @@ pub fn exportar() -> Value {
         for code in responses.keys() {
             let mut headers = Vec::new();
             if matches!(code.as_str(), "302" | "303") { headers.push("location"); }
-            else if !browser && matches!(code.as_str(), "200" | "201") { headers.extend(["content-type", "cache-control"]); }
+            else if code == "200" || !browser && code == "201" { headers.extend(["content-type", "cache-control"]); }
             response_headers.insert(code.clone(), json!(headers));
         }
         json!({

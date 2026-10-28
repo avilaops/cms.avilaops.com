@@ -551,7 +551,10 @@ async fn responder(
                 if matches!(endpoint.operation, McpConsent | RuntimeConsent)
                     && !veio_do_painel(&estado.configuracao, host, cabecalhos)
                 {
-                    return Ok(simples(StatusCode::FORBIDDEN, "Pedido recusado: não veio do painel."));
+                    return Ok(simples(
+                        StatusCode::FORBIDDEN,
+                        "Pedido recusado: não veio do painel.",
+                    ));
                 }
                 let conta = match entrar(estado, host, cabecalhos, uri).await {
                     Ok(conta) => conta,
@@ -560,7 +563,9 @@ async fn responder(
                 match endpoint.operation {
                     McpAuthorize => conector::tela_de_autorizacao(estado, &conta, uri).await,
                     McpConsent => conector::autorizar(estado, &conta, corpo).await,
-                    RuntimeAuthorize => crate::runtime_oauth::authorization_page(estado, &conta, uri).await,
+                    RuntimeAuthorize => {
+                        crate::runtime_oauth::authorization_page(estado, &conta, uri).await
+                    }
                     RuntimeConsent => crate::runtime_oauth::authorize(estado, &conta, corpo).await,
                     _ => unreachable!("somente operações de consentimento"),
                 }
@@ -576,7 +581,10 @@ async fn responder(
         conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);
         return resposta;
     }
-    if matches!(caminho, "/oauth/register" | "/oauth/token" | "/oauth/runtime/token") {
+    if matches!(
+        caminho,
+        "/oauth/register" | "/oauth/token" | "/oauth/runtime/token"
+    ) {
         let resposta = Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST."));
         if caminho != "/oauth/runtime/token" {
             conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);

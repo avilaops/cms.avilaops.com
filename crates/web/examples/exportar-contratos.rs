@@ -5,6 +5,7 @@ fn main() {
             cms_web::contratos_oauth::exportar()
         } else {
             cms_web::contratos::exportar()
-        }).expect("contrato JSON")
+        })
+        .expect("contrato JSON")
     );
 }

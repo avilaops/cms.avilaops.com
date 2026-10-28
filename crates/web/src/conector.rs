@@ -46,7 +46,10 @@ fn json_com(status: StatusCode, corpo: Value) -> Response {
 fn erro_oauth(status: StatusCode, codigo: &str, descricao: &str) -> Response {
     json_com(
         status,
-        valor(OAuthError { error: codigo.to_string(), error_description: descricao.to_string() }),
+        valor(OAuthError {
+            error: codigo.to_string(),
+            error_description: descricao.to_string(),
+        }),
     )
 }
 
@@ -63,7 +66,10 @@ pub fn metadados(origem: &str) -> Response {
             grant_types_supported: vec!["authorization_code".into(), "refresh_token".into()],
             code_challenge_methods_supported: vec!["S256".into()],
             token_endpoint_auth_methods_supported: vec!["none".into()],
-            scopes_supported: ESCOPOS.iter().map(|(escopo, _)| escopo.to_string()).collect(),
+            scopes_supported: ESCOPOS
+                .iter()
+                .map(|(escopo, _)| escopo.to_string())
+                .collect(),
         }),
     )
 }
@@ -71,7 +77,11 @@ pub fn metadados(origem: &str) -> Response {
 pub fn recurso_protegido(origem: &str) -> Response {
     json_com(
         StatusCode::OK,
-        valor(ResourceMetadata { resource: format!("{origem}/mcp"), authorization_servers: vec![origem.to_string()], scopes_supported: None }),
+        valor(ResourceMetadata {
+            resource: format!("{origem}/mcp"),
+            authorization_servers: vec![origem.to_string()],
+            scopes_supported: None,
+        }),
     )
 }
 
@@ -129,9 +139,12 @@ pub async fn registrar(estado: &Estado, corpo: &[u8]) -> Result<Response, ErroWe
     Ok(json_com(
         StatusCode::CREATED,
         valor(RegistrationResponse {
-            client_id: id, client_name: nome, redirect_uris: pedido.redirect_uris,
+            client_id: id,
+            client_name: nome,
+            redirect_uris: pedido.redirect_uris,
             grant_types: vec!["authorization_code".into(), "refresh_token".into()],
-            response_types: vec!["code".into()], token_endpoint_auth_method: "none".into(),
+            response_types: vec!["code".into()],
+            token_endpoint_auth_method: "none".into(),
         }),
     ))
 }
@@ -308,8 +321,11 @@ pub(crate) struct PedidoDeToken {
 fn tokens_em_json(tokens: Tokens) -> Response {
     json_com(
         StatusCode::OK,
-        valor(TokenResponse { access_token: tokens.acesso, token_type: "Bearer".into(),
-            expires_in: tokens.expira_em_segundos, refresh_token: tokens.renovacao,
+        valor(TokenResponse {
+            access_token: tokens.acesso,
+            token_type: "Bearer".into(),
+            expires_in: tokens.expira_em_segundos,
+            refresh_token: tokens.renovacao,
             scope: tokens.escopos.join(" "),
         }),
     )
