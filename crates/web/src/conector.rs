@@ -28,7 +28,11 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
+use crate::app_contract_types::valor;
 use crate::identidade::{self, DadosDaIdentidade};
+use crate::oauth_types::{
+    AuthorizationMetadata, OAuthError, RegistrationResponse, ResourceMetadata, TokenResponse,
+};
 use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
 use crate::{Configuracao, Estado, biblioteca, mensagens, modelos};
 
