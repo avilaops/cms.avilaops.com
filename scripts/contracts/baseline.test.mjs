@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+import { baselinePath, loadBaseline } from './baseline.mjs';
+
+test('baseline vem do commit base e ignora alterações do candidato ou da cópia de trabalho', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'cms-baseline-'));
+  t.after(() => rm(directory, { recursive: true }));
+  const git = (...args) => execFileSync('git', args, { cwd: directory, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
+  git('init');
+  git('config', 'user.name', 'Contract test');
+  git('config', 'user.email', 'contract@example.test');
+  git('config', 'commit.gpgsign', 'false');
+  await mkdir(join(directory, 'docs/contracts'), { recursive: true });
+  await writeFile(join(directory, baselinePath), JSON.stringify({ authentication: 'private' }));
+  git('add', '.');
+  git('commit', '-m', 'baseline');
+  const base = git('rev-parse', 'HEAD');
+  await writeFile(join(directory, baselinePath), JSON.stringify({ authentication: 'public' }));
+  git('add', '.');
+  git('commit', '-m', 'candidate');
+  assert.deepEqual(loadBaseline(base, directory), { authentication: 'private' });
+  await writeFile(join(directory, baselinePath), 'invalid JSON');
+  assert.deepEqual(loadBaseline(base, directory), { authentication: 'private' });
+  assert.throws(() => loadBaseline('main', directory));
+  assert.throws(() => loadBaseline('f'.repeat(40), directory));
+});

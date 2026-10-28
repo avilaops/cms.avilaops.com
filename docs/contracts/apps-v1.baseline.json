@@ -1,0 +1,6097 @@
+{
+  "schemaVersion": 1,
+  "module": "cms-apps-v1",
+  "operations": [
+    {
+      "id": "listApps",
+      "method": "GET",
+      "path": "/api/v1/apps",
+      "parameters": {},
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Array_of_AppJson",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "bundleId": {
+                "type": "string"
+              },
+              "draftRevision": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "owner",
+                  "editor",
+                  "viewer"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "slug",
+              "name",
+              "bundleId",
+              "draftRevision",
+              "role"
+            ]
+          }
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "createApp",
+      "method": "POST",
+      "path": "/api/v1/apps",
+      "parameters": {},
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "NovoApp",
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "bundleId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "slug",
+          "name",
+          "bundleId"
+        ]
+      },
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "201": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AppJson",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string"
+            },
+            "draftRevision": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "owner",
+                "editor",
+                "viewer"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "slug",
+            "name",
+            "bundleId",
+            "draftRevision",
+            "role"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "201": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "getApp",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AppJson",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "bundleId": {
+              "type": "string"
+            },
+            "draftRevision": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "owner",
+                "editor",
+                "viewer"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "slug",
+            "name",
+            "bundleId",
+            "draftRevision",
+            "role"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "getDraft",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/draft",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "RascunhoJson",
+          "type": "object",
+          "properties": {
+            "draftRevision": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "definition": true
+          },
+          "required": [
+            "draftRevision",
+            "definition"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id",
+          "etag"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "saveDraft",
+      "method": "PUT",
+      "path": "/api/v1/apps/{appId}/draft",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": true,
+      "requiredHeaders": [
+        "origin",
+        "if-match"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "RevisaoJson",
+          "type": "object",
+          "properties": {
+            "draftRevision": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "required": [
+            "draftRevision"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id",
+          "etag"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "validateDraft",
+      "method": "POST",
+      "path": "/api/v1/apps/{appId}/validate",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": true,
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ValidacaoValidaJson",
+          "type": "object",
+          "properties": {
+            "valid": {
+              "type": "boolean"
+            },
+            "draftRevision": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ]
+              }
+            }
+          },
+          "required": [
+            "valid",
+            "draftRevision",
+            "errors"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "ErroJson",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                }
+              },
+              "required": [
+                "error"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "ValidacaoInvalidaJson",
+              "type": "object",
+              "properties": {
+                "valid": {
+                  "type": "boolean"
+                },
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "valid",
+                "errors"
+              ]
+            }
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "listVersions",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/versions",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Array_of_VersaoJson",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "number": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "schemaVersion": {
+                "type": "string"
+              },
+              "minimumRuntimeVersion": {
+                "type": "string"
+              },
+              "createdBy": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "number",
+              "schemaVersion",
+              "minimumRuntimeVersion",
+              "createdBy",
+              "createdAt"
+            ]
+          }
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "createVersion",
+      "method": "POST",
+      "path": "/api/v1/apps/{appId}/versions",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [
+        "origin",
+        "idempotency-key"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "VersaoCriadaJson",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "number": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": [
+            "id",
+            "number"
+          ]
+        },
+        "201": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "VersaoCriadaJson",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "number": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "required": [
+            "id",
+            "number"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "201": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "getVersion",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/versions/{number}",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        },
+        "number": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "int32",
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "DefinicaoVersionadaJson",
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "definition": {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "type": "string"
+                },
+                "appId": {
+                  "type": "string"
+                },
+                "minimumRuntimeVersion": {
+                  "type": "string"
+                },
+                "navigation": {
+                  "type": "object",
+                  "properties": {
+                    "initialRoute": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "initialRoute"
+                  ]
+                },
+                "screens": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "route": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "components": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "text"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "button"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "action": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "navigate"
+                                        },
+                                        "target": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "type",
+                                        "target"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id",
+                                "label",
+                                "action"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "spacer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "route",
+                      "title",
+                      "components"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "schemaVersion",
+                "appId",
+                "minimumRuntimeVersion",
+                "navigation",
+                "screens"
+              ]
+            }
+          },
+          "required": [
+            "number",
+            "definition"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "listEnvironments",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/environments",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Array_of_AmbienteJson",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "versionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "version": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "updatedBy": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "versionId",
+              "version",
+              "updatedBy",
+              "updatedAt"
+            ]
+          }
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "publishVersion",
+      "method": "PUT",
+      "path": "/api/v1/apps/{appId}/environments/{environment}",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        },
+        "environment": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "string",
+          "type": "string"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Publicacao",
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version"
+        ]
+      },
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "PublicadoJson",
+          "type": "object",
+          "properties": {
+            "environment": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "versionId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "environment",
+            "version",
+            "versionId"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "listMembers",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/members",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Array_of_ParticipanteJson",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "account": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "owner",
+                  "editor",
+                  "viewer"
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "account",
+              "role",
+              "createdAt"
+            ]
+          }
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "putMember",
+      "method": "PUT",
+      "path": "/api/v1/apps/{appId}/members",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "DefinicaoDeParticipante",
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "editor",
+              "viewer"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "role"
+        ]
+      },
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AtualizadoJson",
+          "type": "object",
+          "properties": {
+            "updated": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "updated"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "deleteMember",
+      "method": "DELETE",
+      "path": "/api/v1/apps/{appId}/members",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AlteracaoDeParticipante",
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "owner",
+              "editor",
+              "viewer",
+              null
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "account"
+        ]
+      },
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AtualizadoJson",
+          "type": "object",
+          "properties": {
+            "updated": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "updated"
+          ]
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "listAudit",
+      "method": "GET",
+      "path": "/api/v1/apps/{appId}/audit",
+      "parameters": {
+        "appId": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Uuid",
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "authentication": "avila_sso",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "Array_of_AuditoriaJson",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "account": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string"
+              },
+              "data": true,
+              "correlationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "createdAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "account",
+              "action",
+              "data",
+              "correlationId",
+              "createdAt"
+            ]
+          }
+        },
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    },
+    {
+      "id": "getRuntime",
+      "method": "GET",
+      "path": "/api/runtime/v1/apps/{slug}/environments/{environment}",
+      "parameters": {
+        "slug": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "string",
+          "type": "string"
+        },
+        "environment": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "string",
+          "type": "string"
+        }
+      },
+      "authentication": "runtime:read",
+      "request": null,
+      "requiredHeaders": [],
+      "responses": {
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "RuntimeJson",
+          "type": "object",
+          "properties": {
+            "appId": {
+              "type": "string"
+            },
+            "environment": {
+              "type": "string"
+            },
+            "version": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "definition": {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "type": "string"
+                },
+                "appId": {
+                  "type": "string"
+                },
+                "minimumRuntimeVersion": {
+                  "type": "string"
+                },
+                "navigation": {
+                  "type": "object",
+                  "properties": {
+                    "initialRoute": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "initialRoute"
+                  ]
+                },
+                "screens": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "route": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "components": {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "text"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id",
+                                "value"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "button"
+                                },
+                                "id": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "action": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "type": {
+                                          "type": "string",
+                                          "const": "navigate"
+                                        },
+                                        "target": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "additionalProperties": false,
+                                      "required": [
+                                        "type",
+                                        "target"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id",
+                                "label",
+                                "action"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "const": "spacer"
+                                },
+                                "id": {
+                                  "type": "string"
+                                }
+                              },
+                              "additionalProperties": false,
+                              "required": [
+                                "type",
+                                "id"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "route",
+                      "title",
+                      "components"
+                    ]
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "schemaVersion",
+                "appId",
+                "minimumRuntimeVersion",
+                "navigation",
+                "screens"
+              ]
+            }
+          },
+          "required": [
+            "appId",
+            "environment",
+            "version",
+            "definition"
+          ]
+        },
+        "304": null,
+        "400": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "401": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "403": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "404": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "409": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "413": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "422": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "428": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "500": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        },
+        "503": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ErroJson",
+          "type": "object",
+          "properties": {
+            "error": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message"
+              ]
+            }
+          },
+          "required": [
+            "error"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "200": [
+          "cache-control",
+          "x-correlation-id",
+          "etag"
+        ],
+        "304": [
+          "cache-control",
+          "x-correlation-id",
+          "etag"
+        ],
+        "400": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "401": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "403": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "404": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "409": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "413": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "422": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "428": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "500": [
+          "cache-control",
+          "x-correlation-id"
+        ],
+        "503": [
+          "cache-control",
+          "x-correlation-id"
+        ]
+      }
+    }
+  ],
+  "aadValidation": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://cms.avilaops.com/schemas/aad-v1.schema.json",
+    "title": "Ávila App Definition 1.0.0",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schemaVersion",
+      "appId",
+      "minimumRuntimeVersion",
+      "navigation",
+      "screens"
+    ],
+    "properties": {
+      "schemaVersion": {
+        "const": "1.0.0"
+      },
+      "appId": {
+        "$ref": "#/$defs/identifier"
+      },
+      "minimumRuntimeVersion": {
+        "const": "1.0.0"
+      },
+      "navigation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "initialRoute"
+        ],
+        "properties": {
+          "initialRoute": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      },
+      "screens": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 100,
+        "items": {
+          "$ref": "#/$defs/screen"
+        }
+      }
+    },
+    "$defs": {
+      "identifier": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "screen": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "route",
+          "title",
+          "components"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "route": {
+            "$ref": "#/$defs/identifier"
+          },
+          "title": {
+            "type": "string"
+          },
+          "components": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/text"
+                },
+                {
+                  "$ref": "#/$defs/button"
+                },
+                {
+                  "$ref": "#/$defs/spacer"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "text": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id",
+          "value"
+        ],
+        "properties": {
+          "type": {
+            "const": "text"
+          },
+          "id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "button": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id",
+          "label",
+          "action"
+        ],
+        "properties": {
+          "type": {
+            "const": "button"
+          },
+          "id": {
+            "$ref": "#/$defs/identifier"
+          },
+          "label": {
+            "type": "string"
+          },
+          "action": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "target"
+            ],
+            "properties": {
+              "type": {
+                "const": "navigate"
+              },
+              "target": {
+                "$ref": "#/$defs/identifier"
+              }
+            }
+          }
+        }
+      },
+      "spacer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "const": "spacer"
+          },
+          "id": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    }
+  },
+  "limits": {
+    "definitionBytes": 524288
+  },
+  "policies": [
+    "CMS-ACCESS-005"
+  ],
+  "tests": [
+    "crates/web/tests/apps_api.rs",
+    "crates/web/tests/runtime_apps.rs",
+    "crates/web/tests/contratos.rs"
+  ]
+}
