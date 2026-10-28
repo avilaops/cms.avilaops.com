@@ -26,6 +26,7 @@ try {
     assert.ok(!operations.has(operation.id), 'código duplicado');
     operations.set(operation.id, operation);
     if (operation.request !== null) ajv.compile(operation.request);
+    for (const schema of Object.values(operation.parameters ?? {})) ajv.compile(schema);
     for (const schema of Object.values(operation.responses)) if (schema !== null) ajv.compile(schema);
   }
   const examples = JSON.parse(await readFile('docs/contracts/examples.json', 'utf8'));
@@ -57,7 +58,16 @@ try {
     }
     for (const header of operation.responseHeaders[record.status]) assert.ok(record.headers[header], `${operation.id}: cabeçalho ${header}`);
     consume(operation.id, record.body, record.status);
-    if (record.status >= 200 && record.status < 300) successes.add(operation.id);
+    if (record.status >= 200 && record.status < 300) {
+      successes.add(operation.id);
+      for (const [index, part] of operation.path.split('/').entries()) {
+        if (!part.startsWith('{')) continue;
+        const name = part.slice(1, -1);
+        const raw = record.path.split('/')[index];
+        const value = name === 'number' ? Number(raw) : raw;
+        assert.equal(ajv.compile(operation.parameters[name])(value), true, `${operation.id}: parâmetro ${name}`);
+      }
+    }
     report.responsesChecked++;
   }
   report.successfulOperations = [...successes].sort();

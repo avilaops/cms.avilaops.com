@@ -79,8 +79,20 @@ pub fn exportar() -> Value {
         }
         if endpoint.operation == SaveDraft { required_headers.push("if-match"); }
         if endpoint.operation == CreateVersion { required_headers.push("idempotency-key"); }
+        let mut parameters = serde_json::Map::new();
+        for name in ["appId", "number", "slug", "environment"] {
+            if endpoint.path.contains(&format!("{{{name}}}")) {
+                let schema = match name {
+                    "appId" => esquema::<uuid::Uuid>(false),
+                    "number" => esquema::<i32>(false),
+                    _ => esquema::<String>(false),
+                };
+                parameters.insert(name.to_string(), schema);
+            }
+        }
         json!({
             "id": endpoint.id, "method": endpoint.method, "path": endpoint.path,
+            "parameters": parameters,
             "authentication": if endpoint.operation == GetRuntime { "runtime:read" } else { "avila_sso" },
             "request": request, "requiredHeaders": required_headers,
             "responses": responses, "responseHeaders": response_headers,

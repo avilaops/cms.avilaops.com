@@ -183,21 +183,26 @@ async fn cria_e_lista_so_os_apps_da_conta(pool: PgPool) {
         "ana",
         Request::builder().uri(format!("/api/v1/apps/{id}")),
         Value::Null,
-    ).await;
+    )
+    .await;
     assert_eq!(detalhe.status, StatusCode::OK);
     let removido = enviar(
         &pool,
         "ana",
-        Request::builder().method("DELETE").uri(format!("/api/v1/apps/{id}/members")),
+        Request::builder()
+            .method("DELETE")
+            .uri(format!("/api/v1/apps/{id}/members")),
         json!({ "account": "sub-bia" }),
-    ).await;
+    )
+    .await;
     assert_eq!(removido.status, StatusCode::OK);
     let revogado = enviar(
         &pool,
         "bia",
         Request::builder().uri(format!("/api/v1/apps/{id}")),
         Value::Null,
-    ).await;
+    )
+    .await;
     assert_eq!(revogado.status, StatusCode::NOT_FOUND);
 }
 

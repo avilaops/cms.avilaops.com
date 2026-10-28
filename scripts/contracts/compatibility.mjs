@@ -151,6 +151,9 @@ export function compareContracts(baseline, candidate) {
       const next = operations.get(old.id);
       if (!next) { reject(`Operação removida: ${old.id}`); continue; }
       for (const key of ['method', 'path', 'authentication']) if (old[key] !== next[key]) reject(`${old.id}: ${key} alterado.`);
+      for (const [name, schema] of Object.entries(old.parameters ?? {})) {
+        if (!next.parameters?.[name] || !isSubset(schema, next.parameters[name])) reject(`${old.id}: parâmetro ${name} incompatível.`);
+      }
       if ((next.requiredHeaders ?? []).some(header => !(old.requiredHeaders ?? []).includes(header))) reject(`${old.id}: novo cabeçalho obrigatório.`);
       if (old.request === null && next.request !== null) reject(`${old.id}: novo corpo obrigatório exige revisão.`);
       if (old.request !== null && (next.request === null || !isSubset(old.request, next.request))) reject(`${old.id}: entrada incompatível ou não comprovada.`);

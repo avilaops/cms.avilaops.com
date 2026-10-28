@@ -103,10 +103,16 @@ pub async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
             ["cache-control", "x-correlation-id", "etag"]
                 .into_iter()
                 .filter_map(|name| {
-                    partes.headers.get(name).and_then(|value| value.to_str().ok())
+                    partes
+                        .headers
+                        .get(name)
+                        .and_then(|value| value.to_str().ok())
                         .map(|value| (name.to_string(), serde_json::json!(value)))
-                }).collect();
-        let body = if bytes.is_empty() { serde_json::Value::Null } else {
+                })
+                .collect();
+        let body = if bytes.is_empty() {
+            serde_json::Value::Null
+        } else {
             serde_json::from_slice(&bytes).expect("resposta de API em JSON")
         };
         let record = serde_json::json!({
