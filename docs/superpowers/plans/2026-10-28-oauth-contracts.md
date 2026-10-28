@@ -14,18 +14,18 @@ sintéticas são identificadas pela execução; tokens e códigos são suprimido
 
 ## Entrega
 
-- [ ] Tipar respostas de metadados, registro, tokens e erros OAuth.
-- [ ] Derivar schemas dos tipos de pedidos reais; declarar query/form/JSON.
-- [ ] Compartilhar o catálogo das 12 operações com o despacho do painel.
-- [ ] Exportar e comparar o contrato OAuth com baseline do commit base.
-- [ ] Validar exemplos, consumidor independente e respostas de todas as operações.
-- [ ] Exigir identidade da captura e suprimir credenciais, query de redirects e HTML.
-- [ ] Exercitar PKCE, consentimento, retorno registrado, uso único e refresh/replay.
+- [x] Tipar respostas de metadados, registro, tokens e erros OAuth.
+- [x] Derivar schemas dos tipos de pedidos reais; declarar query/form/JSON.
+- [x] Compartilhar o catálogo das 12 operações com o despacho do painel.
+- [x] Exportar e comparar o contrato OAuth com baseline do commit base.
+- [x] Validar exemplos, consumidor independente e respostas de todas as operações.
+- [x] Exigir identidade da captura e suprimir credenciais, query de redirects e HTML.
+- [x] Exercitar PKCE, consentimento, retorno registrado, uso único e refresh/replay.
 - [ ] Conferir CI, artefatos, baseline e registrar evidência no Linear.
 
 ## Limites e aceite
 
-Sche­mas descrevem transporte; autenticação, participação e regras de OAuth
+Schemas descrevem transporte; autenticação, participação e regras de OAuth
 continuam no executor. As telas e redirects mantêm testes semânticos próprios.
 A evidência de HTML registra somente o tipo, sem conteúdo; tokens preservam
 tipo/presença e são suprimidos antes de gravar. Não declarar que o artefato
