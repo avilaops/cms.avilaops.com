@@ -56,20 +56,17 @@ diretório `.sqlx` e o `Cargo.lock` que vêm nele.
 
 ## Como validar
 
-Precisa de Rust estável e de um Postgres 18 para os testes de integração, que
-criam uma base por teste.
+Builds e testes são executados exclusivamente no GitHub CI pelo workflow
+`Validar`. Envie um pull request ou execute o workflow na revisão desejada:
 
 ```bash
-export DATABASE_URL=postgres://postgres@127.0.0.1:5432/postgres
-export SQLX_OFFLINE=true
-cargo fmt --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+gh workflow run validar.yml --ref <ramo>
 ```
 
-Mudou uma consulta ou uma migração: aplique as migrações em um banco de
-desenvolvimento e regrave o diretório `.sqlx` com
-`cargo sqlx prepare --workspace`, sem `SQLX_OFFLINE`.
+A CI prepara Rust e Postgres, verifica formatação, Clippy, testes e a
+[base MLOps do módulo](docs/mlops/README.md). O artefato
+`cms-mlops-evidence` vincula fontes, catálogo e resultados à execução exata.
+Alterações de consultas e migrações usam o workflow `Consultas`, descrito acima.
 
 ## Pilha
 
