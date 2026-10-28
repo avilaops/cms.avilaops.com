@@ -2109,6 +2109,25 @@ async fn chamar(
 ) -> Result<Value, ErroWeb> {
     let nome = parametros.get("name").and_then(Value::as_str).unwrap_or("");
     let Some(ferramenta) = FERRAMENTAS.iter().find(|f| f.nome == nome) else {
+        return chamar_sem_tracing(estado, conexao, origem, parametros).await;
+    };
+    crate::langfuse::observe(
+        ferramenta.nome,
+        "tool",
+        chamar_sem_tracing(estado, conexao, origem, parametros),
+        |resultado| resultado["isError"] == true,
+    )
+    .await
+}
+
+async fn chamar_sem_tracing(
+    estado: &Estado,
+    conexao: &Conexao,
+    origem: &str,
+    parametros: &Value,
+) -> Result<Value, ErroWeb> {
+    let nome = parametros.get("name").and_then(Value::as_str).unwrap_or("");
+    let Some(ferramenta) = FERRAMENTAS.iter().find(|f| f.nome == nome) else {
         return Ok(conteudo_de_ferramenta(
             format!("Ferramenta desconhecida: {nome}"),
             true,
