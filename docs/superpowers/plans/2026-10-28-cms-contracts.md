@@ -33,8 +33,8 @@ O primeiro contrato é declarado inicial quando o baseline ainda não existe.
 - [x] Exportar contrato pelo código Rust da versão testada.
 - [x] Implementar comparação direcional com testes de quebras de payload.
 - [x] Validar exemplos e consumidor independente, inclusive respostas reais.
-- [ ] Integrar e publicar artefatos na CI existente; conferir a revisão exata.
-- [ ] Atualizar evidências, tarefas e limites no Linear.
+- [x] Integrar e publicar artefatos na CI existente; conferir a revisão exata.
+- [x] Atualizar evidências, tarefas e limites no Linear.
 
 Primeira execução 40643821803: exportação, testes e comparação aprovados;
 16 operações e 33 respostas verificadas no artefato. A revisão final inclui

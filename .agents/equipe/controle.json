@@ -37,7 +37,7 @@
       "title": "Concluir contratos executáveis de apps v1 e runtime",
       "owner": "codex-cms",
       "priority": "alta",
-      "status": "em-andamento",
+      "status": "em-revisao",
       "objective": "Exportar os tipos reais do servidor, impedir incompatibilidades históricas e validar respostas das 16 operações com consumidor independente.",
       "acceptance": [
         "Schemas derivados dos DTOs usados pelos handlers.",
@@ -49,9 +49,11 @@
       "evidence": [
         "https://linear.app/avilaops/issue/AVL-343",
         "https://github.com/avilaops/cms.avilaops.com/pull/23",
-        "docs/contracts/README.md"
+        "docs/contracts/README.md",
+        "https://github.com/avilaops/cms.avilaops.com/actions/runs/40643821803",
+        "https://linear.app/avilaops/document/cms-contratos-executaveis-de-apps-v1-e-runtime-91cbfd9134e9"
       ],
-      "next": "Conferir a CI, versionar o primeiro baseline gerado e registrar a evidência."
+      "next": "Conferir a CI da revisão final com baseline versionado; resultado imutável registrado no documento Linear. Depois continuar os módulos OAuth/MCP e executor."
     }
   ],
   "decisions": [
