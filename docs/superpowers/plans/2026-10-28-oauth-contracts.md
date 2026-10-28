@@ -21,7 +21,12 @@ sintéticas são identificadas pela execução; tokens e códigos são suprimido
 - [x] Validar exemplos, consumidor independente e respostas de todas as operações.
 - [x] Exigir identidade da captura e suprimir credenciais, query de redirects e HTML.
 - [x] Exercitar PKCE, consentimento, retorno registrado, uso único e refresh/replay.
-- [ ] Conferir CI, artefatos, baseline e registrar evidência no Linear.
+- [x] Conferir CI, artefatos, baseline e registrar evidência no Linear.
+
+CI final: 40651479008, commit candidato d0a3cec, aprovada. Contrato exportado
+igual ao baseline versionado; 68 respostas, 12 operações com sucesso e grants
+authorization_code/refresh_token exercitados com sucesso e recusa nos dois
+recursos. Evidência detalhada no documento OAuth da AVL-343. Sem merge/deploy.
 
 ## Limites e aceite
 
