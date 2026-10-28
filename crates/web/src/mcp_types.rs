@@ -79,6 +79,33 @@ pub(crate) struct ToolsList {
     pub tools: Vec<ToolDescriptor>,
 }
 
+#[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+pub(crate) struct EmptyResult {}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+pub(crate) struct Capabilities {
+    pub tools: EmptyResult,
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+pub(crate) struct ServerInfo {
+    pub name: String,
+    pub version: String,
+}
+
+#[derive(Serialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct InitializeResult {
+    pub protocol_version: String,
+    pub capabilities: Capabilities,
+    pub server_info: ServerInfo,
+    pub instructions: String,
+}
+
 pub(crate) fn success<T: Serialize>(id: Value, result: T) -> Value {
     crate::app_contract_types::valor(RpcSuccess { jsonrpc: RpcVersion::V2, id, result })
 }

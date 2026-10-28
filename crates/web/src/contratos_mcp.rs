@@ -3,7 +3,7 @@
 
 use serde_json::{Value, json};
 use crate::contratos::esquema;
-use crate::mcp_types::{RpcError, RpcSuccess, ToolResult, ToolsList};
+use crate::mcp_types::{EmptyResult, InitializeResult, RpcError, RpcSuccess, ToolResult, ToolsList};
 
 pub fn exportar() -> Value {
     json!({
@@ -15,6 +15,8 @@ pub fn exportar() -> Value {
         "authentication": "oauth_mcp",
         "tools": crate::conector::catalogo_contratado(),
         "transport": {
+            "initialize": esquema::<RpcSuccess<InitializeResult>>(true),
+            "ping": esquema::<RpcSuccess<EmptyResult>>(true),
             "toolsList": esquema::<RpcSuccess<ToolsList>>(true),
             "toolResult": esquema::<RpcSuccess<ToolResult>>(true),
             "error": esquema::<RpcError>(true),

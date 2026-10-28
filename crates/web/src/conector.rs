@@ -2274,13 +2274,13 @@ pub async fn mcp(
     let nulo = Value::Null;
     let parametros = mensagem.get("params").unwrap_or(&nulo);
     let resultado = match mensagem.get("method").and_then(Value::as_str).unwrap_or("") {
-        "initialize" => Ok(json!({
-            "protocolVersion": VERSAO_DO_PROTOCOLO,
-            "capabilities": { "tools": {} },
-            "serverInfo": { "name": "cms-avila-ops", "version": env!("CARGO_PKG_VERSION") },
-            "instructions": "CMS da Ávila Ops. Escreva rascunhos (vários de uma vez com criar_rascunhos), confira com validar_documento ou ver_previa e envie para revisão; publicar depende de a pessoa ter liberado.",
+        "initialize" => Ok(valor(mcp_types::InitializeResult {
+            protocol_version: VERSAO_DO_PROTOCOLO.to_string(),
+            capabilities: mcp_types::Capabilities { tools: mcp_types::EmptyResult {} },
+            server_info: mcp_types::ServerInfo { name: "cms-avila-ops".to_string(), version: env!("CARGO_PKG_VERSION").to_string() },
+            instructions: "CMS da Ávila Ops. Escreva rascunhos (vários de uma vez com criar_rascunhos), confira com validar_documento ou ver_previa e envie para revisão; publicar depende de a pessoa ter liberado.".to_string(),
         })),
-        "ping" => Ok(json!({})),
+        "ping" => Ok(valor(mcp_types::EmptyResult {})),
         "tools/list" => {
             Ok(valor(ToolsList { tools: FERRAMENTAS.iter().map(descrever).collect() }))
         }

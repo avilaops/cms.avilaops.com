@@ -69,8 +69,10 @@ export function consumeMcpResponse(contract, method, response, requestId) {
     assert.equal(response.result.content[0].type, 'text');
     if (!response.result.isError) JSON.parse(response.result.content[0].text);
   } else if (method === 'ping') {
+    assert.ok(ajv.compile(contract.transport.ping)(response));
     assert.deepEqual(response.result, {});
   } else if (method === 'initialize') {
+    assert.ok(ajv.compile(contract.transport.initialize)(response));
     assert.equal(response.result.protocolVersion, contract.protocolVersion);
     assert.equal(response.result.serverInfo.name, 'cms-avila-ops');
     assert.equal(typeof response.result.serverInfo.version, 'string');
