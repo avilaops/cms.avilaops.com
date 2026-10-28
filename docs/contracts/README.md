@@ -53,6 +53,9 @@ navegação e espaçador. Sucesso, conflitos, recusas e `304` permanecem distint
 O artefato `cms-contracts` contém contrato atual, baseline histórico, respostas
 sintéticas e relatório de compatibilidade, com revisão do baseline, revisão
 executada, hash do contrato, operações cobertas e contagem de respostas.
+O diretório é recriado antes da coleta. Cada captura precisa corresponder ao
+commit, identificador e tentativa atuais da CI; arquivos recuperados do cache
+não comprovam uma execução nova e são recusados.
 `cms-mlops-evidence` também registra o resultado da etapa de contratos.
 
 ## Atualizar

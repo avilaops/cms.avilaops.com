@@ -116,6 +116,8 @@ pub async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
             serde_json::from_slice(&bytes).expect("resposta de API em JSON")
         };
         let record = serde_json::json!({
+            "executionRevision": std::env::var("CMS_CONTRACT_REVISION").ok(),
+            "runId": std::env::var("CMS_CONTRACT_RUN").ok(),
             "method": contrato_pedido.0, "path": contrato_pedido.1,
             "status": partes.status.as_u16(), "headers": headers, "body": body,
         });

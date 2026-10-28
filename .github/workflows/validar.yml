@@ -80,6 +80,7 @@ jobs:
       - name: Exportar contratos do código testado
         id: export-contracts
         run: |
+          rm -rf target/contracts
           mkdir -p target/contracts/responses
           cargo run --package cms-web --example exportar-contratos --features contracts --locked > target/contracts/apps-v1.json
       - name: Testes
@@ -88,6 +89,8 @@ jobs:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
           CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
           CMS_CONTRACT_RESPONSES: ${{ github.workspace }}/target/contracts/responses
+          CMS_CONTRACT_REVISION: ${{ github.sha }}
+          CMS_CONTRACT_RUN: ${{ github.run_id }}/${{ github.run_attempt }}
         run: cargo test --workspace --features cms-web/contracts --locked
       - name: Compatibilidade de contratos e respostas reais
         id: contracts

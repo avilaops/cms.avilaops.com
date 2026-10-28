@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { compareContracts, validator } from './compatibility.mjs';
 import { consume } from './consumer.mjs';
 import { baselinePath, loadBaseline } from './baseline.mjs';
+import { assertCaptureIdentity } from './capture.mjs';
 
 const directory = resolve('target/contracts');
 const candidate = JSON.parse(await readFile(resolve(directory, 'apps-v1.json'), 'utf8'));
@@ -15,6 +16,7 @@ const baseline = loadBaseline(base);
 await writeFile(resolve(directory, 'baseline.json'), JSON.stringify(baseline, null, 2));
 const report = { ...compareContracts(baseline, candidate), baselineRevision: base,
   executionRevision: git('rev-parse', 'HEAD'),
+  runId: `${process.env.GITHUB_RUN_ID}/${process.env.GITHUB_RUN_ATTEMPT}`,
   contractSha256: createHash('sha256').update(JSON.stringify(candidate)).digest('hex'),
   operationCount: candidate.operations.length, responsesChecked: 0, successfulOperations: [],
   policies: candidate.policies, tests: candidate.tests, routerWithPostgresVerified: false };
@@ -42,6 +44,7 @@ try {
   assert.ok(files.length > 0, 'respostas reais da suíte ausentes');
   for (const file of files) {
     const record = JSON.parse(await readFile(resolve(directory, 'responses', file), 'utf8'));
+    assertCaptureIdentity(record, report.executionRevision, report.runId);
     const operation = candidate.operations.find(op => op.method === record.method &&
       op.path.split('/').length === record.path.split('/').length &&
       op.path.split('/').every((part, index) => part.startsWith('{') || part === record.path.split('/')[index]));
