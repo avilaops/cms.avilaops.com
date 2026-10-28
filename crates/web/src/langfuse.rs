@@ -3,7 +3,8 @@ use std::{collections::HashMap, future::Future, sync::OnceLock, time::Duration};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use opentelemetry::{
-    Context, FutureExt, KeyValue,
+    Context, KeyValue,
+    context::FutureExt,
     trace::{Status, TraceContextExt, Tracer, TracerProvider},
 };
 use opentelemetry_otlp::{Protocol, WithExportConfig, WithHttpConfig};
@@ -27,6 +28,15 @@ fn configuration(
 ) -> Result<Option<Configuration>, &'static str> {
     if get("LANGFUSE_ENABLED").as_deref() != Some("true") {
         return Ok(None);
+    }
+    if [
+        "OTEL_EXPORTER_OTLP_HEADERS",
+        "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+    ]
+    .iter()
+    .any(|name| get(name).is_some_and(|value| !value.trim().is_empty()))
+    {
+        return Err("ambient OTLP headers are not permitted for Langfuse");
     }
     let required = |name| {
         get(name)
@@ -98,7 +108,7 @@ pub fn init() {
                         config.sample_rate,
                     ))))
                     .with_resource(
-                        Resource::builder()
+                        Resource::builder_empty()
                             .with_service_name(SERVICE)
                             .with_attributes([
                                 KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
@@ -153,6 +163,10 @@ where
     let tracer = provider.tracer(SERVICE);
     let span = tracer.start_with_context(name, &Context::current());
     let context = Context::current().with_span(span);
+    let mut guard = ObservationGuard {
+        context: context.clone(),
+        finished: false,
+    };
     context.span().set_attributes([
         KeyValue::new("langfuse.observation.type", kind),
         KeyValue::new("langfuse.version", env!("CARGO_PKG_VERSION")),
@@ -160,10 +174,6 @@ where
         KeyValue::new("langfuse.observation.metadata.service", SERVICE),
         KeyValue::new("langfuse.observation.input", r#"{"content":"omitted"}"#),
     ]);
-    // If this future is dropped by a timeout or cancellation, retain a safe error.
-    context
-        .span()
-        .set_status(Status::error("operation interrupted"));
     let result = future.with_context(context.clone()).await;
     let failed = match &result {
         Ok(value) => rejected(value),
@@ -183,7 +193,24 @@ where
         Status::Ok
     });
     context.span().end();
+    guard.finished = true;
     result
+}
+
+struct ObservationGuard {
+    context: Context,
+    finished: bool,
+}
+
+impl Drop for ObservationGuard {
+    fn drop(&mut self) {
+        if !self.finished {
+            self.context
+                .span()
+                .set_status(Status::error("operation interrupted"));
+            self.context.span().end();
+        }
+    }
 }
 
 fn tracing_environment() -> String {
@@ -231,6 +258,19 @@ mod tests {
             );
         }
         let config = configuration(configured).unwrap().unwrap();
+        for header in [
+            "OTEL_EXPORTER_OTLP_HEADERS",
+            "OTEL_EXPORTER_OTLP_TRACES_HEADERS",
+        ] {
+            assert!(
+                configuration(|key| if key == header {
+                    Some("unrelated=private-header".into())
+                } else {
+                    configured(key)
+                })
+                .is_err()
+            );
+        }
         assert_eq!(
             config.endpoint,
             "https://example.invalid/api/public/otel/v1/traces"
