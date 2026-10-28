@@ -3837,8 +3837,14 @@ async fn dono_escolhe_o_tema_e_o_site_sai_com_as_fontes_do_cms(pool: PgPool) {
     // O clássico não carrega arquivo de fonte.
     assert!(!painel.visitar(&h, "/").await.corpo.contains("@font-face"));
     let tela = painel.abrir(Some("ana"), IDENTIDADE).await;
-    assert!(tela.corpo.contains(r#"<option value="classico" selected>"#));
-    assert!(tela.corpo.contains(r#"<option value="industrial">"#));
+    assert!(
+        tela.corpo
+            .contains(r#"<input type="radio" name="tema" value="classico" checked>"#)
+    );
+    assert!(
+        tela.corpo
+            .contains(r#"<input type="radio" name="tema" value="industrial">"#)
+    );
 
     let recusado = painel
         .postar(
@@ -3862,7 +3868,7 @@ async fn dono_escolhe_o_tema_e_o_site_sai_com_as_fontes_do_cms(pool: PgPool) {
             .abrir(Some("ana"), IDENTIDADE)
             .await
             .corpo
-            .contains(r#"<option value="industrial" selected>"#)
+            .contains(r#"<input type="radio" name="tema" value="industrial" checked>"#)
     );
 
     // O site troca na hora, e a fonte sai do próprio site.
