@@ -15,6 +15,8 @@ mod conteudo;
 pub mod contratos;
 #[cfg(feature = "contracts")]
 pub mod contratos_oauth;
+#[cfg(feature = "contracts")]
+pub mod contratos_mcp;
 mod descoberta;
 mod dominio;
 mod editor;
@@ -27,6 +29,7 @@ mod midia;
 mod modelos;
 mod oauth_routes;
 mod oauth_types;
+mod mcp_types;
 mod painel;
 mod publico;
 mod resposta;

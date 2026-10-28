@@ -30,13 +30,14 @@ use uuid::Uuid;
 
 use crate::app_contract_types::valor;
 use crate::identidade::{self, DadosDaIdentidade};
+use crate::mcp_types::{self, TextContent, TextKind, ToolAnnotations, ToolDescriptor, ToolResult, ToolsList};
 use crate::oauth_types::{
     AuthorizationMetadata, OAuthError, RegistrationResponse, ResourceMetadata, TokenResponse,
 };
 use crate::resposta::{ErroWeb, html_privado, html_privado_com_retorno, redirecionar, simples};
 use crate::{Configuracao, Estado, biblioteca, mensagens, modelos};
 
-const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
+pub(crate) const VERSAO_DO_PROTOCOLO: &str = "2025-06-18";
 
 fn json_com(status: StatusCode, corpo: Value) -> Response {
     let mut resposta = (status, corpo.to_string()).into_response();
@@ -1075,7 +1076,7 @@ const DESFAZEM: [&str; 4] = [
     "remover_redirecionamento",
 ];
 
-fn descrever(ferramenta: &Ferramenta) -> Value {
+fn descrever(ferramenta: &Ferramenta) -> ToolDescriptor {
     let mut propriedades = serde_json::Map::new();
     let mut obrigatorios: Vec<&str> = Vec::new();
     for (nome, descricao) in ferramenta.argumentos {
@@ -1116,15 +1117,22 @@ fn descrever(ferramenta: &Ferramenta) -> Value {
     let so_le = ["listar_", "ver_", "validar_"]
         .iter()
         .any(|prefixo| ferramenta.nome.starts_with(prefixo));
-    json!({
-        "name": ferramenta.nome,
-        "description": ferramenta.descricao,
-        "annotations": {
-            "readOnlyHint": so_le,
-            "destructiveHint": DESFAZEM.contains(&ferramenta.nome),
+    ToolDescriptor {
+        name: ferramenta.nome.to_string(),
+        description: ferramenta.descricao.to_string(),
+        annotations: ToolAnnotations {
+            read_only_hint: so_le,
+            destructive_hint: DESFAZEM.contains(&ferramenta.nome),
         },
-        "inputSchema": objetos_abertos(json!({ "type": "object", "properties": propriedades, "required": obrigatorios })),
-    })
+        input_schema: objetos_abertos(json!({ "type": "object", "properties": propriedades, "required": obrigatorios })),
+    }
+}
+
+#[cfg(feature = "contracts")]
+pub(crate) fn catalogo_contratado() -> Vec<Value> {
+    FERRAMENTAS.iter().map(|ferramenta| {
+        json!({ "descriptor": descrever(ferramenta), "scope": ferramenta.escopo })
+    }).collect()
 }
 
 /// Diz por extenso, em cada objeto do esquema que declara campos, que os
@@ -2115,7 +2123,10 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
 
 /// O resultado de uma ferramenta, no formato do MCP.
 fn conteudo_de_ferramenta(texto: String, eh_erro: bool) -> Value {
-    json!({ "content": [{ "type": "text", "text": texto }], "isError": eh_erro })
+    valor(ToolResult {
+        content: vec![TextContent { r#type: TextKind::Text, text: texto }],
+        is_error: eh_erro,
+    })
 }
 
 async fn chamar(
@@ -2253,7 +2264,7 @@ pub async fn mcp(
     let Ok(mensagem) = serde_json::from_slice::<Value>(corpo) else {
         return Ok(json_com(
             StatusCode::BAD_REQUEST,
-            json!({ "jsonrpc": "2.0", "id": null, "error": { "code": -32700, "message": "JSON inválido." } }),
+            mcp_types::error(Value::Null, -32700, "JSON inválido."),
         ));
     };
     let Some(id) = mensagem.get("id").filter(|id| !id.is_null()).cloned() else {
@@ -2271,16 +2282,16 @@ pub async fn mcp(
         })),
         "ping" => Ok(json!({})),
         "tools/list" => {
-            Ok(json!({ "tools": FERRAMENTAS.iter().map(descrever).collect::<Vec<_>>() }))
+            Ok(valor(ToolsList { tools: FERRAMENTAS.iter().map(descrever).collect() }))
         }
         "tools/call" => Ok(chamar(estado, &conexao, origem, parametros).await?),
-        _ => Err(json!({ "code": -32601, "message": "Método desconhecido." })),
+        _ => Err(()),
     };
     Ok(json_com(
         StatusCode::OK,
         match resultado {
-            Ok(resultado) => json!({ "jsonrpc": "2.0", "id": id, "result": resultado }),
-            Err(erro) => json!({ "jsonrpc": "2.0", "id": id, "error": erro }),
+            Ok(resultado) => mcp_types::success(id, resultado),
+            Err(()) => mcp_types::error(id, -32601, "Método desconhecido."),
         },
     ))
 }
