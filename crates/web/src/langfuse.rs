@@ -22,7 +22,9 @@ struct Configuration {
     sample_rate: f64,
 }
 
-fn configuration(get: impl Fn(&str) -> Option<String>) -> Result<Option<Configuration>, &'static str> {
+fn configuration(
+    get: impl Fn(&str) -> Option<String>,
+) -> Result<Option<Configuration>, &'static str> {
     if get("LANGFUSE_ENABLED").as_deref() != Some("true") {
         return Ok(None);
     }
@@ -46,7 +48,10 @@ fn configuration(get: impl Fn(&str) -> Option<String>) -> Result<Option<Configur
     let public = required("LANGFUSE_PUBLIC_KEY")?;
     let secret = required("LANGFUSE_SECRET_KEY")?;
     let environment = get("LANGFUSE_TRACING_ENVIRONMENT").unwrap_or_else(|| "development".into());
-    if !matches!(environment.as_str(), "development" | "test" | "staging" | "production") {
+    if !matches!(
+        environment.as_str(),
+        "development" | "test" | "staging" | "production"
+    ) {
         return Err("invalid Langfuse environment");
     }
     let sample_rate = get("LANGFUSE_SAMPLE_RATE")
@@ -156,7 +161,9 @@ where
         KeyValue::new("langfuse.observation.input", r#"{"content":"omitted"}"#),
     ]);
     // If this future is dropped by a timeout or cancellation, retain a safe error.
-    context.span().set_status(Status::error("operation interrupted"));
+    context
+        .span()
+        .set_status(Status::error("operation interrupted"));
     let result = future.with_context(context.clone()).await;
     let failed = match &result {
         Ok(value) => rejected(value),
@@ -164,7 +171,11 @@ where
     };
     context.span().set_attribute(KeyValue::new(
         "langfuse.observation.output",
-        if failed { r#"{"status":"error"}"# } else { r#"{"status":"success"}"# },
+        if failed {
+            r#"{"status":"error"}"#
+        } else {
+            r#"{"status":"success"}"#
+        },
     ));
     context.span().set_status(if failed {
         Status::error("operation failed")
@@ -210,21 +221,30 @@ mod tests {
             "https://example.invalid?token=private",
             "https://example.invalid#private",
         ] {
-            assert!(configuration(|key| if key == "LANGFUSE_BASE_URL" {
-                Some(base.into())
-            } else {
-                configured(key)
-            }).is_err());
+            assert!(
+                configuration(|key| if key == "LANGFUSE_BASE_URL" {
+                    Some(base.into())
+                } else {
+                    configured(key)
+                })
+                .is_err()
+            );
         }
         let config = configuration(configured).unwrap().unwrap();
-        assert_eq!(config.endpoint, "https://example.invalid/api/public/otel/v1/traces");
+        assert_eq!(
+            config.endpoint,
+            "https://example.invalid/api/public/otel/v1/traces"
+        );
         assert_eq!(config.environment, "development");
         for value in ["NaN", "-0.1", "1.1", "bad"] {
-            assert!(configuration(|key| if key == "LANGFUSE_SAMPLE_RATE" {
-                Some(value.into())
-            } else {
-                configured(key)
-            }).is_err());
+            assert!(
+                configuration(|key| if key == "LANGFUSE_SAMPLE_RATE" {
+                    Some(value.into())
+                } else {
+                    configured(key)
+                })
+                .is_err()
+            );
         }
     }
 
@@ -234,24 +254,49 @@ mod tests {
         let provider = SdkTracerProvider::builder()
             .with_simple_exporter(exporter.clone())
             .build();
-        let result = observe_with_provider(&provider, "render-document", "span", async {
-            observe_with_provider(&provider, "validate-document", "tool", async {
-                Ok::<_, &'static str>("private-xml-and-document")
-            }, |_| false).await
-        }, |_| false).await;
+        let result = observe_with_provider(
+            &provider,
+            "render-document",
+            "span",
+            async {
+                observe_with_provider(
+                    &provider,
+                    "validate-document",
+                    "tool",
+                    async { Ok::<_, &'static str>("private-xml-and-document") },
+                    |_| false,
+                )
+                .await
+            },
+            |_| false,
+        )
+        .await;
         assert_eq!(result, Ok("private-xml-and-document"));
-        let error = observe_with_provider(&provider, "render-document", "tool", async {
-            Err::<(), _>("private-upstream-error")
-        }, |_| false).await;
+        let error = observe_with_provider(
+            &provider,
+            "render-document",
+            "tool",
+            async { Err::<(), _>("private-upstream-error") },
+            |_| false,
+        )
+        .await;
         assert_eq!(error, Err("private-upstream-error"));
-        let rejected = observe_with_provider(&provider, "render-document", "tool", async {
-            Ok::<_, ()>(true)
-        }, |value| *value).await;
+        let rejected = observe_with_provider(
+            &provider,
+            "render-document",
+            "tool",
+            async { Ok::<_, ()>(true) },
+            |value| *value,
+        )
+        .await;
         assert_eq!(rejected, Ok(true));
         provider.force_flush().unwrap();
         let spans = exporter.get_finished_spans().unwrap();
         assert_eq!(spans.len(), 4);
-        assert_eq!(spans[0].span_context.trace_id(), spans[1].span_context.trace_id());
+        assert_eq!(
+            spans[0].span_context.trace_id(),
+            spans[1].span_context.trace_id()
+        );
         assert_eq!(spans[0].parent_span_id, spans[1].span_context.span_id());
         assert!(matches!(spans[0].status, Status::Ok));
         assert!(matches!(spans[2].status, Status::Error { .. }));
@@ -270,9 +315,15 @@ mod tests {
             .build();
         let timed = tokio::time::timeout(
             Duration::from_millis(1),
-            observe_with_provider(&provider, "cancelled-tool", "tool",
-                std::future::pending::<Result<(), ()>>(), |_| false),
-        ).await;
+            observe_with_provider(
+                &provider,
+                "cancelled-tool",
+                "tool",
+                std::future::pending::<Result<(), ()>>(),
+                |_| false,
+            ),
+        )
+        .await;
         assert!(timed.is_err());
         provider.force_flush().unwrap();
         let spans = exporter.get_finished_spans().unwrap();
