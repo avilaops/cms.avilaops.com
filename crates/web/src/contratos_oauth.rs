@@ -48,25 +48,6 @@ pub fn redact_body(mut body: Value) -> Value {
     body
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn redacao_nao_exporta_credenciais_e_preserva_erros_de_tipo() {
-        let body = json!({ "access_token": "sentinela-privada", "refresh_token": null,
-            "client_secret": { "unexpected": "sentinela-privada" },
-            "redirect_uris": ["https://example.test/?secret=sentinela-privada"],
-            "scope": "runtime:read", "expires_in": 3600 });
-        let redacted = redact_body(body);
-        assert!(!redacted.to_string().contains("sentinela-privada"));
-        assert_eq!(redacted["refresh_token"], Value::Null);
-        assert!(redacted["client_secret"].is_object());
-        assert_eq!(redacted["scope"], "runtime:read");
-        assert_eq!(redacted["expires_in"], 3600);
-    }
-}
-
 pub fn exportar() -> Value {
     let operations: Vec<_> = OAUTH_ENDPOINTS.iter().map(|endpoint| {
         use OAuthOperation::*;
@@ -114,4 +95,23 @@ pub fn exportar() -> Value {
         "policies": ["CMS-ACCESS-004", "CMS-ACCESS-005"],
         "tests": ["crates/web/tests/painel.rs", "crates/web/tests/runtime_oauth.rs", "crates/web/tests/oauth_contracts.rs"],
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn redacao_nao_exporta_credenciais_e_preserva_erros_de_tipo() {
+        let body = json!({ "access_token": "sentinela-privada", "refresh_token": null,
+            "client_secret": { "unexpected": "sentinela-privada" },
+            "redirect_uris": ["https://example.test/?secret=sentinela-privada"],
+            "scope": "runtime:read", "expires_in": 3600 });
+        let redacted = redact_body(body);
+        assert!(!redacted.to_string().contains("sentinela-privada"));
+        assert_eq!(redacted["refresh_token"], Value::Null);
+        assert!(redacted["client_secret"].is_object());
+        assert_eq!(redacted["scope"], "runtime:read");
+        assert_eq!(redacted["expires_in"], 3600);
+    }
 }
