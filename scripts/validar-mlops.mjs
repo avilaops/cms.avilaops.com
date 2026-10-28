@@ -35,6 +35,10 @@ export function validarInventario({ policies, manifest, readPinned, readCurrent 
   const used = new Set();
   const testReferences = new Map();
   for (const policy of policies) {
+    const fields = ['id', 'product', 'title', 'category', 'state', 'rule', 'owner',
+      'enforcement', 'verificationDate', 'sources'];
+    exigir(Object.keys(policy).length === fields.length && fields.every(field => field in policy),
+      'Campos divergentes do contrato PolicyDraft.');
     exigir(typeof policy.id === 'string' && /^CMS-[A-Z]+-\d{3}$/.test(policy.id), 'Código inválido.');
     exigir(!ids.has(policy.id), 'Política duplicada.');
     ids.add(policy.id);
@@ -42,16 +46,21 @@ export function validarInventario({ policies, manifest, readPinned, readCurrent 
       'Este incremento registra somente implementação inspecionada, sem promoção a verificada.');
     exigir(['access', 'commercial', 'data', 'execution', 'publication', 'integration'].includes(policy.category),
       'Categoria inválida.');
-    for (const field of ['title', 'rule', 'owner', 'enforcement']) {
-      exigir(typeof policy[field] === 'string' && policy[field].trim(), `Campo obrigatório: ${field}.`);
+    for (const [field, maximum] of Object.entries({ title: 180, rule: 8000, owner: 160, enforcement: 4000 })) {
+      exigir(typeof policy[field] === 'string' && policy[field].trim() && policy[field].length <= maximum,
+        `Campo obrigatório ou limite do contrato: ${field}.`);
     }
-    exigir(Array.isArray(policy.sources) && policy.sources.some(source => source.kind === 'code'),
+    exigir(Array.isArray(policy.sources) && policy.sources.length <= 20
+      && policy.sources.some(source => source.kind === 'code'),
       'Ficha exige referência de código.');
     const tests = new Set();
     for (const reference of policy.sources) {
+      exigir(Object.keys(reference).length === 3
+        && ['kind', 'location', 'note'].every(field => field in reference), 'Fonte fora do contrato.');
       exigir(['code', 'test'].includes(reference.kind), 'Tipo de fonte inválido neste incremento.');
       exigir(sources.has(reference.location), 'Referência sem cobertura no manifesto.');
-      exigir(typeof reference.note === 'string' && reference.note.trim(), 'Fonte exige nota.');
+      exigir(reference.location.length <= 2000 && typeof reference.note === 'string'
+        && reference.note.trim() && reference.note.length <= 2000, 'Fonte fora dos limites do contrato.');
       used.add(reference.location);
       if (reference.kind === 'test') tests.add(reference.location);
     }

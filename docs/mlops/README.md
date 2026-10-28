@@ -17,7 +17,7 @@ distintos. Builds e testes acontecem exclusivamente no GitHub CI.
   já usado pelo laboratório, com responsável, aplicação, fontes e testes.
 - [Manifesto](sources.json): revisão Git, hashes SHA-256 de 12 arquivos e oito
   vínculos de testes. A integridade cobre somente essas fontes.
-- [Gate](../../scripts/validar-mlops.mjs): recusa duplicação, referência descoberta,
+- [Gate](../../scripts/validar-mlops.mjs): recusa duplicação, referência sem cobertura,
   hash divergente, fonte extra, seletor ausente e promoção indevida da situação.
 - [Workflow](../../.github/workflows/validar.yml): executa os testes do gate,
   valida o catálogo e publica `cms-mlops-evidence`, inclusive em falha posterior.

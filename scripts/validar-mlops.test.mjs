@@ -83,3 +83,15 @@ test('recusa promoção automática, data ou responsável ausente', () => {
     assert.throws(() => validarInventario(value));
   }
 });
+
+test('preserva os limites e campos do contrato de importação do laboratório', () => {
+  for (const changes of [{ title: 'x'.repeat(181) }, { owner: 'x'.repeat(161) },
+    { rule: 'x'.repeat(8001) }, { enforcement: 'x'.repeat(4001) }, { extra: true }]) {
+    const value = fixture();
+    Object.assign(value.policies[0], changes);
+    assert.throws(() => validarInventario(value), /contrato/);
+  }
+  const value = fixture();
+  value.policies[0].sources[0].note = 'x'.repeat(2001);
+  assert.throws(() => validarInventario(value), /contrato/);
+});
