@@ -49,7 +49,7 @@ pub fn exportar() -> Value {
         };
         let mut responses = serde_json::Map::new();
         let mut response_headers = serde_json::Map::new();
-        for status in [400, 401, 403, 404, 409, 413, 422, 428, 500] {
+        for status in [400, 401, 403, 404, 409, 413, 422, 428, 500, 503] {
             responses.insert(status.to_string(), esquema::<ErroJson>(true));
         }
         responses.insert(if endpoint.operation == CreateApp { "201" } else { "200" }.into(), response.clone());

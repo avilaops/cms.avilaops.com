@@ -20,6 +20,13 @@ const supported = new Set(['type', 'properties', 'required', 'additionalProperti
   'pattern', 'format', 'enum', 'const', 'uniqueItems', 'anyOf', 'oneOf']);
 
 function expand(value, root = value, seen = new Set()) {
+  const safeNumbers = node => {
+    if (typeof node === 'number' && (!Number.isFinite(node) || Number.isInteger(node) && !Number.isSafeInteger(node))) {
+      throw new Error('Número fora da precisão segura do comparador.');
+    }
+    if (node && typeof node === 'object') Object.values(node).forEach(safeNumbers);
+  };
+  safeNumbers(value);
   if (typeof value === 'boolean') return value;
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Schema inválido.');
   let schema = { ...value };

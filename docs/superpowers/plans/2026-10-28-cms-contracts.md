@@ -28,13 +28,19 @@ O primeiro contrato é declarado inicial quando o baseline ainda não existe.
 
 ## Execução
 
-- [ ] Tipar respostas e derivar schemas dos DTOs e do AAD.
-- [ ] Compartilhar catálogo de operações com o despacho real.
-- [ ] Exportar contrato pelo código Rust da versão testada.
-- [ ] Implementar comparação direcional com testes de quebras de payload.
-- [ ] Validar exemplos e consumidor independente, inclusive respostas reais.
+- [x] Tipar respostas e derivar schemas dos DTOs e do AAD.
+- [x] Compartilhar catálogo de operações com o despacho real.
+- [x] Exportar contrato pelo código Rust da versão testada.
+- [x] Implementar comparação direcional com testes de quebras de payload.
+- [x] Validar exemplos e consumidor independente, inclusive respostas reais.
 - [ ] Integrar e publicar artefatos na CI existente; conferir a revisão exata.
 - [ ] Atualizar evidências, tarefas e limites no Linear.
+
+Primeira execução 40643821803: exportação, testes e comparação aprovados;
+16 operações e 33 respostas verificadas no artefato. A revisão final inclui
+o caso 503 de indisponibilidade do Auth e um teste específico. O baseline
+inicial deriva desse artefato com a declaração adicional do erro compartilhado
+503; a CI deve provar igualdade integral com a exportação da revisão final.
 
 Testes e builds exclusivamente no GitHub CI. Sem deploy. Não reescrever o
 workspace, instalar infraestrutura ML ou adicionar o laboratório ao caminho

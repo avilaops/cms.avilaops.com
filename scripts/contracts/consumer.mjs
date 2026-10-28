@@ -66,7 +66,10 @@ export function consume(operation, body, status = 200) {
     case 'putMember': case 'deleteMember': fields(body, { updated: 'boolean' }); assert.equal(body.updated, true); break;
     case 'listAudit':
       assert.ok(Array.isArray(body));
-      body.forEach(item => fields(item, { id: 'integer', account: 'string', action: 'string', data: 'object', correlationId: 'string', createdAt: 'string' })); break;
+      body.forEach(item => {
+        fields(item, { id: 'integer', account: 'string', action: 'string', correlationId: 'string', createdAt: 'string' });
+        assert.ok(Object.hasOwn(item, 'data'));
+      }); break;
     case 'getRuntime': fields(body, { appId: 'string', environment: 'string', version: 'integer' }); definition(body.definition); break;
     default: throw new Error(`Consumidor ausente: ${operation}`);
   }

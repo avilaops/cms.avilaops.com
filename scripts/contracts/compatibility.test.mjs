@@ -51,6 +51,7 @@ test('tipos, campos desconhecidos, limites e formatos respeitam inclusão', () =
   assert.equal(isSubset({ type: 'array', items: string, maxItems: 4 }, { type: 'array', items: string, maxItems: 3 }), false);
   assert.equal(isSubset({ type: 'string' }, { type: 'string', format: 'uuid' }), false);
   assert.equal(isSubset({ type: 'string', pattern: '^a' }, { type: 'string', pattern: '^a' }), true);
+  assert.equal(isSubset({ type: 'integer', maximum: 1e20 }, { type: 'integer', maximum: 1e20 }), false);
 });
 
 test('compara uniões discriminadas e referências locais; mudanças não suportadas exigem revisão', () => {

@@ -96,6 +96,20 @@ async fn api_sem_sessao_responde_erro_json_em_vez_de_redirecionar(pool: PgPool) 
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]
+async fn api_sem_auth_configurado_responde_indisponivel_sem_redirecionar(pool: PgPool) {
+    let pedido = Request::builder()
+        .uri("/api/v1/apps")
+        .header("host", HOST_DO_PAINEL)
+        .body(Body::empty())
+        .expect("pedido válido");
+    let resposta = responder(estado(&pool, PathBuf::from("midia-ausente")), pedido).await;
+    assert_eq!(resposta.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(resposta.cabecalho("cache-control"), "private, no-store");
+    let erro: Value = serde_json::from_str(&resposta.corpo).expect("erro JSON");
+    assert_eq!(erro["error"]["code"], "auth_unavailable");
+}
+
+#[sqlx::test(migrator = "cms_dados::MIGRADOR")]
 async fn cria_e_lista_so_os_apps_da_conta(pool: PgPool) {
     let criada = enviar(
         &pool,
