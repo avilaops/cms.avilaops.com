@@ -24,7 +24,13 @@ fn add_common_headers(response: &mut Response, correlation_id: Uuid) {
 fn json_response(status: StatusCode, code: &str, message: &str) -> Response {
     let mut response = (
         status,
-        valor(ErroJson { error: DetalheErro { code: code.to_string(), message: message.to_string() } }).to_string(),
+        valor(ErroJson {
+            error: DetalheErro {
+                code: code.to_string(),
+                message: message.to_string(),
+            },
+        })
+        .to_string(),
     )
         .into_response();
     response
@@ -95,7 +101,9 @@ pub async fn serve(
     {
         tracing::debug!(operation = route.endpoint.id, "operação do runtime");
         let slug = route.parametro("slug").expect("slug da rota runtime");
-        let environment = route.parametro("environment").expect("ambiente da rota runtime");
+        let environment = route
+            .parametro("environment")
+            .expect("ambiente da rota runtime");
         let Some(access_token) = bearer(headers) else {
             let mut response = unauthorized(origin);
             add_common_headers(&mut response, correlation_id);

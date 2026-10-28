@@ -33,6 +33,10 @@ jobs:
         run: node --test scripts/validar-mlops.test.mjs
       - name: Contrato e integridade MLOps
         run: node scripts/validar-mlops.mjs
+      - name: Dependências dos testes de contratos
+        run: npm ci --ignore-scripts --prefix scripts/contracts
+      - name: Testes de compatibilidade e consumidor
+        run: node --test scripts/contracts/*.test.mjs
       # Instala no runner para não depender de limites de pull do Docker Hub
       # ou do ECR público. Os builds continuam integralmente no GitHub.
       - name: PostgreSQL 18
@@ -72,18 +76,37 @@ jobs:
       - name: Formatação
         run: cargo fmt --check
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --features cms-web/contracts --locked -- -D warnings
+      - name: Exportar contratos do código testado
+        id: export-contracts
+        run: |
+          mkdir -p target/contracts/responses
+          cargo run --package cms-web --example exportar-contratos --features contracts --locked > target/contracts/apps-v1.json
       - name: Testes
         id: rust-tests
         env:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
           CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
-        run: cargo test --workspace --locked
+          CMS_CONTRACT_RESPONSES: ${{ github.workspace }}/target/contracts/responses
+        run: cargo test --workspace --features cms-web/contracts --locked
+      - name: Compatibilidade de contratos e respostas reais
+        id: contracts
+        env:
+          BASE_REVISION: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
+        run: node scripts/contracts/check.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cms-contracts
+          path: target/contracts
+          retention-days: 30
+          if-no-files-found: warn
       - name: Registrar evidência MLOps
         if: always()
         env:
           MLOPS_RUST_TESTS_OUTCOME: ${{ steps.rust-tests.outcome }}
           MLOPS_GATE_TESTS_OUTCOME: ${{ steps.mlops-tests.outcome }}
+          MLOPS_CONTRACTS_OUTCOME: ${{ steps.contracts.outcome }}
         run: node scripts/validar-mlops.mjs --report
       - uses: actions/upload-artifact@v4
         if: always()

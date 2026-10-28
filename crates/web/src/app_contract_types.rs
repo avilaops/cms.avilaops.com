@@ -36,7 +36,10 @@ pub(crate) struct RevisaoJson {
 #[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 pub(crate) struct DefinicaoVersionadaJson {
     pub number: i32,
-    #[cfg_attr(feature = "contracts", schemars(with = "cms_dominio::app_builder::AppDefinition"))]
+    #[cfg_attr(
+        feature = "contracts",
+        schemars(with = "cms_dominio::app_builder::AppDefinition")
+    )]
     pub definition: Value,
 }
 
@@ -85,7 +88,10 @@ pub(crate) struct RuntimeJson {
     pub app_id: String,
     pub environment: String,
     pub version: i32,
-    #[cfg_attr(feature = "contracts", schemars(with = "cms_dominio::app_builder::AppDefinition"))]
+    #[cfg_attr(
+        feature = "contracts",
+        schemars(with = "cms_dominio::app_builder::AppDefinition")
+    )]
     pub definition: Value,
 }
 
@@ -96,6 +102,9 @@ pub(crate) fn valor<T: Serialize>(body: T) -> Value {
 pub(crate) fn validacao_invalida(code: &str, message: impl ToString) -> Value {
     valor(ValidacaoInvalidaJson {
         valid: false,
-        errors: vec![DetalheErro { code: code.to_string(), message: message.to_string() }],
+        errors: vec![DetalheErro {
+            code: code.to_string(),
+            message: message.to_string(),
+        }],
     })
 }

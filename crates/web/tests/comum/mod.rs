@@ -84,12 +84,39 @@ pub async fn postar(
 }
 
 pub async fn responder(estado: Estado, pedido: Request<Body>) -> Resposta {
+    #[cfg(feature = "contracts")]
+    let contrato_pedido = (pedido.method().to_string(), pedido.uri().path().to_string());
     let resposta = roteador(estado)
         .oneshot(pedido)
         .await
         .expect("o roteador responde");
     let (partes, corpo) = resposta.into_parts();
     let bytes = corpo.collect().await.expect("corpo lido").to_bytes();
+    #[cfg(feature = "contracts")]
+    if let Ok(directory) = std::env::var("CMS_CONTRACT_RESPONSES")
+        && (contrato_pedido.1.starts_with("/api/v1/apps")
+            || contrato_pedido.1.starts_with("/api/runtime/v1/apps/"))
+    {
+        // Somente respostas sintéticas de testes. Nunca registra cookie,
+        // autorização, códigos OAuth, parâmetros ou corpos de pedidos.
+        let headers: serde_json::Map<String, serde_json::Value> =
+            ["cache-control", "x-correlation-id", "etag"]
+                .into_iter()
+                .filter_map(|name| {
+                    partes.headers.get(name).and_then(|value| value.to_str().ok())
+                        .map(|value| (name.to_string(), serde_json::json!(value)))
+                }).collect();
+        let body = if bytes.is_empty() { serde_json::Value::Null } else {
+            serde_json::from_slice(&bytes).expect("resposta de API em JSON")
+        };
+        let record = serde_json::json!({
+            "method": contrato_pedido.0, "path": contrato_pedido.1,
+            "status": partes.status.as_u16(), "headers": headers, "body": body,
+        });
+        std::fs::create_dir_all(&directory).expect("diretório de contratos");
+        let file = std::path::Path::new(&directory).join(format!("{}.json", uuid::Uuid::new_v4()));
+        std::fs::write(file, record.to_string()).expect("resposta de contrato registrada");
+    }
     Resposta {
         status: partes.status,
         cabecalhos: partes.headers,

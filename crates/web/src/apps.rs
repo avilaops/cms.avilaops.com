@@ -153,7 +153,12 @@ fn json_response(status: StatusCode, valor: Value) -> Response {
 fn erro(status: StatusCode, codigo: &'static str, mensagem: impl ToString) -> Response {
     json_response(
         status,
-        valor(ErroJson { error: DetalheErro { code: codigo.to_string(), message: mensagem.to_string() } }),
+        valor(ErroJson {
+            error: DetalheErro {
+                code: codigo.to_string(),
+                message: mensagem.to_string(),
+            },
+        }),
     )
 }
 
@@ -291,7 +296,10 @@ async fn obter_rascunho(estado: &Estado, conta: &Conta, app_id: Uuid) -> Respons
         Ok(rascunho) => {
             let mut resposta = json_response(
                 StatusCode::OK,
-                valor(RascunhoJson { draft_revision: rascunho.revisao, definition: rascunho.definicao }),
+                valor(RascunhoJson {
+                    draft_revision: rascunho.revisao,
+                    definition: rascunho.definicao,
+                }),
             );
             resposta.headers_mut().insert(
                 "etag",
@@ -324,7 +332,10 @@ async fn obter_versao(estado: &Estado, conta: &Conta, app_id: Uuid, numero: i32)
     match cms_dados::definicao_da_versao(&estado.pool, conta, app_id, numero).await {
         Ok(definicao) => json_response(
             StatusCode::OK,
-            valor(DefinicaoVersionadaJson { number: numero, definition: definicao }),
+            valor(DefinicaoVersionadaJson {
+                number: numero,
+                definition: definicao,
+            }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -370,6 +381,14 @@ pub(crate) struct AlteracaoDeParticipante {
     role: Option<AppRole>,
 }
 
+#[derive(Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DefinicaoDeParticipante {
+    account: String,
+    role: AppRole,
+}
+
 async fn membros(
     estado: &Estado,
     conta: &Conta,
@@ -403,12 +422,16 @@ async fn membros(
             let resultado = if *metodo == Method::PUT {
                 match pedido.role {
                     Some(papel) => {
+                        let pedido = DefinicaoDeParticipante {
+                            account: pedido.account,
+                            role: papel,
+                        };
                         cms_dados::definir_participante_do_app(
                             &estado.pool,
                             conta,
                             app_id,
                             &pedido.account,
-                            papel,
+                            pedido.role,
                             correlation_id,
                         )
                         .await
@@ -488,7 +511,12 @@ async fn salvar_rascunho(
     .await
     {
         Ok(revisao) => {
-            let mut resposta = json_response(StatusCode::OK, valor(RevisaoJson { draft_revision: revisao }));
+            let mut resposta = json_response(
+                StatusCode::OK,
+                valor(RevisaoJson {
+                    draft_revision: revisao,
+                }),
+            );
             resposta.headers_mut().insert(
                 "etag",
                 HeaderValue::from_str(&format!("\"{revisao}\"")).expect("revisão é cabeçalho"),
@@ -511,7 +539,10 @@ fn definicao_valida(rascunho: &cms_dados::RascunhoDoApp) -> Result<AppDefinition
     if definicao.app_id != rascunho.slug {
         return Err(Box::new(json_response(
             StatusCode::UNPROCESSABLE_ENTITY,
-            validacao_invalida("app_id_mismatch", "appId deve ser igual ao slug do aplicativo."),
+            validacao_invalida(
+                "app_id_mismatch",
+                "appId deve ser igual ao slug do aplicativo.",
+            ),
         )));
     }
     if let Err(erro_validacao) = definicao.validate() {
@@ -556,7 +587,11 @@ async fn validar_rascunho(
     match cms_dados::auditar_validacao(&estado.pool, conta, app_id, correlation_id).await {
         Ok(()) => json_response(
             StatusCode::OK,
-            valor(ValidacaoValidaJson { valid: true, draft_revision: rascunho.revisao, errors: vec![] }),
+            valor(ValidacaoValidaJson {
+                valid: true,
+                draft_revision: rascunho.revisao,
+                errors: vec![],
+            }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -583,7 +618,10 @@ async fn criar_versao(
             } else {
                 StatusCode::OK
             },
-            valor(VersaoCriadaJson { id: versao.id, number: versao.numero }),
+            valor(VersaoCriadaJson {
+                id: versao.id,
+                number: versao.numero,
+            }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -623,7 +661,11 @@ async fn publicar(
     {
         Ok(versao_id) => json_response(
             StatusCode::OK,
-            valor(PublicadoJson { environment: ambiente.to_string(), version: publicacao.version, version_id: versao_id }),
+            valor(PublicadoJson {
+                environment: ambiente.to_string(),
+                version: publicacao.version,
+                version_id: versao_id,
+            }),
         ),
         Err(erro_app) => resposta_de_erro(erro_app),
     }
@@ -639,44 +681,111 @@ pub async fn atender(
 ) -> Response {
     let correlation_id = Uuid::new_v4();
     use crate::app_routes::{Operacao, localizar};
-    let resposta = if let Some(rota) = localizar(metodo, caminho)
-        .filter(|rota| rota.endpoint.operation != Operacao::GetRuntime)
+    let resposta = if let Some(rota) =
+        localizar(metodo, caminho).filter(|rota| rota.endpoint.operation != Operacao::GetRuntime)
     {
         tracing::debug!(operation = rota.endpoint.id, "operação da API de apps");
         match rota.endpoint.operation {
             Operacao::ListApps | Operacao::CreateApp => {
                 raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await
             }
-            operation => match rota.parametro("appId").and_then(|id| id.parse::<Uuid>().ok()) {
+            operation => match rota
+                .parametro("appId")
+                .and_then(|id| id.parse::<Uuid>().ok())
+            {
                 Some(app_id) => match operation {
                     Operacao::GetApp => obter_app(estado, conta, app_id).await,
                     Operacao::GetDraft => obter_rascunho(estado, conta, app_id).await,
-                    Operacao::SaveDraft => salvar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await,
-                    Operacao::ValidateDraft => validar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id).await,
+                    Operacao::SaveDraft => {
+                        salvar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id)
+                            .await
+                    }
+                    Operacao::ValidateDraft => {
+                        validar_rascunho(estado, conta, app_id, cabecalhos, corpo, correlation_id)
+                            .await
+                    }
                     Operacao::ListVersions => listar_versoes(estado, conta, app_id).await,
-                    Operacao::CreateVersion => criar_versao(estado, conta, app_id, cabecalhos, correlation_id).await,
-                    Operacao::GetVersion => match rota.parametro("number").and_then(|number| number.parse().ok()) {
+                    Operacao::CreateVersion => {
+                        criar_versao(estado, conta, app_id, cabecalhos, correlation_id).await
+                    }
+                    Operacao::GetVersion => match rota
+                        .parametro("number")
+                        .and_then(|number| number.parse().ok())
+                    {
                         Some(number) => obter_versao(estado, conta, app_id, number).await,
-                        None => erro(StatusCode::NOT_FOUND, "version_not_found", "Versão não encontrada."),
+                        None => erro(
+                            StatusCode::NOT_FOUND,
+                            "version_not_found",
+                            "Versão não encontrada.",
+                        ),
                     },
                     Operacao::ListEnvironments => listar_ambientes(estado, conta, app_id).await,
-                    Operacao::PublishVersion => publicar(estado, conta, app_id, rota.parametro("environment").expect("ambiente da rota"), cabecalhos, corpo, correlation_id).await,
-                    Operacao::ListMembers | Operacao::PutMember | Operacao::DeleteMember => membros(estado, conta, app_id, metodo, cabecalhos, corpo, correlation_id).await,
+                    Operacao::PublishVersion => {
+                        publicar(
+                            estado,
+                            conta,
+                            app_id,
+                            rota.parametro("environment").expect("ambiente da rota"),
+                            cabecalhos,
+                            corpo,
+                            correlation_id,
+                        )
+                        .await
+                    }
+                    Operacao::ListMembers | Operacao::PutMember | Operacao::DeleteMember => {
+                        membros(
+                            estado,
+                            conta,
+                            app_id,
+                            metodo,
+                            cabecalhos,
+                            corpo,
+                            correlation_id,
+                        )
+                        .await
+                    }
                     Operacao::ListAudit => listar_auditoria(estado, conta, app_id).await,
-                    Operacao::ListApps | Operacao::CreateApp | Operacao::GetRuntime => unreachable!("operações tratadas antes do identificador"),
+                    Operacao::ListApps | Operacao::CreateApp | Operacao::GetRuntime => {
+                        unreachable!("operações tratadas antes do identificador")
+                    }
                 },
-                None if operation == Operacao::GetVersion => erro(StatusCode::NOT_FOUND, "version_not_found", "Versão não encontrada."),
-                None => erro(StatusCode::NOT_FOUND, "app_not_found", "Aplicativo não encontrado."),
+                None if operation == Operacao::GetVersion => erro(
+                    StatusCode::NOT_FOUND,
+                    "version_not_found",
+                    "Versão não encontrada.",
+                ),
+                None => erro(
+                    StatusCode::NOT_FOUND,
+                    "app_not_found",
+                    "Aplicativo não encontrado.",
+                ),
             },
         }
     } else {
         // Preserva 405 nas duas famílias que já distinguiam método de caminho.
         let partes: Vec<&str> = caminho.split('/').skip(1).collect();
         match partes.as_slice() {
-            ["api", "v1", "apps"] => raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await,
+            ["api", "v1", "apps"] => {
+                raiz(estado, conta, metodo, cabecalhos, corpo, correlation_id).await
+            }
             ["api", "v1", "apps", app_id, "members"] => match app_id.parse() {
-                Ok(app_id) => membros(estado, conta, app_id, metodo, cabecalhos, corpo, correlation_id).await,
-                Err(_) => erro(StatusCode::NOT_FOUND, "app_not_found", "Aplicativo não encontrado."),
+                Ok(app_id) => {
+                    membros(
+                        estado,
+                        conta,
+                        app_id,
+                        metodo,
+                        cabecalhos,
+                        corpo,
+                        correlation_id,
+                    )
+                    .await
+                }
+                Err(_) => erro(
+                    StatusCode::NOT_FOUND,
+                    "app_not_found",
+                    "Aplicativo não encontrado.",
+                ),
             },
             _ => erro(StatusCode::NOT_FOUND, "not_found", "Não encontrado."),
         }

@@ -25,7 +25,8 @@ pub fn exportar() -> Value {
         use Operacao::*;
         let request = match endpoint.operation {
             CreateApp => esquema::<NovoApp>(false),
-            PutMember | DeleteMember => esquema::<AlteracaoDeParticipante>(false),
+            PutMember => esquema::<DefinicaoDeParticipante>(false),
+            DeleteMember => esquema::<AlteracaoDeParticipante>(false),
             PublishVersion => esquema::<Publicacao>(false),
             SaveDraft | ValidateDraft => json!(true),
             _ => Value::Null,
