@@ -1526,6 +1526,15 @@ async fn mcp_contrato_cobre_transporte_e_recusa_escopo_das_37_ferramentas(pool: 
     }
     let unknown = painel.rpc(&leitura_site, "metodo/inexistente", json!({})).await;
     assert_eq!(unknown["error"]["code"], -32601);
+    let invalid = painel.do_assistente("/mcp", "application/json", Some(&leitura_site), "{".to_string()).await;
+    assert_eq!(invalid.status, StatusCode::BAD_REQUEST);
+    let invalid: Value = serde_json::from_str(&invalid.corpo).expect("erro JSON-RPC");
+    assert_eq!(invalid["jsonrpc"], "2.0");
+    assert_eq!(invalid["id"], Value::Null);
+    assert_eq!(invalid["error"]["code"], -32700);
+    let notification = painel.do_assistente("/mcp", "application/json", Some(&leitura_site), json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }).to_string()).await;
+    assert_eq!(notification.status, StatusCode::ACCEPTED);
+    assert!(notification.corpo.is_empty());
     let contract = cms_web::contratos_mcp::exportar();
     let tools = contract["tools"].as_array().expect("ferramentas");
     assert_eq!(tools.len(), 37);
