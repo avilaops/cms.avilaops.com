@@ -81,14 +81,16 @@ jobs:
         id: export-contracts
         run: |
           rm -rf target/contracts
-          mkdir -p target/contracts/responses
+          mkdir -p target/contracts/responses target/contracts/oauth-responses
           cargo run --package cms-web --example exportar-contratos --features contracts --locked > target/contracts/apps-v1.json
+          cargo run --package cms-web --example exportar-contratos --features contracts --locked -- oauth > target/contracts/oauth-v1.json
       - name: Testes
         id: rust-tests
         env:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
           CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
           CMS_CONTRACT_RESPONSES: ${{ github.workspace }}/target/contracts/responses
+          CMS_OAUTH_RESPONSES: ${{ github.workspace }}/target/contracts/oauth-responses
           CMS_CONTRACT_REVISION: ${{ github.sha }}
           CMS_CONTRACT_RUN: ${{ github.run_id }}/${{ github.run_attempt }}
         run: cargo test --workspace --features cms-web/contracts --locked
@@ -96,7 +98,9 @@ jobs:
         id: contracts
         env:
           BASE_REVISION: ${{ github.event.pull_request.base.sha || github.event.before || github.sha }}
-        run: node scripts/contracts/check.mjs
+        run: |
+          node scripts/contracts/check.mjs
+          node scripts/contracts/check-oauth.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

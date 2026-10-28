@@ -143,7 +143,7 @@ export function compareContracts(baseline, candidate) {
   const differences = [];
   const reject = message => differences.push(message);
   const operations = new Map();
-  if (candidate.schemaVersion !== 1 || candidate.module !== 'cms-apps-v1' || !Array.isArray(candidate.operations)) {
+  if (candidate.schemaVersion !== 1 || !['cms-apps-v1', 'cms-oauth-v1'].includes(candidate.module) || !Array.isArray(candidate.operations)) {
     return { compatible: false, initialContract: baseline === null, differences: ['Contrato inválido.'] };
   }
   for (const operation of candidate.operations) {
@@ -152,12 +152,15 @@ export function compareContracts(baseline, candidate) {
   }
   if (baseline) {
     if (baseline.schemaVersion !== candidate.schemaVersion || baseline.module !== candidate.module) reject('Versão ou módulo divergente.');
-    if (candidate.limits.definitionBytes < baseline.limits.definitionBytes) reject('Limite de entrada reduzido.');
-    if (!isSubset(baseline.aadValidation, candidate.aadValidation)) reject('Validação AAD restringiu entradas anteriores.');
+    for (const [name, value] of Object.entries(baseline.limits ?? {})) {
+      if (candidate.limits?.[name] === undefined || candidate.limits[name] < value) reject(`Limite de entrada reduzido: ${name}.`);
+    }
+    if (baseline.aadValidation !== undefined && (candidate.aadValidation === undefined || !isSubset(baseline.aadValidation, candidate.aadValidation))) reject('Validação AAD restringiu entradas anteriores.');
     for (const old of baseline.operations) {
       const next = operations.get(old.id);
       if (!next) { reject(`Operação removida: ${old.id}`); continue; }
-      for (const key of ['method', 'path', 'authentication']) if (old[key] !== next[key]) reject(`${old.id}: ${key} alterado.`);
+      for (const key of ['method', 'path', 'authentication', 'requestEncoding', 'redacted']) if (old[key] !== next[key]) reject(`${old.id}: ${key} alterado.`);
+      if (!same(old.successStatuses, next.successStatuses)) reject(`${old.id}: status de sucesso alterado.`);
       for (const [name, schema] of Object.entries(old.parameters ?? {})) {
         if (!next.parameters?.[name] || !isSubset(schema, next.parameters[name])) reject(`${old.id}: parâmetro ${name} incompatível.`);
       }

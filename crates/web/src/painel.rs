@@ -414,8 +414,6 @@ enum Rota<'a> {
     SalvarCategoria(&'a str),
     RenomearCategoria(&'a str, &'a str),
     ApagarCategoria(&'a str, &'a str),
-    Autorizar,
-    Decidir,
     Conector,
     RevogarConexao(&'a str),
     Dominio(&'a str),
@@ -475,8 +473,6 @@ impl<'a> Rota<'a> {
                 Some(Rota::EnviarImagemDaIdentidade(slug, papel))
             }
             (true, ["painel", "sites", slug, "historico"]) => Some(Rota::Historico(slug)),
-            (true, ["oauth", "authorize"]) => Some(Rota::Autorizar),
-            (false, ["oauth", "authorize"]) => Some(Rota::Decidir),
             (true, ["painel", "conector"]) => Some(Rota::Conector),
             (false, ["painel", "conector", id, "revogar"]) => Some(Rota::RevogarConexao(id)),
             (true, ["painel", "sites", slug]) => Some(Rota::Site(slug)),
@@ -518,7 +514,6 @@ impl<'a> Rota<'a> {
                 | Rota::SalvarCategoria(_)
                 | Rota::RenomearCategoria(..)
                 | Rota::ApagarCategoria(..)
-                | Rota::Decidir
                 | Rota::RevogarConexao(_)
                 | Rota::GravarDominio(..)
                 | Rota::GravarIdentidade(_)
@@ -540,62 +535,68 @@ async fn responder(
     // ali é o cliente registrado e o token, não o cookie do Auth.
     let origem = origem_do_painel(&estado.configuracao, host);
     let leitura = metodo == Method::GET;
-    match caminho {
-        "/.well-known/oauth-authorization-server" if leitura => {
-            return Ok(conector::metadados(&origem));
-        }
-        "/.well-known/oauth-authorization-server/runtime" if leitura => {
-            return Ok(crate::runtime_oauth::authorization_metadata(&origem));
-        }
-        // O segundo endereço é o que a RFC 9728 monta para um recurso em
-        // `/mcp`; há assistente que pede um e há o que pede o outro.
-        "/.well-known/oauth-protected-resource" | "/.well-known/oauth-protected-resource/mcp"
-            if leitura =>
-        {
-            return Ok(conector::recurso_protegido(&origem));
-        }
-        "/.well-known/oauth-protected-resource/api/runtime" if leitura => {
-            return Ok(crate::runtime_oauth::protected_resource_metadata(&origem));
-        }
-        "/oauth/runtime/token" => {
-            return if metodo == Method::POST {
-                crate::runtime_oauth::token(estado, corpo).await
-            } else {
-                Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST."))
-            };
-        }
-        "/oauth/register" | "/oauth/token" | "/mcp" => {
-            let resposta = match caminho {
-                "/oauth/register" if metodo == Method::POST => {
-                    conector::registrar(estado, corpo).await
+    use crate::oauth_routes::{OAuthOperation, localizar};
+    if let Some(endpoint) = localizar(metodo, caminho) {
+        use OAuthOperation::*;
+        tracing::debug!(operation = endpoint.id, "operação OAuth");
+        let resposta = match endpoint.operation {
+            McpMetadata => Ok(conector::metadados(&origem)),
+            McpResource | McpResourceAlias => Ok(conector::recurso_protegido(&origem)),
+            RuntimeMetadata => Ok(crate::runtime_oauth::authorization_metadata(&origem)),
+            RuntimeResource => Ok(crate::runtime_oauth::protected_resource_metadata(&origem)),
+            Register => conector::registrar(estado, corpo).await,
+            McpToken => conector::token(estado, corpo).await,
+            RuntimeToken => crate::runtime_oauth::token(estado, corpo).await,
+            McpAuthorize | McpConsent | RuntimeAuthorize | RuntimeConsent => {
+                if matches!(endpoint.operation, McpConsent | RuntimeConsent)
+                    && !veio_do_painel(&estado.configuracao, host, cabecalhos)
+                {
+                    return Ok(simples(
+                        StatusCode::FORBIDDEN,
+                        "Pedido recusado: não veio do painel.",
+                    ));
                 }
-                "/oauth/token" if metodo == Method::POST => conector::token(estado, corpo).await,
-                "/mcp" => conector::mcp(estado, &origem, metodo, cabecalhos, corpo).await,
-                _ => Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST.")),
-            };
+                let conta = match entrar(estado, host, cabecalhos, uri).await {
+                    Ok(conta) => conta,
+                    Err(resposta) => return Ok(*resposta),
+                };
+                match endpoint.operation {
+                    McpAuthorize => conector::tela_de_autorizacao(estado, &conta, uri).await,
+                    McpConsent => conector::autorizar(estado, &conta, corpo).await,
+                    RuntimeAuthorize => {
+                        crate::runtime_oauth::authorization_page(estado, &conta, uri).await
+                    }
+                    RuntimeConsent => crate::runtime_oauth::authorize(estado, &conta, corpo).await,
+                    _ => unreachable!("somente operações de consentimento"),
+                }
+            }
+        };
+        if matches!(endpoint.operation, Register | McpToken) {
             conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);
-            return resposta;
         }
-        _ => {}
+        return resposta;
     }
-    if caminho == "/oauth/runtime/authorize" {
-        if metodo == Method::POST && !veio_do_painel(&estado.configuracao, host, cabecalhos) {
-            return Ok(simples(
-                StatusCode::FORBIDDEN,
-                "Pedido recusado: não veio do painel.",
-            ));
+    if caminho == "/mcp" {
+        let resposta = conector::mcp(estado, &origem, metodo, cabecalhos, corpo).await;
+        conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);
+        return resposta;
+    }
+    if matches!(
+        caminho,
+        "/oauth/register" | "/oauth/token" | "/oauth/runtime/token"
+    ) {
+        let resposta = Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use POST."));
+        if caminho != "/oauth/runtime/token" {
+            conector::anotar_pedido(caminho, metodo, cabecalhos, corpo, &resposta);
         }
-        let conta = match entrar(estado, host, cabecalhos, uri).await {
-            Ok(conta) => conta,
-            Err(resposta) => return Ok(*resposta),
-        };
-        return if metodo == Method::GET {
-            crate::runtime_oauth::authorization_page(estado, &conta, uri).await
-        } else if metodo == Method::POST {
-            crate::runtime_oauth::authorize(estado, &conta, corpo).await
-        } else {
-            Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use GET ou POST."))
-        };
+        return resposta;
+    }
+    // Preserva a resposta dos métodos não suportados pelo recurso nativo.
+    if caminho == "/oauth/runtime/authorize" {
+        if let Err(resposta) = entrar(estado, host, cabecalhos, uri).await {
+            return Ok(*resposta);
+        }
+        return Ok(simples(StatusCode::METHOD_NOT_ALLOWED, "Use GET ou POST."));
     }
     if caminho == "/api/runtime" || caminho.starts_with("/api/runtime/") {
         return Ok(crate::runtime_apps::serve(estado, &origem, metodo, cabecalhos, caminho).await);
@@ -698,8 +699,6 @@ async fn responder(
         Rota::ApagarCategoria(slug, categoria) => {
             conteudo::mexer_na_categoria(estado, &conta, slug, categoria, true, corpo).await
         }
-        Rota::Autorizar => conector::tela_de_autorizacao(estado, &conta, uri).await,
-        Rota::Decidir => conector::autorizar(estado, &conta, corpo).await,
         Rota::Conector => {
             let origem = origem_do_painel(&estado.configuracao, host);
             conector::tela(estado, &conta, &origem).await
