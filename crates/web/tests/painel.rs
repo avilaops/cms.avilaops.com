@@ -1524,29 +1524,73 @@ async fn mcp_contrato_cobre_transporte_e_recusa_escopo_das_37_ferramentas(pool: 
         let response = painel.rpc(&leitura_site, method, json!({})).await;
         assert!(response.get("result").is_some(), "{method}: {response}");
     }
-    let unknown = painel.rpc(&leitura_site, "metodo/inexistente", json!({})).await;
+    let unknown = painel
+        .rpc(&leitura_site, "metodo/inexistente", json!({}))
+        .await;
     assert_eq!(unknown["error"]["code"], -32601);
-    let invalid = painel.do_assistente("/mcp", "application/json", Some(&leitura_site), "{".to_string()).await;
+    let invalid = painel
+        .do_assistente(
+            "/mcp",
+            "application/json",
+            Some(&leitura_site),
+            "{".to_string(),
+        )
+        .await;
     assert_eq!(invalid.status, StatusCode::BAD_REQUEST);
     let invalid: Value = serde_json::from_str(&invalid.corpo).expect("erro JSON-RPC");
     assert_eq!(invalid["jsonrpc"], "2.0");
     assert_eq!(invalid["id"], Value::Null);
     assert_eq!(invalid["error"]["code"], -32700);
-    let notification = painel.do_assistente("/mcp", "application/json", Some(&leitura_site), json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }).to_string()).await;
+    let notification = painel
+        .do_assistente(
+            "/mcp",
+            "application/json",
+            Some(&leitura_site),
+            json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }).to_string(),
+        )
+        .await;
     assert_eq!(notification.status, StatusCode::ACCEPTED);
     assert!(notification.corpo.is_empty());
     let contract = cms_web::contratos_mcp::exportar();
     let tools = contract["tools"].as_array().expect("ferramentas");
     assert_eq!(tools.len(), 37);
     for tool in tools {
-        let token = if tool["scope"] == "sites:ler" { &leitura_conteudo } else { &leitura_site };
+        let token = if tool["scope"] == "sites:ler" {
+            &leitura_conteudo
+        } else {
+            &leitura_site
+        };
         let name = tool["descriptor"]["name"].as_str().expect("nome");
-        let response = painel.rpc(token, "tools/call", json!({ "name": name, "arguments": {} })).await;
+        let response = painel
+            .rpc(
+                token,
+                "tools/call",
+                json!({ "name": name, "arguments": {} }),
+            )
+            .await;
         assert_eq!(response["result"]["isError"], true, "{name}");
-        assert!(response["result"]["content"][0]["text"].as_str().expect("erro").contains("não tem a permissão"), "{name}");
+        assert!(
+            response["result"]["content"][0]["text"]
+                .as_str()
+                .expect("erro")
+                .contains("não tem a permissão"),
+            "{name}"
+        );
     }
-    assert_eq!(sqlx::query_scalar::<_, i64>("select count(*) from chamada_mcp where deu_certo = false").fetch_one(&pool).await.expect("chamadas"), 37);
-    assert_eq!(sqlx::query_scalar::<_, i64>("select count(*) from site").fetch_one(&pool).await.expect("sites"), 0);
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("select count(*) from chamada_mcp where deu_certo = false")
+            .fetch_one(&pool)
+            .await
+            .expect("chamadas"),
+        37
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("select count(*) from site")
+            .fetch_one(&pool)
+            .await
+            .expect("sites"),
+        0
+    );
 }
 
 #[sqlx::test(migrator = "cms_dados::MIGRADOR")]

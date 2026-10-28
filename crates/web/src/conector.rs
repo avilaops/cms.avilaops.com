@@ -30,7 +30,9 @@ use uuid::Uuid;
 
 use crate::app_contract_types::valor;
 use crate::identidade::{self, DadosDaIdentidade};
-use crate::mcp_types::{self, TextContent, TextKind, ToolAnnotations, ToolDescriptor, ToolResult, ToolsList};
+use crate::mcp_types::{
+    self, TextContent, TextKind, ToolAnnotations, ToolDescriptor, ToolResult, ToolsList,
+};
 use crate::oauth_types::{
     AuthorizationMetadata, OAuthError, RegistrationResponse, ResourceMetadata, TokenResponse,
 };
@@ -1124,15 +1126,20 @@ fn descrever(ferramenta: &Ferramenta) -> ToolDescriptor {
             read_only_hint: so_le,
             destructive_hint: DESFAZEM.contains(&ferramenta.nome),
         },
-        input_schema: objetos_abertos(json!({ "type": "object", "properties": propriedades, "required": obrigatorios })),
+        input_schema: objetos_abertos(
+            json!({ "type": "object", "properties": propriedades, "required": obrigatorios }),
+        ),
     }
 }
 
 #[cfg(feature = "contracts")]
 pub(crate) fn catalogo_contratado() -> Vec<Value> {
-    FERRAMENTAS.iter().map(|ferramenta| {
-        json!({ "descriptor": descrever(ferramenta), "scope": ferramenta.escopo })
-    }).collect()
+    FERRAMENTAS
+        .iter()
+        .map(
+            |ferramenta| json!({ "descriptor": descrever(ferramenta), "scope": ferramenta.escopo }),
+        )
+        .collect()
 }
 
 /// Diz por extenso, em cada objeto do esquema que declara campos, que os
@@ -2124,7 +2131,10 @@ async fn executar(ferramenta: &str, chamada: &Chamada<'_>) -> Result<Feito, Recu
 /// O resultado de uma ferramenta, no formato do MCP.
 fn conteudo_de_ferramenta(texto: String, eh_erro: bool) -> Value {
     valor(ToolResult {
-        content: vec![TextContent { r#type: TextKind::Text, text: texto }],
+        content: vec![TextContent {
+            r#type: TextKind::Text,
+            text: texto,
+        }],
         is_error: eh_erro,
     })
 }

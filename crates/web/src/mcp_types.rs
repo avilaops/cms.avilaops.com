@@ -107,13 +107,20 @@ pub(crate) struct InitializeResult {
 }
 
 pub(crate) fn success<T: Serialize>(id: Value, result: T) -> Value {
-    crate::app_contract_types::valor(RpcSuccess { jsonrpc: RpcVersion::V2, id, result })
+    crate::app_contract_types::valor(RpcSuccess {
+        jsonrpc: RpcVersion::V2,
+        id,
+        result,
+    })
 }
 
 pub(crate) fn error(id: Value, code: i32, message: &str) -> Value {
     crate::app_contract_types::valor(RpcError {
         jsonrpc: RpcVersion::V2,
         id,
-        error: RpcErrorDetail { code, message: message.to_string() },
+        error: RpcErrorDetail {
+            code,
+            message: message.to_string(),
+        },
     })
 }

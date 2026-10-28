@@ -1,9 +1,11 @@
 //! Transporte e catálogo exportados do código executado. Payloads textuais
 //! das ferramentas ainda exigem contratos e validação específicos.
 
-use serde_json::{Value, json};
 use crate::contratos::esquema;
-use crate::mcp_types::{EmptyResult, InitializeResult, RpcError, RpcSuccess, ToolResult, ToolsList};
+use crate::mcp_types::{
+    EmptyResult, InitializeResult, RpcError, RpcSuccess, ToolResult, ToolsList,
+};
+use serde_json::{Value, json};
 
 pub fn exportar() -> Value {
     json!({
