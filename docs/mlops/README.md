@@ -52,6 +52,8 @@ revogação com ETag no mesmo pedido ainda precisa de cenário específico.
 3. Fixar as referências das fichas na revisão que contém a implementação e
    atualizar os hashes do manifesto com os bytes dos blobs Git dessa revisão.
    Fontes do checkout diferentes da revisão fixada bloqueiam a CI.
+   Se o commit não estiver no clone após squash, o gate busca o SHA no origin
+   sem alterar o checkout. Revisão indisponível ou arquivo divergente é falha.
 4. Conferir os seletores e a relação com o comportamento; existência de nome
    não comprova que o teste é suficiente ou que cobre todos os caminhos.
 5. Conferir a CI e o artefato no commit submetido. Registrar falhas e limitações.

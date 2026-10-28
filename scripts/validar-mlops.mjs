@@ -106,7 +106,17 @@ function executar() {
     const policies = JSON.parse(readFileSync(resolve(root, 'docs/mlops/cms-policies.json'), 'utf8'));
     const manifest = JSON.parse(readFileSync(resolve(root, 'docs/mlops/sources.json'), 'utf8'));
     report = { ...validarInventario({ policies, manifest,
-      readPinned: (revision, path) => git('show', `${revision}:${path}`),
+      readPinned: (revision, path) => {
+        // Após squash, a revisão da fonte pode existir só no histórico do PR.
+        // Busca exclusivamente o SHA validado pelo contrato, sem checkout.
+        if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('Revisão inválida.');
+        try {
+          git('cat-file', '-e', `${revision}^{commit}`);
+        } catch {
+          git('fetch', '--no-tags', 'origin', revision);
+        }
+        return git('show', `${revision}:${path}`);
+      },
       readCurrent: path => readFileSync(resolve(root, path)),
     }), integrityOutcome: 'success' };
   } catch (error) {
