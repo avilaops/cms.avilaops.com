@@ -23,6 +23,7 @@ mod editor;
 mod equipe;
 mod icone;
 mod identidade;
+pub mod langfuse;
 mod lista;
 mod mcp_types;
 mod mensagens;

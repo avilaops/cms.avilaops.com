@@ -82,3 +82,28 @@ export function consumeMcpResponse(contract, method, response, requestId) {
     assert.fail('Método MCP sem consumidor.');
   }
 }
+
+export function consumeMcpInput(descriptor, args, result) {
+  const ajv = validator();
+  if (ajv.compile(descriptor.inputSchema)(args)) return;
+  assert.equal(descriptor.name, 'criar_rascunhos', `${descriptor.name}: entrada real fora do schema anunciado`);
+  // O lote recusa documentos individualmente, sem desfazer os válidos.
+  // Apenas o schema dos itens pode falhar; envelope e limites continuam obrigatórios.
+  const envelope = structuredClone(descriptor.inputSchema);
+  const itemSchema = envelope.properties.conteudos.items;
+  envelope.properties.conteudos.items = {};
+  assert.ok(ajv.compile(envelope)(args), 'Lote aceito com envelope inválido');
+  const payload = JSON.parse(result.content[0].text);
+  assert.ok(Array.isArray(payload.rascunhos));
+  assert.equal(payload.rascunhos.length, args.conteudos.length);
+  const validateItem = ajv.compile(itemSchema);
+  args.conteudos.forEach((item, index) => {
+    const outcome = payload.rascunhos[index];
+    assert.equal(outcome.indice, index);
+    if (!validateItem(item)) {
+      assert.equal(typeof outcome.erro, 'string', 'Item inválido não foi recusado');
+      assert.ok(outcome.erro.length > 0);
+      assert.equal(Object.hasOwn(outcome, 'documento'), false, 'Item inválido foi salvo');
+    }
+  });
+}

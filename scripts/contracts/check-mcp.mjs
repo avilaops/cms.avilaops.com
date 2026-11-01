@@ -4,8 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { loadBaseline } from './baseline.mjs';
 import { assertCaptureIdentity } from './capture.mjs';
-import { compareMcp, consumeMcpCatalog, consumeMcpResponse } from './mcp-consumer.mjs';
-import { validator } from './compatibility.mjs';
+import { compareMcp, consumeMcpCatalog, consumeMcpInput, consumeMcpResponse } from './mcp-consumer.mjs';
 
 const directory = 'target/contracts';
 const contract = JSON.parse(await readFile(`${directory}/mcp-v1.json`, 'utf8'));
@@ -20,7 +19,6 @@ await writeFile(`${directory}/mcp-baseline.json`, JSON.stringify(baseline, null,
 try {
   assert.equal(report.compatible, true, report.differences.join('\n'));
   const names = consumeMcpCatalog(contract);
-  const ajv = validator();
   const successes = new Set(), refusals = new Set(), methods = new Set();
   for (const file of await readdir(`${directory}/mcp-responses`)) {
     const capture = JSON.parse(await readFile(`${directory}/mcp-responses/${file}`, 'utf8'));
@@ -31,7 +29,7 @@ try {
       (capture.response.result.isError ? refusals : successes).add(capture.params.name);
       if (!capture.response.result.isError) {
         const tool = contract.tools.find(tool => tool.descriptor.name === capture.params.name);
-        assert.ok(ajv.compile(tool.descriptor.inputSchema)(capture.params.arguments), `${capture.params.name}: entrada real fora do schema anunciado`);
+        consumeMcpInput(tool.descriptor, capture.params.arguments, capture.response.result);
       }
     }
     report.responsesChecked++;

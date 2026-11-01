@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compareMcp, consumeMcpResponse } from './mcp-consumer.mjs';
+import { compareMcp, consumeMcpInput, consumeMcpResponse } from './mcp-consumer.mjs';
 
 const catalog = () => ({ schemaVersion: 1, module: 'cms-mcp-v1', protocolVersion: '2025-06-18',
   path: '/mcp', method: 'POST', authentication: 'oauth_mcp',
@@ -24,6 +24,31 @@ test('MCP recusa remoção, restrição de entrada, troca de escopo e anotaçõe
     mutate(candidate);
     assert.equal(compareMcp(baseline, candidate).compatible, false);
   }
+});
+
+test('lote parcial exige recusa individual de cada documento inválido', () => {
+  const descriptor = { name: 'criar_rascunhos', inputSchema: {
+    type: 'object', required: ['site', 'conteudos'], properties: {
+      site: { type: 'string' },
+      conteudos: { type: 'array', minItems: 1, maxItems: 25,
+        items: { type: 'object', required: ['dados'], properties: { dados: { type: 'object' } } } },
+    },
+  } };
+  const args = { site: 'padaria', conteudos: [{ dados: {} }, {}] };
+  const outcomes = [{ indice: 0, documento: 'id', problemas: [] }, { indice: 1, erro: 'Contrato inválido' }];
+  const response = (items) => ({ content: [{ text: JSON.stringify({ rascunhos: items }) }] });
+  consumeMcpInput(descriptor, args, response(outcomes));
+  for (const invalid of [
+    [outcomes[0], { indice: 1, documento: 'salvo' }],
+    [outcomes[0], { indice: 1, erro: 'erro', documento: 'salvo' }],
+    [outcomes[0], { indice: 1, erro: '' }],
+    [outcomes[0]],
+    [outcomes[1], outcomes[0]],
+  ]) assert.throws(() => consumeMcpInput(descriptor, args, response(invalid)));
+  assert.throws(() => consumeMcpInput(descriptor, { ...args, site: 42 }, response(outcomes)));
+  assert.throws(() => consumeMcpInput(descriptor, { ...args, conteudos: [] }, response([])));
+  assert.throws(() => consumeMcpInput(descriptor, { ...args, conteudos: Array(26).fill({}) }, response([])));
+  assert.throws(() => consumeMcpInput({ ...descriptor, name: 'criar_rascunho' }, args, response(outcomes)));
 });
 
 test('consumidor MCP confere correlação, exclusividade e JSON textual de sucesso', () => {
