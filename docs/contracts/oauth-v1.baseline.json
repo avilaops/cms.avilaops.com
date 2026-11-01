@@ -1,0 +1,2770 @@
+{
+  "schemaVersion": 1,
+  "module": "cms-oauth-v1",
+  "operations": [
+    {
+      "id": "mcpMetadata",
+      "method": "GET",
+      "path": "/.well-known/oauth-authorization-server",
+      "authentication": "public_oauth_client",
+      "request": null,
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AuthorizationMetadata",
+          "type": "object",
+          "properties": {
+            "issuer": {
+              "type": "string"
+            },
+            "authorization_endpoint": {
+              "type": "string"
+            },
+            "token_endpoint": {
+              "type": "string"
+            },
+            "registration_endpoint": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "response_types_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "grant_types_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "code_challenge_methods_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "token_endpoint_auth_methods_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scopes_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "issuer",
+            "authorization_endpoint",
+            "token_endpoint",
+            "response_types_supported",
+            "grant_types_supported",
+            "code_challenge_methods_supported",
+            "token_endpoint_auth_methods_supported",
+            "scopes_supported"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "mcpResource",
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource",
+      "authentication": "public_oauth_client",
+      "request": null,
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ResourceMetadata",
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string"
+            },
+            "authorization_servers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scopes_supported": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "resource",
+            "authorization_servers"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "mcpResourceAlias",
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource/mcp",
+      "authentication": "public_oauth_client",
+      "request": null,
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ResourceMetadata",
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string"
+            },
+            "authorization_servers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scopes_supported": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "resource",
+            "authorization_servers"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "runtimeMetadata",
+      "method": "GET",
+      "path": "/.well-known/oauth-authorization-server/runtime",
+      "authentication": "public_oauth_client",
+      "request": null,
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "AuthorizationMetadata",
+          "type": "object",
+          "properties": {
+            "issuer": {
+              "type": "string"
+            },
+            "authorization_endpoint": {
+              "type": "string"
+            },
+            "token_endpoint": {
+              "type": "string"
+            },
+            "registration_endpoint": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "response_types_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "grant_types_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "code_challenge_methods_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "token_endpoint_auth_methods_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scopes_supported": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "issuer",
+            "authorization_endpoint",
+            "token_endpoint",
+            "response_types_supported",
+            "grant_types_supported",
+            "code_challenge_methods_supported",
+            "token_endpoint_auth_methods_supported",
+            "scopes_supported"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "runtimeResource",
+      "method": "GET",
+      "path": "/.well-known/oauth-protected-resource/api/runtime",
+      "authentication": "public_oauth_client",
+      "request": null,
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "ResourceMetadata",
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string"
+            },
+            "authorization_servers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "scopes_supported": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "resource",
+            "authorization_servers"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "register",
+      "method": "POST",
+      "path": "/oauth/register",
+      "authentication": "public_oauth_client",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "PedidoDeRegistro",
+        "type": "object",
+        "properties": {
+          "client_name": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          }
+        }
+      },
+      "requestEncoding": "json",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "201": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "RegistrationResponse",
+          "type": "object",
+          "properties": {
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_name": {
+              "type": "string"
+            },
+            "redirect_uris": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "grant_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "response_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "token_endpoint_auth_method": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "client_id",
+            "client_name",
+            "redirect_uris",
+            "grant_types",
+            "response_types",
+            "token_endpoint_auth_method"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "201": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "201"
+      ],
+      "redacted": false
+    },
+    {
+      "id": "mcpToken",
+      "method": "POST",
+      "path": "/oauth/token",
+      "authentication": "public_oauth_client",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "PedidoDeToken",
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "default": ""
+          },
+          "code": {
+            "type": "string",
+            "default": ""
+          },
+          "code_verifier": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "refresh_token": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "form",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "TokenResponse",
+          "type": "object",
+          "properties": {
+            "access_token": {
+              "type": "string"
+            },
+            "token_type": {
+              "type": "string"
+            },
+            "expires_in": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "refresh_token": {
+              "type": "string"
+            },
+            "scope": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "access_token",
+            "token_type",
+            "expires_in",
+            "refresh_token",
+            "scope"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": true
+    },
+    {
+      "id": "runtimeToken",
+      "method": "POST",
+      "path": "/oauth/runtime/token",
+      "authentication": "public_oauth_client",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "TokenRequest",
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "default": ""
+          },
+          "code": {
+            "type": "string",
+            "default": ""
+          },
+          "code_verifier": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "refresh_token": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "form",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "TokenResponse",
+          "type": "object",
+          "properties": {
+            "access_token": {
+              "type": "string"
+            },
+            "token_type": {
+              "type": "string"
+            },
+            "expires_in": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "refresh_token": {
+              "type": "string"
+            },
+            "scope": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "access_token",
+            "token_type",
+            "expires_in",
+            "refresh_token",
+            "scope"
+          ]
+        }
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": true
+    },
+    {
+      "id": "mcpAuthorize",
+      "method": "GET",
+      "path": "/oauth/authorize",
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "PedidoDeAutorizacao",
+        "description": "Os parâmetros do pedido de autorização, vindos da consulta ou do\nformulário de consentimento.",
+        "type": "object",
+        "properties": {
+          "response_type": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge_method": {
+            "type": "string",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "string",
+          "type": "string"
+        },
+        "302": null
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ],
+        "302": [
+          "location"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": true
+    },
+    {
+      "id": "mcpConsent",
+      "method": "POST",
+      "path": "/oauth/authorize",
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "PedidoDeAutorizacao",
+        "description": "Os parâmetros do pedido de autorização, vindos da consulta ou do\nformulário de consentimento.",
+        "type": "object",
+        "properties": {
+          "response_type": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge_method": {
+            "type": "string",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "form",
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "303": null,
+        "302": null
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "303": [
+          "location"
+        ],
+        "302": [
+          "location"
+        ]
+      },
+      "successStatuses": [
+        "303"
+      ],
+      "redacted": true
+    },
+    {
+      "id": "runtimeAuthorize",
+      "method": "GET",
+      "path": "/oauth/runtime/authorize",
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AuthorizationRequest",
+        "type": "object",
+        "properties": {
+          "response_type": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge_method": {
+            "type": "string",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "query",
+      "requiredHeaders": [],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "200": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "title": "string",
+          "type": "string"
+        },
+        "302": null
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "200": [
+          "content-type",
+          "cache-control"
+        ],
+        "302": [
+          "location"
+        ]
+      },
+      "successStatuses": [
+        "200"
+      ],
+      "redacted": true
+    },
+    {
+      "id": "runtimeConsent",
+      "method": "POST",
+      "path": "/oauth/runtime/authorize",
+      "authentication": "avila_sso",
+      "request": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "AuthorizationRequest",
+        "type": "object",
+        "properties": {
+          "response_type": {
+            "type": "string",
+            "default": ""
+          },
+          "client_id": {
+            "type": "string",
+            "default": ""
+          },
+          "redirect_uri": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge": {
+            "type": "string",
+            "default": ""
+          },
+          "code_challenge_method": {
+            "type": "string",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "requestEncoding": "form",
+      "requiredHeaders": [
+        "origin"
+      ],
+      "responses": {
+        "400": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "401": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "403": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "405": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "500": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "503": {
+          "anyOf": [
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "OAuthError",
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string"
+                },
+                "error_description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error",
+                "error_description"
+              ]
+            },
+            {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "title": "string",
+              "type": "string"
+            }
+          ]
+        },
+        "303": null,
+        "302": null
+      },
+      "responseHeaders": {
+        "400": [],
+        "401": [],
+        "403": [],
+        "405": [],
+        "500": [],
+        "503": [],
+        "303": [
+          "location"
+        ],
+        "302": [
+          "location"
+        ]
+      },
+      "successStatuses": [
+        "303"
+      ],
+      "redacted": true
+    }
+  ],
+  "policies": [
+    "CMS-ACCESS-004",
+    "CMS-ACCESS-005"
+  ],
+  "tests": [
+    "crates/web/tests/painel.rs",
+    "crates/web/tests/runtime_oauth.rs",
+    "crates/web/tests/oauth_contracts.rs"
+  ]
+}
