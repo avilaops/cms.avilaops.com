@@ -48,14 +48,17 @@ const USO: &str = "uso: servidor <servir | migrar [--conferir] | semear-demonstr
 #[tokio::main]
 async fn main() -> ExitCode {
     tracing_subscriber::fmt().json().with_target(false).init();
+    cms_web::langfuse::init();
     let argumentos: Vec<String> = std::env::args().skip(1).collect();
-    match executar(&argumentos).await {
+    let codigo = match executar(&argumentos).await {
         Ok(codigo) => codigo,
         Err(erro) => {
             tracing::error!(%erro, "o comando falhou");
             ExitCode::FAILURE
         }
-    }
+    };
+    cms_web::langfuse::shutdown().await;
+    codigo
 }
 
 async fn executar(argumentos: &[String]) -> Result<ExitCode, Erro> {
