@@ -12,22 +12,22 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dominio/src/fluxo.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dominio/src/fluxo.rs",
         "note": "Matriz editorial inspecionada; a equipe usa ator com poder de Dono."
       },
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dados/src/fluxo.rs",
         "note": "Consulta com site_id e FOR UPDATE; não comprova autorização vigente na rotina de agendados."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dominio/src/fluxo.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dominio/src/fluxo.rs",
         "note": "autor_so_mexe_no_que_e_dele_e_nao_publica; editor_dono_e_equipe_fazem_tudo_de_conteudo. Testes lidos, não executados nesta etapa."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/fluxo_de_publicacao.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/fluxo_de_publicacao.rs",
         "note": "autor_escreve_e_editor_publica; um_site_nao_alcanca_documento_de_outro. Sem resultado aprovado atribuído a esta ficha."
       }
     ]
@@ -45,12 +45,12 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/painel.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/src/painel.rs",
         "note": "Comparação exata de Origin; não equivale a auditoria de todos os endpoints ou da configuração do proxy."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/painel.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/painel.rs",
         "note": "formulario_so_vale_vindo_do_proprio_painel verifica 403 e ausência de site criado. Teste inspecionado."
       }
     ]
@@ -68,17 +68,17 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/conector.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/src/conector.rs",
         "note": "Escopo em chamar e participação em Chamada::site; não afirma auditoria exaustiva das 37 ferramentas."
       },
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dados/src/fluxo.rs",
         "note": "Permissão editorial aplicada no fluxo compartilhado."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/painel.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/painel.rs",
         "note": "conector_define_endereco_definitivo_so_com_escopo_e_papel_do_dono verifica falta de escopo e conta de outro site; assistente_escreve_valida_e_envia_para_revisao_sem_publicar cobre fluxo editorial. Testes inspecionados."
       }
     ]
@@ -96,17 +96,17 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dados/src/fluxo.rs",
         "note": "Fluxo inspecionado; não comprova entrega externa nem atomicidade entre banco e arquivos."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/fluxo_de_publicacao.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/fluxo_de_publicacao.rs",
         "note": "rascunho_salva_com_problema_e_nao_vai_ao_ar; endereco_ocupado_ou_reservado_barra_a_publicacao; trocar_o_endereco_redireciona_o_antigo. Testes inspecionados."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/eventos.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/eventos.rs",
         "note": "acao_recusada_nao_grava_evento verifica ausência de evento ao recusar publicação."
       }
     ]
@@ -124,17 +124,17 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/admin.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/src/admin.rs",
         "note": "Autenticação do callback e mapeamento de JaEncerrado para conflito."
       },
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/eventos.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dados/src/eventos.rs",
         "note": "UPDATE condicional preserva resultado encerrado; reivindicação busca somente pendentes. Não garante efeito externo exatamente uma vez."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/eventos.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/eventos.rs",
         "note": "so_o_token_do_n8n_encerra_evento; encerrar_grava_o_resultado_uma_vez_so. Testes inspecionados."
       }
     ]
@@ -152,17 +152,17 @@
     "sources": [
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/runtime_apps.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/src/runtime_apps.rs",
         "note": "Autenticação e consulta precedem comparação do ETag."
       },
       {
         "kind": "code",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/apps.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/dados/src/apps.rs",
         "note": "Consulta exige participação por account.sub; permite development, staging e production."
       },
       {
         "kind": "test",
-        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/runtime_apps.rs",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/282c81c24249473243fcea70094de614dbb5a9da/crates/web/tests/runtime_apps.rs",
         "note": "runtime_serves_only_published_definition_and_honors_etag_after_auth; runtime_hides_cross_app_missing_environment_and_revoked_membership; mcp_and_runtime_tokens_cannot_cross_resource_boundaries. Testes inspecionados; o cenário de revogação não envia ETag."
       }
     ]

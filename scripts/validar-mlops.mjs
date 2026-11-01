@@ -129,6 +129,8 @@ function executar() {
     ? process.env.MLOPS_RUST_TESTS_OUTCOME : 'not_observed';
   report.gateTestsOutcome = outcomes.includes(process.env.MLOPS_GATE_TESTS_OUTCOME)
     ? process.env.MLOPS_GATE_TESTS_OUTCOME : 'not_observed';
+  report.contractsOutcome = outcomes.includes(process.env.MLOPS_CONTRACTS_OUTCOME)
+    ? process.env.MLOPS_CONTRACTS_OUTCOME : 'not_observed';
   report.executionRevision = git('rev-parse', 'HEAD').toString().trim();
   report.runUrl = process.env.GITHUB_RUN_ID && process.env.GITHUB_REPOSITORY
     ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : null;

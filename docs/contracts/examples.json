@@ -1,0 +1,19 @@
+{
+  "aad": {
+    "schemaVersion": "1.0.0",
+    "appId": "example-app",
+    "minimumRuntimeVersion": "1.0.0",
+    "navigation": { "initialRoute": "home" },
+    "screens": [{ "id": "home", "route": "home", "title": "Início", "components": [
+      { "type": "text", "id": "title", "value": "Exemplo sintético" },
+      { "type": "button", "id": "open", "label": "Abrir", "action": { "type": "navigate", "target": "home" } },
+      { "type": "spacer", "id": "space" }
+    ] }]
+  },
+  "requests": {
+    "createApp": { "slug": "example-app", "name": "Exemplo", "bundleId": "com.avilaops.example" },
+    "putMember": { "account": "synthetic-account", "role": "viewer" },
+    "deleteMember": { "account": "synthetic-account" },
+    "publishVersion": { "version": 1 }
+  }
+}
