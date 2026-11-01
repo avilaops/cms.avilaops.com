@@ -1,0 +1,170 @@
+[
+  {
+    "id": "CMS-ACCESS-002",
+    "product": "cms",
+    "title": "Autoria limita alterações e publicação editorial",
+    "category": "access",
+    "state": "implemented",
+    "rule": "O Autor cria rascunhos e só edita ou envia para revisão documentos próprios; não publica, despublica, agenda nem devolve. Editor e Dono executam ações de conteúdo. O fluxo trava o documento filtrado por site_id antes de exigir a permissão.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/dominio/src/fluxo.rs · pode; crates/dados/src/fluxo.rs · travar e exigir.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dominio/src/fluxo.rs",
+        "note": "Matriz editorial inspecionada; a equipe usa ator com poder de Dono."
+      },
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "note": "Consulta com site_id e FOR UPDATE; não comprova autorização vigente na rotina de agendados."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dominio/src/fluxo.rs",
+        "note": "autor_so_mexe_no_que_e_dele_e_nao_publica; editor_dono_e_equipe_fazem_tudo_de_conteudo. Testes lidos, não executados nesta etapa."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/fluxo_de_publicacao.rs",
+        "note": "autor_escreve_e_editor_publica; um_site_nao_alcanca_documento_de_outro. Sem resultado aprovado atribuído a esta ficha."
+      }
+    ]
+  },
+  {
+    "id": "CMS-ACCESS-003",
+    "product": "cms",
+    "title": "Mutações do painel editorial exigem origem exata",
+    "category": "access",
+    "state": "implemented",
+    "rule": "As rotas reconhecidas pelo painel editorial como escrita exigem Origin igual à origem calculada do painel. Origem ausente, HTTP divergente ou site público são recusados antes do despacho. A regra é específica desse caminho; API de apps, MCP e OAuth têm controles próprios.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/web/src/painel.rs · veio_do_painel e despacho de Rota::escreve.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/painel.rs",
+        "note": "Comparação exata de Origin; não equivale a auditoria de todos os endpoints ou da configuração do proxy."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/painel.rs",
+        "note": "formulario_so_vale_vindo_do_proprio_painel verifica 403 e ausência de site criado. Teste inspecionado."
+      }
+    ]
+  },
+  {
+    "id": "CMS-ACCESS-004",
+    "product": "cms",
+    "title": "Escopo MCP e participação restringem as ferramentas por site",
+    "category": "access",
+    "state": "implemented",
+    "rule": "O conector confere o escopo exigido pela ferramenta antes de executá-la. Nas operações por site, Chamada::site consulta a participação da conta e monta o ator; a exceção explícita da equipe permanece. Os efeitos editoriais passam pelo fluxo de domínio e dados, com autorização própria.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/web/src/conector.rs · chamar e Chamada::site; crates/dados/src/fluxo.rs.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/conector.rs",
+        "note": "Escopo em chamar e participação em Chamada::site; não afirma auditoria exaustiva das 37 ferramentas."
+      },
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "note": "Permissão editorial aplicada no fluxo compartilhado."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/painel.rs",
+        "note": "conector_define_endereco_definitivo_so_com_escopo_e_papel_do_dono verifica falta de escopo e conta de outro site; assistente_escreve_valida_e_envia_para_revisao_sem_publicar cobre fluxo editorial. Testes inspecionados."
+      }
+    ]
+  },
+  {
+    "id": "CMS-PUBLICATION-002",
+    "product": "cms",
+    "title": "Publicação valida e registra a alteração em transação",
+    "category": "publication",
+    "state": "implemented",
+    "rule": "Publicar trava o documento do site, exige permissão, valida conteúdo, mídia e endereço, hidrata referências e usa datas do servidor. Ponteiro publicado, redirecionamento, usos, histórico e evento são gravados na transação antes do commit. A validação recusada não deve produzir evento de publicação.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/dados/src/fluxo.rs · publicar, problemas_de e registrar_com_evento.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/fluxo.rs",
+        "note": "Fluxo inspecionado; não comprova entrega externa nem atomicidade entre banco e arquivos."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/fluxo_de_publicacao.rs",
+        "note": "rascunho_salva_com_problema_e_nao_vai_ao_ar; endereco_ocupado_ou_reservado_barra_a_publicacao; trocar_o_endereco_redireciona_o_antigo. Testes inspecionados."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/eventos.rs",
+        "note": "acao_recusada_nao_grava_evento verifica ausência de evento ao recusar publicação."
+      }
+    ]
+  },
+  {
+    "id": "CMS-INTEGRATION-001",
+    "product": "cms",
+    "title": "Encerramento de evento exige credencial própria e preserva o primeiro resultado",
+    "category": "integration",
+    "state": "implemented",
+    "rule": "O retorno do n8n exige Bearer próprio comparado em tempo constante; sem credencial configurada o acesso é recusado. Um evento encerrado não tem seu resultado substituído: repetição recebe 409. Entrega aceita e efeito encerrado são estados distintos; eventos entregues sem retorno não ganham retentativa automática por essa regra.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/web/src/admin.rs · autorizado e encerrar_evento; crates/dados/src/eventos.rs.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/admin.rs",
+        "note": "Autenticação do callback e mapeamento de JaEncerrado para conflito."
+      },
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/eventos.rs",
+        "note": "UPDATE condicional preserva resultado encerrado; reivindicação busca somente pendentes. Não garante efeito externo exatamente uma vez."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/eventos.rs",
+        "note": "so_o_token_do_n8n_encerra_evento; encerrar_grava_o_resultado_uma_vez_so. Testes inspecionados."
+      }
+    ]
+  },
+  {
+    "id": "CMS-ACCESS-005",
+    "product": "cms",
+    "title": "Runtime móvel exige token próprio e participação vigente antes do ETag",
+    "category": "access",
+    "state": "implemented",
+    "rule": "A leitura da definição publicada exige sessão runtime e runtime:read. A consulta vincula app do token, slug, ambiente e participação explícita atual da conta. Só após essa consulta o handler considera If-None-Match. Cookie do painel e token MCP não substituem o token runtime; a alegação de equipe salva na sessão não dispensa participação.",
+    "owner": "Codex — responsável pelo módulo CMS, por instrução do proprietário em 28/10/2026",
+    "enforcement": "crates/web/src/runtime_apps.rs · serve; crates/dados/src/apps.rs · published_runtime_definition.",
+    "verificationDate": "",
+    "sources": [
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/src/runtime_apps.rs",
+        "note": "Autenticação e consulta precedem comparação do ETag."
+      },
+      {
+        "kind": "code",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/dados/src/apps.rs",
+        "note": "Consulta exige participação por account.sub; permite development, staging e production."
+      },
+      {
+        "kind": "test",
+        "location": "https://github.com/avilaops/cms.avilaops.com/blob/fb8c88545a948625fedfb9aed39892492ccefe84/crates/web/tests/runtime_apps.rs",
+        "note": "runtime_serves_only_published_definition_and_honors_etag_after_auth; runtime_hides_cross_app_missing_environment_and_revoked_membership; mcp_and_runtime_tokens_cannot_cross_resource_boundaries. Testes inspecionados; o cenário de revogação não envia ETag."
+      }
+    ]
+  }
+]

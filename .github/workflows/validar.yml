@@ -23,6 +23,16 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/postgres
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Testes do gate MLOps
+        id: mlops-tests
+        run: node --test scripts/validar-mlops.test.mjs
+      - name: Contrato e integridade MLOps
+        run: node scripts/validar-mlops.mjs
       # Instala no runner para não depender de limites de pull do Docker Hub
       # ou do ECR público. Os builds continuam integralmente no GitHub.
       - name: PostgreSQL 18
@@ -64,10 +74,24 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Testes
+        id: rust-tests
         env:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
           CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
         run: cargo test --workspace --locked
+      - name: Registrar evidência MLOps
+        if: always()
+        env:
+          MLOPS_RUST_TESTS_OUTCOME: ${{ steps.rust-tests.outcome }}
+          MLOPS_GATE_TESTS_OUTCOME: ${{ steps.mlops-tests.outcome }}
+        run: node scripts/validar-mlops.mjs --report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cms-mlops-evidence
+          path: target/mlops/evidence.json
+          retention-days: 30
+          if-no-files-found: error
       - name: Prints do App Builder
         run: |
           mkdir -p target/app-builder-capture/recursos target/app-builder-screenshots
@@ -87,9 +111,6 @@ jobs:
             --window-size=720,1000 --hide-scrollbars \
             --screenshot=target/app-builder-screenshots/apps.png \
             http://127.0.0.1:4173/apps.html
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
       - name: Seleção de itens
         run: node --test crates/web/recursos/pedido.test.mjs
       - uses: actions/upload-artifact@v4
