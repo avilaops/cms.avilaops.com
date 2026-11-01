@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "module": "cms",
-  "sourceRevision": "282c81c24249473243fcea70094de614dbb5a9da",
+  "sourceRevision": "3e53f4b4e5404986986c8b205f5e250faf23a645",
   "sources": [
     {
       "path": "crates/dominio/src/fluxo.rs",
@@ -17,7 +17,7 @@
     },
     {
       "path": "crates/web/src/conector.rs",
-      "sha256": "9e90143ba2ddd82cf9e92a07a143329a9b75fb720adc1f935d62b060e65220a2"
+      "sha256": "86f6107d423e4443103b19b222bffd8415a24586cd2b53f78f72433fef02dfa5"
     },
     {
       "path": "crates/web/src/admin.rs",
