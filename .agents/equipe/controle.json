@@ -30,7 +30,7 @@
         "https://github.com/avilaops/cms.avilaops.com/pull/21",
         "https://linear.app/avilaops/document/cms-estrutura-de-desenvolvimento-mlops-e-inventario-de-politicas-50671a53f963"
       ],
-      "next": "Verificar a execução da CI e cadastrar o recorte no registro privado MLOps."
+      "next": "Revisar PR21 com CI 40638336918 aprovada; importação no registro privado MLOps permanece pendente."
     },
     {
       "id": "T-20261028-cms-contracts",
@@ -50,10 +50,30 @@
         "https://linear.app/avilaops/issue/AVL-343",
         "https://github.com/avilaops/cms.avilaops.com/pull/23",
         "docs/contracts/README.md",
-        "https://github.com/avilaops/cms.avilaops.com/actions/runs/40643821803",
-        "https://linear.app/avilaops/document/cms-contratos-executaveis-de-apps-v1-e-runtime-91cbfd9134e9"
+        "https://linear.app/avilaops/document/cms-contratos-executaveis-de-apps-v1-e-runtime-91cbfd9134e9",
+        "https://github.com/avilaops/cms.avilaops.com/actions/runs/40646218868"
       ],
-      "next": "Conferir a CI da revisão final com baseline versionado; resultado imutável registrado no documento Linear. Depois continuar os módulos OAuth/MCP e executor."
+      "next": "Revisar PR23: 201 testes Rust e 20 JavaScript aprovados; continuar OAuth e contratos MCP."
+    },
+    {
+      "id": "T-20261028-cms-oauth",
+      "title": "Contratos executáveis OAuth de MCP e runtime",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-andamento",
+      "objective": "Validar as 12 operações OAuth com tipos reais, consumidor independente e evidências sanitizadas por execução.",
+      "acceptance": [
+        "Catálogo compartilhado entre despacho e exportação.",
+        "Metadados, registro, consentimento e grants verificados no roteador com Postgres.",
+        "Credenciais suprimidas antes de persistir capturas.",
+        "Baseline histórico e relatório imutável conferidos na CI."
+      ],
+      "evidence": [
+        "https://linear.app/avilaops/issue/AVL-343",
+        "https://github.com/avilaops/cms.avilaops.com/pull/24",
+        "docs/superpowers/plans/2026-10-28-oauth-contracts.md"
+      ],
+      "next": "Conferir CI, versionar baseline exportado e registrar resultado no Linear."
     }
   ],
   "decisions": [

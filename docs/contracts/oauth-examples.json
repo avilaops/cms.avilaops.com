@@ -1,0 +1,7 @@
+{
+  "requests": {
+    "register": { "client_name": "Exemplo sintético", "redirect_uris": ["https://example.test/callback"] },
+    "mcpToken": { "grant_type": "authorization_code", "client_id": "00000000-0000-0000-0000-000000000001", "code": "synthetic-code", "code_verifier": "synthetic-verifier", "redirect_uri": "https://example.test/callback" },
+    "runtimeToken": { "grant_type": "refresh_token", "client_id": "00000000-0000-0000-0000-000000000002", "refresh_token": "synthetic-refresh" }
+  }
+}

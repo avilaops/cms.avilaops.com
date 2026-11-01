@@ -9,7 +9,7 @@ use crate::app_contract_types::*;
 use crate::app_routes::{ENDPOINTS, Operacao};
 use crate::apps::*;
 
-fn esquema<T: JsonSchema>(serialize: bool) -> Value {
+pub(crate) fn esquema<T: JsonSchema>(serialize: bool) -> Value {
     let mut settings = SchemaSettings::draft2020_12();
     settings.inline_subschemas = true;
     if serialize {
