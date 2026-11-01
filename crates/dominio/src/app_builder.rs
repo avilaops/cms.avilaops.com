@@ -11,6 +11,7 @@ pub const MAX_DEFINITION_BYTES: usize = 512 * 1024;
 pub const JSON_SCHEMA: &str = include_str!("../../../docs/app-builder/aad-v1.schema.json");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AppDefinition {
     pub schema_version: String,
@@ -21,12 +22,14 @@ pub struct AppDefinition {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Navigation {
     pub initial_route: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Screen {
     pub id: String,
@@ -36,6 +39,7 @@ pub struct Screen {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(tag = "type", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Component {
     Text {
@@ -53,6 +57,7 @@ pub enum Component {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "contracts", derive(schemars::JsonSchema))]
 #[serde(tag = "type", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Action {
     Navigate { target: String },

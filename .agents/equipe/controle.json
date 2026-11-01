@@ -31,6 +31,29 @@
         "https://linear.app/avilaops/document/cms-estrutura-de-desenvolvimento-mlops-e-inventario-de-politicas-50671a53f963"
       ],
       "next": "Verificar a execução da CI e cadastrar o recorte no registro privado MLOps."
+    },
+    {
+      "id": "T-20261028-cms-contracts",
+      "title": "Concluir contratos executáveis de apps v1 e runtime",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-revisao",
+      "objective": "Exportar os tipos reais do servidor, impedir incompatibilidades históricas e validar respostas das 16 operações com consumidor independente.",
+      "acceptance": [
+        "Schemas derivados dos DTOs usados pelos handlers.",
+        "Catálogo compartilhado por despacho e exportação.",
+        "Baseline lido do commit base, com comparação direcional e cenários negativos.",
+        "Todas as operações exercitadas com sucesso e respostas verificadas contra contrato.",
+        "Artefato e resultado da revisão exata conferidos no GitHub CI."
+      ],
+      "evidence": [
+        "https://linear.app/avilaops/issue/AVL-343",
+        "https://github.com/avilaops/cms.avilaops.com/pull/23",
+        "docs/contracts/README.md",
+        "https://github.com/avilaops/cms.avilaops.com/actions/runs/40643821803",
+        "https://linear.app/avilaops/document/cms-contratos-executaveis-de-apps-v1-e-runtime-91cbfd9134e9"
+      ],
+      "next": "Conferir a CI da revisão final com baseline versionado; resultado imutável registrado no documento Linear. Depois continuar os módulos OAuth/MCP e executor."
     }
   ],
   "decisions": [

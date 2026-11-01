@@ -5,10 +5,38 @@ name: Consultas
 # como artefato, para quem pediu conferir e versionar.
 on:
   workflow_dispatch:
+    inputs:
+      somente_metadados:
+        description: Atualizar lockfile e obter diff de formatação, sem banco
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
+  metadados:
+    if: inputs.somente_metadados
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt
+          rustup default stable
+      - name: Preparar metadados
+        run: |
+          cargo update --package cms-web --package cms-dominio
+          cargo fmt --all
+          git diff -- '*.rs' > formatacao.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: metadados
+          path: |
+            Cargo.lock
+            formatacao.patch
+          retention-days: 3
   preparar:
+    if: '!inputs.somente_metadados'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:

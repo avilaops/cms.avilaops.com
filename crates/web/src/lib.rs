@@ -2,6 +2,8 @@
 
 mod acesso;
 mod admin;
+mod app_contract_types;
+mod app_routes;
 mod apps;
 mod biblioteca;
 mod cache;
@@ -9,6 +11,8 @@ mod cardapio;
 mod conector;
 mod construtor_de_apps;
 mod conteudo;
+#[cfg(feature = "contracts")]
+pub mod contratos;
 mod descoberta;
 mod dominio;
 mod editor;
