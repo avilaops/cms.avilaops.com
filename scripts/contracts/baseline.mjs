@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 export const baselinePath = 'docs/contracts/apps-v1.baseline.json';
 
 export function loadBaseline(revision, cwd = process.cwd(), path = baselinePath) {
-  assert.ok([baselinePath, 'docs/contracts/oauth-v1.baseline.json'].includes(path), 'baseline não autorizado');
+  assert.ok([baselinePath, 'docs/contracts/oauth-v1.baseline.json', 'docs/contracts/mcp-v1.baseline.json'].includes(path), 'baseline não autorizado');
   assert.match(revision ?? '', /^[a-f0-9]{40}$/, 'baseline exige SHA completo');
   const git = (...args) => execFileSync('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim();
   git('cat-file', '-e', `${revision}^{commit}`);

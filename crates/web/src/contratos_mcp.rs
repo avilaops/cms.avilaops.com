@@ -1,0 +1,29 @@
+//! Transporte e catálogo exportados do código executado. Payloads textuais
+//! das ferramentas ainda exigem contratos e validação específicos.
+
+use crate::contratos::esquema;
+use crate::mcp_types::{
+    EmptyResult, InitializeResult, RpcError, RpcSuccess, ToolResult, ToolsList,
+};
+use serde_json::{Value, json};
+
+pub fn exportar() -> Value {
+    json!({
+        "schemaVersion": 1,
+        "module": "cms-mcp-v1",
+        "protocolVersion": crate::conector::VERSAO_DO_PROTOCOLO,
+        "path": "/mcp",
+        "method": "POST",
+        "authentication": "oauth_mcp",
+        "tools": crate::conector::catalogo_contratado(),
+        "transport": {
+            "initialize": esquema::<RpcSuccess<InitializeResult>>(true),
+            "ping": esquema::<RpcSuccess<EmptyResult>>(true),
+            "toolsList": esquema::<RpcSuccess<ToolsList>>(true),
+            "toolResult": esquema::<RpcSuccess<ToolResult>>(true),
+            "error": esquema::<RpcError>(true),
+        },
+        "policies": ["CMS-ACCESS-002", "CMS-ACCESS-004", "CMS-PUBLICATION-002"],
+        "payloadsVerified": false,
+    })
+}

@@ -19,6 +19,22 @@ pub const CHAVE_DO_INDEXNOW: &str = "0123456789abcdef0123456789abcdef";
 pub const HOST_DO_PAINEL: &str = "cms.teste";
 pub const TOKEN_DO_N8N: &str = "token-de-volta-do-teste";
 
+/// Apenas a suíte isolada usa este coletor. Não recebe cabeçalhos, cookies ou
+/// tokens; argumentos e resultados são fixtures sintéticas do teste.
+#[cfg(feature = "contracts")]
+pub fn capturar_mcp(method: &str, params: &serde_json::Value, response: &serde_json::Value) {
+    if let Ok(directory) = std::env::var("CMS_MCP_RESPONSES") {
+        let record = serde_json::json!({
+            "executionRevision": std::env::var("CMS_CONTRACT_REVISION").ok(),
+            "runId": std::env::var("CMS_CONTRACT_RUN").ok(),
+            "method": method, "params": params, "requestId": 1, "response": response,
+        });
+        std::fs::create_dir_all(&directory).expect("diretório MCP");
+        let file = std::path::Path::new(&directory).join(format!("{}.json", uuid::Uuid::new_v4()));
+        std::fs::write(file, record.to_string()).expect("captura MCP sintética");
+    }
+}
+
 pub struct Resposta {
     pub status: StatusCode,
     pub cabecalhos: axum::http::HeaderMap,

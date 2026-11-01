@@ -60,7 +60,7 @@
       "title": "Contratos executáveis OAuth de MCP e runtime",
       "owner": "codex-cms",
       "priority": "alta",
-      "status": "em-andamento",
+      "status": "em-revisao",
       "objective": "Validar as 12 operações OAuth com tipos reais, consumidor independente e evidências sanitizadas por execução.",
       "acceptance": [
         "Catálogo compartilhado entre despacho e exportação.",
@@ -71,9 +71,30 @@
       "evidence": [
         "https://linear.app/avilaops/issue/AVL-343",
         "https://github.com/avilaops/cms.avilaops.com/pull/24",
-        "docs/superpowers/plans/2026-10-28-oauth-contracts.md"
+        "docs/superpowers/plans/2026-10-28-oauth-contracts.md",
+        "https://github.com/avilaops/cms.avilaops.com/actions/runs/40651479008",
+        "https://linear.app/avilaops/document/cms-contratos-oauth-de-mcp-e-runtime-61753773b9db"
       ],
-      "next": "Conferir CI, versionar baseline exportado e registrar resultado no Linear."
+      "next": "Revisar PR24: baseline idêntico ao contrato exportado, 68 respostas e todas as 12 operações validadas. Continuar módulo MCP."
+    },
+    {
+      "id": "T-20261028-cms-mcp",
+      "title": "Concluir contratos executáveis MCP e das 37 ferramentas",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-andamento",
+      "objective": "Contratar transporte, entradas e payloads internos; validar cada ferramenta com consumidor independente e roteador real.",
+      "acceptance": [
+        "Tipos de transporte e catálogo compartilhados com execução.",
+        "Sucesso e recusa de cada ferramenta exercitados.",
+        "Payloads textuais JSON validados além dos envelopes.",
+        "Baseline histórico, capturas atuais e evidência de CI conferidos."
+      ],
+      "evidence": [
+        "https://linear.app/avilaops/issue/AVL-343",
+        "docs/superpowers/plans/2026-10-28-mcp-contracts.md"
+      ],
+      "next": "Validar transporte e recusas; completar payloads, exemplos e sucesso de cada ferramenta."
     }
   ],
   "decisions": [
