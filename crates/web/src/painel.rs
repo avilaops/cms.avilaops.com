@@ -583,10 +583,20 @@ async fn responder(
     }
     if caminho == "/painel/logout" {
         let Some(auth) = &estado.auth else {
-            return Ok(simples(StatusCode::SERVICE_UNAVAILABLE, "O login do painel não está configurado."));
+            return Ok(simples(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "O login do painel não está configurado.",
+            ));
         };
-        let retorno = format!("{}{}", origem_do_painel(&estado.configuracao, host), CAMINHO);
-        return Ok(redirecionar(StatusCode::SEE_OTHER, &auth.url_de_logout(&retorno)));
+        let retorno = format!(
+            "{}{}",
+            origem_do_painel(&estado.configuracao, host),
+            CAMINHO
+        );
+        return Ok(redirecionar(
+            StatusCode::SEE_OTHER,
+            &auth.url_de_logout(&retorno),
+        ));
     }
     if matches!(
         caminho,
