@@ -100,9 +100,9 @@ Português nos nomes e comentários. Dinheiro em centavos, `i64`.
 
 O login do painel é do Auth (`auth.avilaops.com`).
 
-- Em host `*.avilaops.com`: ler o cookie `avila_sso`, verificar o JWT com
-  `SSO_JWT_SECRET`, **fixando HS256**, exigindo `iss == "auth.avilaops.com"` e
-  `exp`. Campos: `sub`, `email`, `nome`, `foto`, `papel`, `mfa`.
+- Em host `*.avilaops.com`: ler o cookie `avila_sso` e consultar o Auth em
+  `GET /api/session?app=<id>`. A aplicação não verifica JWT nem mantém segredo
+  compartilhado do emissor. Campos de identidade vêm da resposta do Auth.
 - Sessão válida não é autorização: o cookie vale em todo `*.avilaops.com`. A
   aplicação confere `permitido` em `GET /api/session?app=<id>`, servidor a
   servidor, e guarda a própria participação por conta.

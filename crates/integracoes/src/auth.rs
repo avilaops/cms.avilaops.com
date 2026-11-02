@@ -137,6 +137,16 @@ impl ClienteAuth {
         )
     }
 
+    /// Encerra a sessão no Auth e retorna ao painel já limpo.
+    pub fn url_de_logout(&self, retorno: &str) -> String {
+        format!(
+            "{}/api/auth/logout?client_id={}&post_logout_redirect_uri={}",
+            self.url,
+            codificar(&self.app),
+            codificar(retorno)
+        )
+    }
+
     /// Pergunta ao Auth quem é o dono deste cookie e se pode entrar no CMS.
     pub async fn consultar(&self, token: Option<&str>) -> RespostaDoAuth {
         let Some(token) = token.filter(|token| tem_formato_de_token(token)) else {
@@ -242,6 +252,15 @@ mod testes {
         assert_eq!(
             cliente.url_de_login("https://cms.example/painel?volta=1"),
             "https://auth.example/login?app=cms&returnTo=https%3A%2F%2Fcms.example%2Fpainel%3Fvolta%3D1"
+        );
+    }
+
+    #[test]
+    fn o_endereco_de_logout_volta_ao_painel() {
+        let cliente = ClienteAuth::novo("https://auth.example/", "cms").expect("cliente");
+        assert_eq!(
+            cliente.url_de_logout("https://cms.example/painel"),
+            "https://auth.example/api/auth/logout?client_id=cms&post_logout_redirect_uri=https%3A%2F%2Fcms.example%2Fpainel"
         );
     }
 }
