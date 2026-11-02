@@ -115,9 +115,10 @@
         "docs/superpowers/plans/2026-11-02-estudio.md",
         "docs/estudio/README.md",
         "e2d3a2971840f61bb701a9306a39913967e33d82",
+        "branch origin avilaops/estudio-design-ff38",
         "cargo test --workspace --features cms-web/contracts --locked: ok nesta árvore, sem CI ainda"
       ],
-      "next": "Revisar o PR. Geração por chat, importação e conector MCP do estúdio continuam fora."
+      "next": "Abrir o PR a partir de avilaops/estudio-design-ff38: a ferramenta de PR desta sessão não respondeu. Geração por chat, importação e conector MCP do estúdio continuam fora."
     }
   ],
   "decisions": [
