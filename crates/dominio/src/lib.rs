@@ -7,6 +7,7 @@ pub mod cardapio;
 pub mod conta;
 pub mod datas;
 pub mod endereco;
+pub mod estudio;
 pub mod eventos;
 pub mod fluxo;
 pub mod modelos;

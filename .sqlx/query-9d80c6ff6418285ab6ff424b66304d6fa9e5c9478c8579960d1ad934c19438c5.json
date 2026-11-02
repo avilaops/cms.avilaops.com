@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, pagina_id, tipo, x, y, largura, altura, texto, preenchimento,\n               biblioteca, variante, catalogo_versao,\n               props as \"props: Json<PropsDeComponente>\"\n        from estudio_no\n        where site_id = $1 and arquivo_id = $2\n        order by ordem, id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "pagina_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "tipo",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "x",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "y",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "altura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "texto",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "preenchimento",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "biblioteca",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "variante",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "catalogo_versao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "props: Json<PropsDeComponente>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "9d80c6ff6418285ab6ff424b66304d6fa9e5c9478c8579960d1ad934c19438c5"
+}

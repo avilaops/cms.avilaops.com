@@ -18,7 +18,7 @@ use serde::Deserialize;
 use crate::resposta::{ErroWeb, html_privado, liberar_script_proprio, redirecionar, simples};
 use crate::{Configuracao, Estado};
 use crate::{
-    biblioteca, conector, conteudo, dominio, equipe, identidade, mensagens, modelos, tema,
+    biblioteca, conector, conteudo, dominio, equipe, estudio, identidade, mensagens, modelos, tema,
 };
 
 const CAMINHO: &str = "/painel";
@@ -403,6 +403,15 @@ enum Rota<'a> {
     EnviarModelo(&'a str),
     ApagarModelo(&'a str, &'a str),
     Mensagens(&'a str),
+    Estudio(&'a str),
+    CriarArquivoDeEstudio(&'a str),
+    BibliotecaDeEstudio(&'a str, &'a str),
+    ArquivoDeEstudio(&'a str, &'a str),
+    SistemaDeEstudio(&'a str, &'a str),
+    NosDeEstudio(&'a str, &'a str),
+    MoverNoDeEstudio(&'a str, &'a str, &'a str),
+    FavoritoDeEstudio(&'a str, &'a str),
+    PublicarEstudio(&'a str, &'a str),
     Site(&'a str),
     NovoDocumento(&'a str, &'a str),
     GravarNovo(&'a str),
@@ -443,6 +452,39 @@ impl<'a> Rota<'a> {
             (true, ["painel", "sites", slug, "equipe"]) => Some(Rota::Equipe(slug)),
             (false, ["painel", "sites", slug, "convites"]) => Some(Rota::Convidar(slug)),
             (true, ["painel", "sites", slug, "mensagens"]) => Some(Rota::Mensagens(slug)),
+            (true, ["painel", "sites", slug, "estudio"]) => Some(Rota::Estudio(slug)),
+            (false, ["painel", "sites", slug, "estudio"]) => {
+                Some(Rota::CriarArquivoDeEstudio(slug))
+            }
+            (
+                false,
+                [
+                    "painel",
+                    "sites",
+                    slug,
+                    "estudio",
+                    "bibliotecas",
+                    biblioteca,
+                ],
+            ) => Some(Rota::BibliotecaDeEstudio(slug, biblioteca)),
+            (true, ["painel", "sites", slug, "estudio", id]) => {
+                Some(Rota::ArquivoDeEstudio(slug, id))
+            }
+            (false, ["painel", "sites", slug, "estudio", id, "sistema"]) => {
+                Some(Rota::SistemaDeEstudio(slug, id))
+            }
+            (false, ["painel", "sites", slug, "estudio", id, "nos"]) => {
+                Some(Rota::NosDeEstudio(slug, id))
+            }
+            (false, ["painel", "sites", slug, "estudio", id, "nos", no]) => {
+                Some(Rota::MoverNoDeEstudio(slug, id, no))
+            }
+            (false, ["painel", "sites", slug, "estudio", id, "favorito"]) => {
+                Some(Rota::FavoritoDeEstudio(slug, id))
+            }
+            (false, ["painel", "sites", slug, "estudio", id, "publicar"]) => {
+                Some(Rota::PublicarEstudio(slug, id))
+            }
             (true, ["painel", "sites", slug, "midia"]) => Some(Rota::Midia(slug)),
             (false, ["painel", "sites", slug, "midia"]) => Some(Rota::EnviarMidia(slug)),
             (true, ["painel", "sites", slug, "midia", "arquivo", arquivo]) => {
@@ -518,6 +560,13 @@ impl<'a> Rota<'a> {
                 | Rota::GravarDominio(..)
                 | Rota::GravarIdentidade(_)
                 | Rota::EnviarImagemDaIdentidade(..)
+                | Rota::CriarArquivoDeEstudio(_)
+                | Rota::BibliotecaDeEstudio(..)
+                | Rota::SistemaDeEstudio(..)
+                | Rota::NosDeEstudio(..)
+                | Rota::MoverNoDeEstudio(..)
+                | Rota::FavoritoDeEstudio(..)
+                | Rota::PublicarEstudio(..)
         )
     }
 }
@@ -619,6 +668,14 @@ async fn responder(
     if let Some(recurso) = crate::construtor_de_apps::recurso(caminho).filter(|_| leitura) {
         return Ok(recurso);
     }
+    if let Some(recurso) = estudio::recurso(caminho).filter(|_| leitura) {
+        return Ok(recurso);
+    }
+    if leitura {
+        if let Some(token) = estudio::token_publico(caminho) {
+            return estudio::previa_publica(estado, token).await;
+        }
+    }
     if leitura && caminho == caminho_do_script() {
         return Ok(modelos::arquivo_pronto(
             SCRIPT_DO_PAINEL,
@@ -664,6 +721,35 @@ async fn responder(
             equipe::convidar(estado, &conta, slug, &origem, corpo).await
         }
         Rota::Mensagens(slug) => mensagens::abrir(estado, &conta, slug).await,
+        Rota::Estudio(slug) => estudio::inicio(estado, &conta, slug, uri).await,
+        Rota::CriarArquivoDeEstudio(slug) => estudio::criar(estado, &conta, slug, corpo).await,
+        Rota::BibliotecaDeEstudio(slug, biblioteca) => {
+            estudio::biblioteca(estado, &conta, slug, biblioteca, corpo).await
+        }
+        Rota::ArquivoDeEstudio(slug, id) => match id.parse() {
+            Ok(id) => estudio::abrir(estado, &conta, slug, id, uri).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
+        Rota::SistemaDeEstudio(slug, id) => match id.parse() {
+            Ok(id) => estudio::aplicar_sistema(estado, &conta, slug, id, corpo).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
+        Rota::NosDeEstudio(slug, id) => match id.parse() {
+            Ok(id) => estudio::criar_no(estado, &conta, slug, id, corpo).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
+        Rota::MoverNoDeEstudio(slug, id, no) => match (id.parse(), no.parse()) {
+            (Ok(id), Ok(no)) => estudio::mover_no(estado, &conta, slug, id, no, corpo).await,
+            _ => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
+        Rota::FavoritoDeEstudio(slug, id) => match id.parse() {
+            Ok(id) => estudio::favorito(estado, &conta, slug, id).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
+        Rota::PublicarEstudio(slug, id) => match id.parse() {
+            Ok(id) => estudio::publicar(estado, &conta, slug, id).await,
+            Err(_) => Ok(simples(StatusCode::NOT_FOUND, "Não encontrado.")),
+        },
         Rota::Midia(slug) => biblioteca::abrir(estado, &conta, slug, uri).await,
         Rota::EnviarMidia(slug) => {
             biblioteca::enviar(estado, &conta, slug, cabecalhos, corpo).await

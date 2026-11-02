@@ -1,0 +1,26 @@
+<div class="no no-{{ no.tipo }}{% if !no.variante.is_empty() %} no-{{ no.variante }}{% endif %}" data-tipo="{{ no.tipo }}" data-id="{{ no.id }}"{% if edita %} data-mover="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/nos/{{ no.id }}"{% endif %} style="left:{{ no.x }}px;top:{{ no.y }}px;width:{{ no.largura }}px;height:{{ no.altura }}px{% if !no.preenchimento.is_empty() %};background:{{ no.preenchimento }}{% endif %}"{% if edita %} tabindex="0" aria-selected="false"{% endif %}>
+{%- if no.tipo == "frame" || no.tipo == "texto" %}
+{{ no.texto }}
+{%- else if no.variante == "chamada" %}
+<aside class="docs docs-chamada" style="--chamada: var({{ no.tom_var }})">
+<span class="docs-faixa" aria-hidden="true"></span>
+<div><strong>{{ no.titulo }}</strong><p>{{ no.texto }}</p></div>
+</aside>
+{%- else if no.variante == "cartao" %}
+<article class="docs docs-cartao"><h3>{{ no.titulo }}</h3><p>{{ no.descricao }}</p></article>
+{%- else if no.variante == "abas" %}
+<div class="docs docs-abas" data-abas>
+<div role="tablist" aria-label="Abas"><button type="button" data-aba>{{ no.aba_a }}</button><button type="button" data-aba>{{ no.aba_b }}</button></div>
+<div data-painel><p>{{ no.painel_a }}</p></div>
+<div data-painel><p>{{ no.painel_b }}</p></div>
+</div>
+{%- else if no.variante == "navegacao" %}
+<nav class="docs docs-nav" aria-label="Páginas vizinhas"><span>Anterior: {{ no.anterior }}</span><span>Próxima: {{ no.proximo }}</span></nav>
+{%- else if no.variante == "sumario" %}
+<nav class="docs docs-sumario" aria-label="Sumário"><strong>{{ no.titulo }}</strong><ol>{% for item in no.itens %}<li>{{ item }}</li>{% endfor %}</ol></nav>
+{%- else if no.variante == "lateral" %}
+<nav class="docs docs-lateral" aria-label="Páginas da documentação"><ul>{% for item in no.itens %}<li>{{ item }}</li>{% endfor %}</ul></nav>
+{%- else if no.variante == "busca" %}
+<div class="docs docs-busca" role="search"><input type="search" readonly value="" placeholder="{{ no.rotulo_busca }}" aria-label="{{ no.rotulo_busca }}"><p class="docs-nota">{{ no.texto }}</p></div>
+{%- endif %}
+</div>

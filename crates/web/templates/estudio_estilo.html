@@ -1,0 +1,70 @@
+<style>
+@font-face{font-family:Archivo;font-weight:100 900;font-display:swap;src:url(/recursos/fontes/archivo.woff2) format("woff2")}
+@font-face{font-family:Oswald;font-weight:200 700;font-display:swap;src:url(/recursos/fontes/oswald.woff2) format("woff2")}
+@font-face{font-family:Barlow;font-weight:400;font-display:swap;src:url(/recursos/fontes/barlow-400.woff2) format("woff2")}
+@font-face{font-family:Barlow;font-weight:700;font-display:swap;src:url(/recursos/fontes/barlow-700.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Serif";font-weight:500;font-display:swap;src:url(/recursos/fontes/plex-serif-500.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Serif";font-weight:700;font-display:swap;src:url(/recursos/fontes/plex-serif-700.woff2) format("woff2")}
+main.estudio{max-width:none;padding:0 0 1rem}
+.estudio-home{max-width:46rem;margin:0 auto;padding:1rem}
+.composer{background:var(--superficie);border:1px solid var(--borda);border-radius:.75rem;padding:1rem}
+.composer h1{font-size:1.35rem}
+.composer textarea{min-height:7rem}
+.atalhos-de-desenho{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.atalhos-de-desenho button{width:auto;margin:0}
+.sistemas{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:.5rem;margin:.75rem 0}
+.sistema{position:relative;margin:0;padding:.55rem;border:1px solid var(--borda);border-radius:.6rem;background:var(--superficie)}
+.sistema input{position:absolute;opacity:0}
+.sistema:has(input:checked){border-color:var(--cota)}
+.amostras{display:flex;gap:.25rem;margin-top:.35rem}
+.amostras i{width:1.1rem;height:1.1rem;border-radius:.25rem;border:1px solid var(--borda);display:block}
+.abas{display:flex;gap:.4rem;flex-wrap:wrap;margin:1rem 0 .5rem}
+.abas a{padding:.35rem .7rem;border-radius:999px;text-decoration:none;color:var(--suave);border:1px solid transparent}
+.abas a[aria-current="page"]{background:var(--superficie);border-color:var(--borda);color:var(--grafite)}
+.estudio-app{display:grid;grid-template-columns:3.25rem minmax(0,1fr) 16rem;grid-template-rows:auto minmax(18rem,calc(100vh - 8rem)) auto;min-height:70vh}
+.barra-do-arquivo{grid-column:1 / -1;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.6rem .75rem;border-bottom:1px solid var(--borda)}
+.barra-do-arquivo h1{font-size:1rem}
+.barra-do-arquivo form{border:0;padding:0;background:none;display:flex;gap:.4rem;align-items:center;margin:0}
+.barra-do-arquivo button,.ferramentas button,.zoom{width:auto;min-height:36px;margin:0;padding:.35rem .7rem}
+.ferramentas{display:flex;flex-direction:column;gap:.25rem;padding:.4rem;border-right:1px solid var(--borda)}
+.ferramentas form{border:0;padding:0;background:none}
+.quadro{position:relative;overflow:hidden;background:
+  linear-gradient(var(--borda) 1px,transparent 1px),
+  linear-gradient(90deg,var(--borda) 1px,transparent 1px);
+  background-size:24px 24px;background-color:var(--afundada);touch-action:none}
+.camera{transform-origin:0 0}
+.pagina{position:relative;box-shadow:0 12px 40px rgb(0 0 0 / .18);background:var(--est-fundo);color:var(--est-texto);font-family:var(--est-fonte-corpo)}
+.ft-sem-serifa{--est-fonte-titulo:Archivo,system-ui,sans-serif}
+.fc-sem-serifa{--est-fonte-corpo:Archivo,system-ui,sans-serif}
+.ft-serifa{--est-fonte-titulo:"IBM Plex Serif",Georgia,serif}
+.fc-serifa{--est-fonte-corpo:"IBM Plex Serif",Georgia,serif}
+.ft-condensada{--est-fonte-titulo:Oswald,Barlow,system-ui,sans-serif}
+.fc-condensada{--est-fonte-corpo:Barlow,system-ui,sans-serif}
+.ft-mono{--est-fonte-titulo:ui-monospace,monospace}
+.fc-mono{--est-fonte-corpo:ui-monospace,monospace}
+.no{position:absolute;box-sizing:border-box;overflow:hidden}
+.no.selecionado{outline:2px solid var(--cota);outline-offset:2px}
+.no-frame{border:1px dashed var(--est-destaque);background:color-mix(in srgb,var(--est-superficie) 80%,transparent);padding:.4rem;font-family:var(--est-fonte-titulo)}
+.no-retangulo{background:var(--est-destaque);border-radius:.35rem}
+.no-texto{padding:.4rem .5rem;font-family:var(--est-fonte-titulo);font-size:1.25rem;line-height:1.25;white-space:pre-wrap}
+.painel-do-arquivo{border-left:1px solid var(--borda);overflow:auto;padding:.6rem}
+.painel-do-arquivo details{border:0;margin:0 0 .5rem}
+.zoom{position:relative;grid-column:1 / -1;justify-self:start;margin:.4rem .6rem}
+.docs{--docs-fundo:hsl(0,0%,96%);--docs-texto:hsl(0,0%,3.9%);--docs-mudo:hsl(0,0%,96.1%);--docs-mudo-texto:hsl(0,0%,45.1%);--docs-cartao:hsl(0,0%,94.7%);--docs-cartao-texto:hsl(0,0%,3.9%);--docs-borda:hsla(0,0%,80%,.5);--docs-primaria:hsl(0,0%,9%);--docs-primaria-texto:hsl(0,0%,98%);--docs-secundaria:hsl(0,0%,93.1%);--docs-acento:hsla(0,0%,82%,.5);--docs-info:oklch(62.3% .214 259.815);--docs-aviso:oklch(76.9% .188 70.08);--docs-erro:oklch(63.7% .237 25.331);--docs-sucesso:oklch(72.3% .219 149.579);--docs-ideia:oklch(70.5% .209 60.849);color:var(--docs-texto);font:13px/1.45 system-ui,sans-serif;background:var(--docs-fundo);height:100%}
+.docs-chamada{display:flex;gap:.5rem;height:100%;box-sizing:border-box;border:1px solid var(--docs-borda);border-radius:.75rem;background:var(--docs-cartao);color:var(--docs-cartao-texto);padding:.6rem}
+.docs-faixa{width:.2rem;border-radius:.2rem;background:var(--chamada,var(--docs-info))}
+.docs-cartao{height:100%;box-sizing:border-box;border:1px solid var(--docs-borda);border-radius:.75rem;background:var(--docs-cartao);padding:.7rem}
+.docs-cartao h3,.docs-chamada strong,.docs-sumario strong{margin:0 0 .25rem;font-size:.9rem}
+.docs-cartao p,.docs-chamada p,.docs-nota{margin:0;color:var(--docs-mudo-texto)}
+.docs-abas{height:100%;box-sizing:border-box;border:1px solid var(--docs-borda);border-radius:.75rem;background:var(--docs-cartao);padding:.5rem}
+.docs-abas [role="tablist"]{display:flex;gap:.25rem}
+.docs-abas button{width:auto;margin:0;min-height:32px;padding:.2rem .55rem;background:var(--docs-secundaria);color:var(--docs-texto)}
+.docs-abas button[aria-selected="true"]{background:var(--docs-primaria);color:var(--docs-primaria-texto)}
+.docs-nav,.docs-lateral,.docs-sumario,.docs-busca{height:100%;box-sizing:border-box;border:1px solid var(--docs-borda);border-radius:.75rem;background:var(--docs-cartao);padding:.6rem}
+.docs-nav{display:flex;justify-content:space-between;gap:.5rem;align-items:center}
+.docs-lateral ul,.docs-sumario ol{margin:.3rem 0 0;padding-left:1rem}
+.docs-busca input{width:100%;min-height:36px}
+.link-da-previa{display:flex;gap:.4rem;align-items:center}
+.link-da-previa input{width:16rem}
+@media (max-width:60rem){.estudio-app{grid-template-columns:3rem minmax(0,1fr)}.painel-do-arquivo{grid-column:1 / -1;border-left:0;border-top:1px solid var(--borda)}}
+</style>

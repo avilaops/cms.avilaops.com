@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select coalesce(max(numero), 0) as \"numero!\"\n        from estudio_versao\n        where site_id = $1 and arquivo_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "numero!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "583ca8205382c9331d02bdeb7ae4f3df72fa4e898dcba480813e1803917d7a5a"
+}

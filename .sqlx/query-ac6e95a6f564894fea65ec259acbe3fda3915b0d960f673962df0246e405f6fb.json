@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into estudio_arquivo (site_id, nome, pedido, criado_por, sistema)\n        values ($1, $2, $3, $4, $5)\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ac6e95a6f564894fea65ec259acbe3fda3915b0d960f673962df0246e405f6fb"
+}

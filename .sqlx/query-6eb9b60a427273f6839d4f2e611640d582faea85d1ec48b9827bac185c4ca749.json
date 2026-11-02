@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select versao, ativa from estudio_biblioteca\n        where site_id = $1 and slug = 'docs'\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "versao",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "ativa",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6eb9b60a427273f6839d4f2e611640d582faea85d1ec48b9827bac185c4ca749"
+}

@@ -1,0 +1,81 @@
+{% extends "painel_base.html" %}
+{% block titulo %}Estúdio de {{ site }}{% endblock %}
+{% block largura %}estudio{% endblock %}
+{% block barra %}{% include "barra_do_site.html" %}{% endblock %}
+{% block lateral %}{% let secao = "estudio" %}{% include "lateral.html" %}{% endblock %}
+{% block conteudo %}
+{% include "estudio_estilo.html" %}
+<div class="estudio-home" hx-boost="false">
+<h1>Estúdio</h1>
+<p class="quem">Desenhe páginas do site {{ site }}. A geração de telas por chat entra na fase seguinte: hoje o pedido vira o arquivo e o texto inicial.</p>
+{%- if !erro.is_empty() %}
+<p class="recado erro" role="alert">{{ erro }}</p>
+{%- endif %}
+{%- if !aviso.is_empty() %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+<form class="composer" method="post" action="/painel/sites/{{ slug }}/estudio">
+<h2>O que você quer desenhar?</h2>
+<label for="pedido">Descreva a ideia. Ela fica gravada no arquivo.</label>
+<textarea id="pedido" name="pedido" maxlength="4000">{{ pedido }}</textarea>
+<label for="arquivo">Arquivo de destino</label>
+<select id="arquivo" name="arquivo">
+<option value="">Arquivo novo</option>
+{%- for destino in destinos %}
+<option value="{{ destino.id }}">{{ destino.nome }}</option>
+{%- endfor %}
+</select>
+<fieldset>
+<legend>Sistema de design</legend>
+<div class="sistemas">
+{%- for sistema in sistemas %}
+<label class="sistema"><input type="radio" name="sistema" value="{{ sistema.slug }}"{% if sistema.selecionado %} checked{% endif %}>{{ sistema.nome }}<span class="amostras" aria-hidden="true"><i style="background:{{ sistema.fundo }}"></i><i style="background:{{ sistema.destaque }}"></i><i style="background:{{ sistema.texto }}"></i></span></label>
+{%- endfor %}
+</div>
+</fieldset>
+<p class="dica">Importar Tailwind, CSS, um DESIGN.md ou um site ainda não está disponível.</p>
+<div class="atalhos-de-desenho">
+<button type="submit" name="atalho" value="">Criar arquivo</button>
+<button type="submit" name="atalho" value="entrada">Uma página de entrada</button>
+<button type="submit" name="atalho" value="painel">Um painel</button>
+<button type="submit" name="atalho" value="aplicativo">Um aplicativo</button>
+<button type="submit" name="atalho" value="biblioteca">Uma biblioteca de componentes</button>
+</div>
+</form>
+<nav class="abas" aria-label="Arquivos" id="abas-do-estudio">
+<a href="/painel/sites/{{ slug }}/estudio?aba=recentes" hx-get="/painel/sites/{{ slug }}/estudio?aba=recentes" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "recentes" %} aria-current="page"{% endif %}>Recentes</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=favoritos" hx-get="/painel/sites/{{ slug }}/estudio?aba=favoritos" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "favoritos" %} aria-current="page"{% endif %}>Favoritos</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=bibliotecas" hx-get="/painel/sites/{{ slug }}/estudio?aba=bibliotecas" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "bibliotecas" %} aria-current="page"{% endif %}>Bibliotecas</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=compartilhados" hx-get="/painel/sites/{{ slug }}/estudio?aba=compartilhados" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "compartilhados" %} aria-current="page"{% endif %}>Compartilhados</a>
+</nav>
+<div id="lista">
+{%- if aba == "bibliotecas" %}
+<article>
+<h2>Documentação</h2>
+<p>Biblioteca de componentes de página de documentação, catálogo {{ biblioteca_versao }}. Os componentes são nossos, em HTML. As cores neutras vêm do tema público do Fumadocs, sob a licença MIT, com atribuição no repositório.</p>
+<p>{% if biblioteca_ativa %}Ativa neste site.{% else %}Nenhuma biblioteca ativa.{% endif %}</p>
+{%- if pode_ativar %}
+<form method="post" action="/painel/sites/{{ slug }}/estudio/bibliotecas/docs">
+<input type="hidden" name="ativa" value="{% if biblioteca_ativa %}0{% else %}1{% endif %}">
+<button type="submit">{% if biblioteca_ativa %}Desativar{% else %}Ativar{% endif %}</button>
+</form>
+{%- endif %}
+<ul>
+{%- for peca in pecas %}
+<li><strong>{{ peca.nome }}</strong><span class="etiquetas">{{ peca.variante }}</span></li>
+{%- endfor %}
+</ul>
+</article>
+{%- else if arquivos.is_empty() %}
+<p>Nenhum arquivo neste recorte.</p>
+{%- else %}
+<ul>
+{%- for arquivo in arquivos %}
+<li><a href="{{ arquivo.href }}"><strong>{{ arquivo.nome }}</strong></a><span class="etiquetas">{{ arquivo.quando }} · {{ arquivo.etiquetas }}</span></li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</div>
+</div>
+{% endblock %}
+{% block script %}<script src="{{ script_htmx }}"></script>{% endblock %}
