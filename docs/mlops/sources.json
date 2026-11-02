@@ -13,7 +13,7 @@
     },
     {
       "path": "crates/web/src/painel.rs",
-      "sha256": "b074b0a005cf6a0547cfd10dfc6f93bf399552e912a28d73eaaf11653c6418e5"
+      "sha256": "6a2d037c3b2450185c0228f948fe899b216e94ce068ae5a77566f314552798f3"
     },
     {
       "path": "crates/web/src/conector.rs",
