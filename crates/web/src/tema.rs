@@ -84,6 +84,19 @@ h1,h2,h3,.marca{font-weight:800;letter-spacing:-.025em}
 img,iframe,modelo-3d,.chamada{border-radius:1rem}
 .botao,.chamada a{border-radius:999px}
 header.topo{border-bottom:0;box-shadow:0 1px 0 var(--linha)}
+/* CMS Builder 2.0: fundação visual progressiva, sem alterar o contrato dos blocos. */
+:root{--raio-cartao:1.25rem;--espaco-secao:clamp(3.5rem,7vw,7rem);--largura-leitura:72ch;--superficie-suave:#f5f8f7}
+body{line-height:1.65;text-rendering:optimizeLegibility}
+h1,h2,h3{line-height:1.12;text-wrap:balance}
+h1{font-size:clamp(2.65rem,5.5vw,5.5rem);letter-spacing:-.055em}
+h2{font-size:clamp(1.9rem,3.4vw,3.3rem);letter-spacing:-.045em}
+p{overflow-wrap:break-word}
+main img{max-width:100%;height:auto}
+.botao,.chamada a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s ease,box-shadow .2s ease}
+@media(hover:hover){.botao:hover,.chamada a:hover{transform:translateY(-2px);box-shadow:0 8px 22px #0f172a18}}
+:where(a,button,input,textarea,select,summary):focus-visible{outline:3px solid var(--destaque);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.botao,.chamada a{transition:none}@media(hover:hover){.botao:hover,.chamada a:hover{transform:none}}}
+@media(max-width:640px){h1{font-size:clamp(2.25rem,10vw,3.5rem)}h2{font-size:clamp(1.8rem,7vw,2.5rem)}.botao,.chamada a{max-width:100%}}
 "#;
 
 /// O tema em miniatura, para a escolha na tela de identidade: as cores de
