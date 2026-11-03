@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, nome, pedido, favorito, sistema, criado_por\n        from estudio_arquivo\n        where site_id = $1 and id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "pedido",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "favorito",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "sistema",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "criado_por",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f6c7c6e3ffae652c4e1550460ed7082ecb06d067f02cca9913269f3e4d463110"
+}

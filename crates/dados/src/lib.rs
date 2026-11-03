@@ -8,6 +8,7 @@ mod conector;
 mod contas;
 mod documentos;
 mod dominios;
+mod estudio;
 mod eventos;
 pub mod fluxo;
 mod mensagens;
@@ -54,6 +55,12 @@ pub use dominios::{
     DominioDoSite, DominioPendente, ErroDeDominio, confirmar_dominio,
     definir_provisorio_definitivo, dominio_permitido, dominios_do_site, dominios_pendentes,
     pedir_dominio, remover_dominio,
+};
+pub use estudio::{
+    ArquivoAberto, ArquivoListado, BibliotecaDoSite, ErroDeEstudio, NoAberto, NovoArquivo, NovoNo,
+    PaginaAberta, PreviaPublicada, abrir_arquivo, alternar_favorito, biblioteca_docs,
+    criar_arquivo, criar_no, definir_biblioteca_docs, definir_sistema, guardar_pedido_e_sistema,
+    listar_arquivos, mover_no, previa_por_token, publicar_previa,
 };
 pub use eventos::{
     Encerramento, EventoAEntregar, encerrar_evento, marcar_evento_entregue, reivindicar_eventos,

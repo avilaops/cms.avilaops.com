@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select n.largura, n.altura, p.largura as pagina_largura, p.altura as pagina_altura\n        from estudio_no n\n        join estudio_pagina p\n          on p.id = n.pagina_id and p.site_id = n.site_id and p.arquivo_id = n.arquivo_id\n        where n.site_id = $1 and n.arquivo_id = $2 and n.id = $3\n        for update of n\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "altura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "pagina_largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "pagina_altura",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "173b73d19ec4242da86224032bcf273be1b16425a7fe29eff0320e4f8071a793"
+}

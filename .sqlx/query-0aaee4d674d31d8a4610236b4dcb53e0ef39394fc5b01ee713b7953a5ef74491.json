@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into estudio_publicacao (arquivo_id, site_id, versao_id, token, publicado_por)\n        values ($1, $2, $3, $4, $5)\n        on conflict (arquivo_id) do update\n        set versao_id = excluded.versao_id,\n            publicado_por = excluded.publicado_por,\n            publicado_em = now()\n        returning token\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0aaee4d674d31d8a4610236b4dcb53e0ef39394fc5b01ee713b7953a5ef74491"
+}

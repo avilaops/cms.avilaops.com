@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        update estudio_arquivo\n        set pedido = $3, sistema = $4, atualizado_em = now()\n        where site_id = $1 and id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "619c8ee27536c93a34e086e71ecfb760eccd300c74d06c3a9e9ab807c90fbb36"
+}

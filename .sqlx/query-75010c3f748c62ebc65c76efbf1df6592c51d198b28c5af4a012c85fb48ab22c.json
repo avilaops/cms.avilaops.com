@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, nome, pedido, sistema\n        from estudio_arquivo\n        where site_id = $1 and id = $2\n        for update\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "nome",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "pedido",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "sistema",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "75010c3f748c62ebc65c76efbf1df6592c51d198b28c5af4a012c85fb48ab22c"
+}

@@ -1,0 +1,106 @@
+{% extends "painel_base.html" %}
+{% block titulo %}{{ nome }} | Estúdio{% endblock %}
+{% block largura %}estudio{% endblock %}
+{% block barra %}{% include "barra_do_site.html" %}{% endblock %}
+{% block lateral %}{% let secao = "estudio" %}{% include "lateral.html" %}{% endblock %}
+{% block conteudo %}
+{% include "estudio_estilo.html" %}
+<div class="estudio-app">
+<div class="barra-do-arquivo">
+<a class="voltar" href="/painel/sites/{{ slug }}/estudio">‹ Estúdio</a>
+<h1>{{ nome }}</h1>
+<p class="chip" data-sistema="{{ sistema_slug }}">Sistema: {{ sistema_nome }}</p>
+{%- if edita %}
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/sistema">
+<label for="sistema">Trocar sistema</label>
+<select id="sistema" name="sistema">
+{%- for sistema in sistemas %}
+<option value="{{ sistema.slug }}"{% if sistema.selecionado %} selected{% endif %}>{{ sistema.nome }}</option>
+{%- endfor %}
+</select>
+<button type="submit">Aplicar</button>
+</form>
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/favorito">
+<button type="submit">{% if favorito %}Tirar dos favoritos{% else %}Favoritar{% endif %}</button>
+</form>
+{%- endif %}
+{%- if pode_publicar %}
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/publicar">
+<button type="submit">Publicar prévia</button>
+</form>
+{%- endif %}
+{%- if !link_da_previa.is_empty() %}
+<p class="link-da-previa"><label for="link-da-previa">Prévia somente leitura</label><input id="link-da-previa" readonly value="{{ link_da_previa }}"></p>
+{%- endif %}
+</div>
+<aside class="ferramentas" aria-label="Ferramentas">
+<button type="button" data-escolha="cursor" aria-pressed="true">Cursor</button>
+<button type="button" data-escolha="mao">Mão</button>
+{%- if edita %}
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/nos" data-ferramenta="frame">
+<input type="hidden" name="tipo" value="frame"><input type="hidden" name="x" value=""><input type="hidden" name="y" value="">
+<button type="submit">Frame</button><button type="submit" data-colocar="1" hidden>Colocar frame</button>
+</form>
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/nos" data-ferramenta="retangulo">
+<input type="hidden" name="tipo" value="retangulo"><input type="hidden" name="x" value=""><input type="hidden" name="y" value="">
+<button type="submit">Retângulo</button><button type="submit" data-colocar="1" hidden>Colocar retângulo</button>
+</form>
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/nos" data-ferramenta="texto">
+<input type="hidden" name="tipo" value="texto"><input type="hidden" name="x" value=""><input type="hidden" name="y" value="">
+<button type="submit">Texto</button><button type="submit" data-colocar="1" hidden>Colocar texto</button>
+</form>
+{%- endif %}
+<button type="button" disabled title="Ainda não disponível nesta versão">Mídia</button>
+<button type="button" disabled title="Ainda não disponível nesta versão">Lápis</button>
+</aside>
+{% include "estudio_quadro.html" %}
+<aside class="painel-do-arquivo">
+<details open>
+<summary>Componentes</summary>
+{%- if nos.is_empty() %}
+<p>Nenhum componente ainda.</p>
+{%- else %}
+<ul>
+{%- for no in nos %}
+<li>{{ no.rotulo }}{% if !no.titulo.is_empty() %}: {{ no.titulo }}{% endif %}</li>
+{%- endfor %}
+</ul>
+{%- endif %}
+</details>
+<details>
+<summary>Bibliotecas</summary>
+{%- if biblioteca_ativa %}
+<p>Documentação {{ biblioteca_versao }}</p>
+{%- if edita %}
+{%- for peca in pecas %}
+<form method="post" action="/painel/sites/{{ slug }}/estudio/{{ arquivo_id }}/nos">
+<input type="hidden" name="tipo" value="componente">
+<input type="hidden" name="variante" value="{{ peca.variante }}">
+<button type="submit">Inserir {{ peca.nome }}</button>
+</form>
+{%- endfor %}
+{%- endif %}
+{%- else %}
+<p>Nenhuma biblioteca ativa. Ative Documentação na lista de bibliotecas do estúdio.</p>
+{%- endif %}
+<details>
+<summary>Ligações</summary>
+<button type="button" disabled>Conectar agente</button>
+<button type="button" disabled>Importar da web</button>
+<p class="dica">Ainda não disponível nesta versão.</p>
+</details>
+</details>
+{%- if !pedido.is_empty() %}
+<p class="dica">Pedido guardado para a geração, que entra na fase seguinte.</p>
+{%- endif %}
+{%- if !aviso.is_empty() %}
+<p class="recado aviso" role="status">{{ aviso }}</p>
+{%- endif %}
+</aside>
+<button type="button" class="zoom" id="zoom">100%</button>
+</div>
+{% endblock %}
+{% block script %}
+<script src="{{ script_htmx }}"></script>
+<script src="{{ script }}" defer></script>
+{% endblock %}

@@ -95,6 +95,30 @@
         "docs/superpowers/plans/2026-10-28-mcp-contracts.md"
       ],
       "next": "Validar transporte e recusas; completar payloads, exemplos e sucesso de cada ferramenta."
+    },
+    {
+      "id": "T-20261102-estudio",
+      "title": "Trazer o estúdio de design para o painel do CMS",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-revisao",
+      "objective": "Spec, plano e fatia vertical do estúdio: arquivos, canvas, sistema de design, prévia somente leitura e biblioteca de documentação, sem Node nem React no runtime.",
+      "acceptance": [
+        "Spec de 2026-11-02 mapeia as doze referências e a biblioteca docs, com a licença MIT do Fumadocs.",
+        "Plano em fases com critério de verificação.",
+        "Migração nova, rotas no painel, isolamento por site e prévia por token.",
+        "cargo fmt, clippy e a suíte Rust passam nesta árvore.",
+        "README do módulo não promete geração, importação nem conector."
+      ],
+      "evidence": [
+        "docs/superpowers/specs/2026-11-02-estudio-design.md",
+        "docs/superpowers/plans/2026-11-02-estudio.md",
+        "docs/estudio/README.md",
+        "e2d3a2971840f61bb701a9306a39913967e33d82",
+        "branch origin avilaops/estudio-design-ff38",
+        "cargo test --workspace --features cms-web/contracts --locked: ok nesta árvore, sem CI ainda"
+      ],
+      "next": "Abrir o PR a partir de avilaops/estudio-design-ff38: a ferramenta de PR desta sessão não respondeu. Geração por chat, importação e conector MCP do estúdio continuam fora."
     }
   ],
   "decisions": [

@@ -1,0 +1,9 @@
+<div id="quadro" class="quadro" data-somente-leitura="{% if edita %}0{% else %}1{% endif %}" data-ferramenta="cursor">
+<div id="camera" class="camera">
+<div id="pagina" class="pagina ft-{{ fonte_titulo }} fc-{{ fonte_corpo }}" style="width:{{ largura }}px;height:{{ altura }}px;--est-fundo:{{ fundo }};--est-superficie:{{ superficie }};--est-texto:{{ cor_texto }};--est-suave:{{ suave }};--est-destaque:{{ destaque }};--est-borda:{{ borda }}">
+{%- for no in nos %}
+{% include "estudio_no.html" %}
+{%- endfor %}
+</div>
+</div>
+</div>

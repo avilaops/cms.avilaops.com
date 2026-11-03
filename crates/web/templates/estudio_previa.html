@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{ nome }} | Prévia</title>
+{% include "estudio_estilo.html" %}
+</head>
+<body>
+<main class="estudio">
+<p class="recado aviso">Prévia somente leitura. Não é o rascunho.</p>
+<h1>{{ nome }}</h1>
+{% include "estudio_quadro.html" %}
+<button type="button" class="zoom" id="zoom">100%</button>
+</main>
+<script src="{{ script }}" defer></script>
+</body>
+</html>

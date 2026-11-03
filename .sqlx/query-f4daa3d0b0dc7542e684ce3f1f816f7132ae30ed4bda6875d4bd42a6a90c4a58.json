@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into estudio_pagina (site_id, arquivo_id, nome, ordem, largura, altura)\n        values ($1, $2, 'Página 1', 0, $3, $4)\n        returning id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f4daa3d0b0dc7542e684ce3f1f816f7132ae30ed4bda6875d4bd42a6a90c4a58"
+}

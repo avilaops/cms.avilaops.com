@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        insert into estudio_biblioteca (site_id, slug, versao, ativa, ativada_por)\n        values ($1, 'docs', $2, $3, $4)\n        on conflict (site_id, slug) do update\n        set versao = excluded.versao,\n            ativa = excluded.ativa,\n            ativada_por = excluded.ativada_por,\n            ativada_em = now()\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1fc0624194d1b33396ba331d736ae83b7b4ea586d335869be60b4875b4417ed4"
+}

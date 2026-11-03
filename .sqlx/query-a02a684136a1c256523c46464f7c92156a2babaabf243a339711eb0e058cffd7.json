@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select id, largura, altura\n        from estudio_pagina\n        where site_id = $1 and arquivo_id = $2\n        order by ordem, id\n        limit 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "largura",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "altura",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a02a684136a1c256523c46464f7c92156a2babaabf243a339711eb0e058cffd7"
+}

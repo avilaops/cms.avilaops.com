@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        select v.definicao as \"definicao: Json<DefinicaoDeArquivo>\"\n        from estudio_publicacao p\n        join estudio_versao v\n          on v.id = p.versao_id and v.site_id = p.site_id and v.arquivo_id = p.arquivo_id\n        where p.token = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "definicao: Json<DefinicaoDeArquivo>",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8c282f8fa853e7c6478d180bfd25ab51f31383dc9087742d2b1e14c4898fc4be"
+}

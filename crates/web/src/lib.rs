@@ -21,6 +21,7 @@ mod descoberta;
 mod dominio;
 mod editor;
 mod equipe;
+mod estudio;
 mod icone;
 mod identidade;
 pub mod langfuse;
