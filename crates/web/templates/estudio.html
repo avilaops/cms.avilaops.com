@@ -43,10 +43,10 @@
 </div>
 </form>
 <nav class="abas" aria-label="Arquivos" id="abas-do-estudio">
-<a href="/painel/sites/{{ slug }}/estudio?aba=recentes" hx-get="/painel/sites/{{ slug }}/estudio?aba=recentes" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "recentes" %} aria-current="page"{% endif %}>Recentes</a>
-<a href="/painel/sites/{{ slug }}/estudio?aba=favoritos" hx-get="/painel/sites/{{ slug }}/estudio?aba=favoritos" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "favoritos" %} aria-current="page"{% endif %}>Favoritos</a>
-<a href="/painel/sites/{{ slug }}/estudio?aba=bibliotecas" hx-get="/painel/sites/{{ slug }}/estudio?aba=bibliotecas" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "bibliotecas" %} aria-current="page"{% endif %}>Bibliotecas</a>
-<a href="/painel/sites/{{ slug }}/estudio?aba=compartilhados" hx-get="/painel/sites/{{ slug }}/estudio?aba=compartilhados" hx-target="#lista" hx-select="#lista" hx-swap="outerHTML"{% if aba == "compartilhados" %} aria-current="page"{% endif %}>Compartilhados</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=recentes"{% if aba == "recentes" %} aria-current="page"{% endif %}>Recentes</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=favoritos"{% if aba == "favoritos" %} aria-current="page"{% endif %}>Favoritos</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=bibliotecas"{% if aba == "bibliotecas" %} aria-current="page"{% endif %}>Bibliotecas</a>
+<a href="/painel/sites/{{ slug }}/estudio?aba=compartilhados"{% if aba == "compartilhados" %} aria-current="page"{% endif %}>Compartilhados</a>
 </nav>
 <div id="lista">
 {%- if aba == "bibliotecas" %}

@@ -153,13 +153,17 @@
       x: String(Number.parseInt(no.style.left, 10) || 0),
       y: String(Number.parseInt(no.style.top, 10) || 0),
     });
-    const resposta = await fetch(destino, {
+    try {
+      await fetch(destino, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: corpo,
       credentials: "same-origin",
-    });
-    if (!resposta.ok) window.location.reload();
+      });
+    } finally {
+      // Releia a posição persistida, inclusive quando o servidor limita o ponto.
+      window.location.reload();
+    }
   };
   quadro.addEventListener("pointerup", soltar);
   quadro.addEventListener("pointercancel", soltar);
