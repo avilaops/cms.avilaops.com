@@ -11,6 +11,22 @@
   ],
   "tasks": [
     {
+      "id": "T-20261104-editor-react",
+      "title": "Modernizar o editor editorial seguindo experiments",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-andamento",
+      "objective": "Integrar React/TypeScript ao editor com BFF Rust, navegação por blocos e prévia fiel.",
+      "acceptance": [
+        "Preservar campos, autorização e fluxo editorial do servidor.",
+        "Conferir edição e prévia em desktop e 390 px no navegador.",
+        "Corrigir todas as variantes de imagem da prévia.",
+        "Registrar evidência de CI sem inferir publicação."
+      ],
+      "evidence": ["docs/editor-react.md"],
+      "next": "Validar CI e capturas do editor; seguir com contratos de concorrência e histórico."
+    },
+    {
       "id": "T-20261028-mlops",
       "title": "Estruturar desenvolvimento do módulo CMS no padrão MLOps",
       "owner": "codex-cms",

@@ -3,6 +3,8 @@
 .env
 /target
 /var
+/dashboard/node_modules
+/dashboard/dist
 /docs/*
 !/docs/app-builder/
 /docs/app-builder/*

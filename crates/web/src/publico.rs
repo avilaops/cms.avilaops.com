@@ -1042,6 +1042,9 @@ pub(crate) async fn previa(
     let mut moldura = moldura(estado, &pedido, &documento).await?;
     // Prévia não é visita: não carrega a tag de medição.
     moldura.tag_do_google = None;
+    // Adapta todas as variantes antes de gerar src/srcset. Substituir só o
+    // começo de um atributo no HTML deixa as demais larguras no host errado.
+    crate::editor_workspace::preparar_imagens(&mut documento.conteudo, &pedido.gravado.slug);
     let mut pagina = PaginaDeDocumento::nova(moldura, &documento);
     if usa_cardapio(&pedido, &documento) {
         let mut documentos =

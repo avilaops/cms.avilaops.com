@@ -2,3 +2,5 @@
 /var
 .env
 *.snap.new
+/dashboard/node_modules
+/dashboard/dist

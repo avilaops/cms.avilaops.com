@@ -20,6 +20,7 @@ pub mod contratos_oauth;
 mod descoberta;
 mod dominio;
 mod editor;
+mod editor_workspace;
 mod equipe;
 mod estudio;
 mod icone;
