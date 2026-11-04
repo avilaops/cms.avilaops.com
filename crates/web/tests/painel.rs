@@ -998,6 +998,17 @@ async fn escrever_rever_e_publicar_uma_pagina_pelo_painel(pool: PgPool) {
         .await;
     assert_eq!(editor.status, StatusCode::OK);
     assert!(editor.corpo.contains("Rascunho salvo."));
+    assert!(editor.corpo.contains("data-editor-contract=\"1\""));
+    assert!(
+        editor
+            .cabecalho("content-security-policy")
+            .contains("script-src 'self'")
+    );
+    if let Ok(diretorio) = std::env::var("CMS_EDITOR_CAPTURE") {
+        let diretorio = std::path::Path::new(&diretorio);
+        std::fs::create_dir_all(diretorio).expect("diretório de evidências do editor");
+        std::fs::write(diretorio.join("editor.html"), &editor.corpo).expect("editor real");
+    }
     assert!(editor.corpo.contains(r#"value="Sobre a padaria""#));
     // O parágrafo volta na marcação em que foi digitado.
     assert!(
@@ -1031,6 +1042,18 @@ async fn escrever_rever_e_publicar_uma_pagina_pelo_painel(pool: PgPool) {
     );
     assert_eq!(previa.cabecalho("x-robots-tag"), "noindex");
     assert_eq!(previa.cabecalho("cache-control"), "private, no-store");
+    assert!(
+        previa
+            .cabecalho("content-security-policy")
+            .contains("frame-ancestors 'self'")
+    );
+    if let Ok(diretorio) = std::env::var("CMS_EDITOR_CAPTURE") {
+        std::fs::write(
+            std::path::Path::new(&diretorio).join("preview.html"),
+            &previa.corpo,
+        )
+        .expect("prévia real");
+    }
 
     // Acrescentar um bloco salva e devolve o editor com ele.
     let com_bloco = painel

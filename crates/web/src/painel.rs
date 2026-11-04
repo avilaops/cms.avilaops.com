@@ -699,6 +699,9 @@ async fn responder(
             "text/javascript; charset=utf-8",
         ));
     }
+    if let Some(recurso) = crate::editor_workspace::recurso(caminho).filter(|_| leitura) {
+        return Ok(recurso);
+    }
     let Some(rota) = Rota::ler(metodo, caminho) else {
         return Ok(simples(StatusCode::NOT_FOUND, "Não encontrado."));
     };

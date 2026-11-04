@@ -367,6 +367,8 @@ struct ProblemaNaTela {
 #[derive(Template)]
 #[template(path = "editor.html")]
 struct PaginaDoEditor {
+    editor_script: &'static str,
+    editor_style: &'static str,
     site: String,
     slug: String,
     cabecalho: &'static str,
@@ -460,6 +462,8 @@ async fn editor(
     let base = format!("/painel/sites/{}/doc", site.slug);
 
     let corpo = PaginaDoEditor {
+        editor_script: crate::editor_workspace::script(),
+        editor_style: crate::editor_workspace::style(),
         site: site.perfil.nome.clone(),
         slug: site.slug.clone(),
         cabecalho: match (formulario.eh_post, formulario.eh_item, aberto.is_some()) {
@@ -533,7 +537,9 @@ async fn editor(
         f: formulario,
     }
     .render()?;
-    Ok(html_privado(StatusCode::OK, corpo))
+    let mut resposta = html_privado(StatusCode::OK, corpo);
+    crate::resposta::liberar_editor(&mut resposta);
+    Ok(resposta)
 }
 
 /// O editor de um documento novo: vazio, para página ou post, ou já montado
@@ -620,6 +626,7 @@ pub async fn previa(
         Ok(pagina) => {
             let tem_cardapio = pagina.contains("data-cardapio-dados");
             let mut resposta = html_privado(StatusCode::OK, pagina.replace("\"/midia/", &imagens));
+            crate::resposta::liberar_previa_no_editor(&mut resposta);
             if tem_cardapio {
                 crate::resposta::liberar_script_proprio(&mut resposta);
             }

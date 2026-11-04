@@ -69,6 +69,20 @@ pub fn liberar_script_do_painel(resposta: &mut Response) {
     trocar_politica(resposta, &politica);
 }
 
+/// O editor incorpora somente a prévia autenticada do próprio CMS.
+pub fn liberar_editor(resposta: &mut Response) {
+    liberar_script_proprio(resposta);
+    let politica = politica_de(resposta).replace("frame-src ", "frame-src 'self' ");
+    trocar_politica(resposta, &politica);
+}
+
+/// A prévia pode ser incorporada pelo painel da mesma origem, nunca por outro site.
+pub fn liberar_previa_no_editor(resposta: &mut Response) {
+    let politica =
+        politica_de(resposta).replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+    trocar_politica(resposta, &politica);
+}
+
 /// Troca a política de uma página de site pela que aceita a tag do Google.
 /// O que não é página (imagem, sitemap, redirecionamento) fica como está, e
 /// a página com modelo 3D continua carregando o visualizador.

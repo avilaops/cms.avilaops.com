@@ -1,0 +1,24 @@
+.editor-ready main{max-width:1480px;position:relative;padding:1.5rem 2rem 4rem}
+.editor-toolbar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.25rem 0;padding:1rem;background:var(--superficie);border:1px solid var(--borda);border-radius:.75rem}
+.editor-toolbar>div{flex:1;min-width:12rem}.editor-toolbar p{color:var(--suave);font-size:.875rem}
+.editor-toolbar button{width:auto;margin:0}
+.editor-outline{width:15rem;position:sticky;top:4rem;float:left;max-height:80vh;overflow:auto;padding-right:1rem}
+.editor-outline h2{margin:.5rem 0 1rem}.editor-outline button{text-align:left;margin:0 0 .4rem;background:transparent;color:var(--grafite);font-weight:400;overflow-wrap:anywhere}
+.editor-section-picker{display:none}
+.editor-outline button span{color:var(--suave);margin-right:.4rem;font-size:.75rem}
+.editor-outline button[aria-current]{background:var(--cota);color:var(--sobre-cota)}
+.editor-outline button[aria-current] span{color:inherit}
+.editor-ready #editor-form{margin-left:16rem;padding:1.5rem;min-width:0}
+.editor-ready #editor-form fieldset{margin:0;border:0;padding:0}
+.editor-ready #editor-form legend{font-size:1.2rem;font-weight:700;color:var(--grafite);margin-bottom:1rem}
+.editor-ready #editor-form label{margin-top:1rem}.editor-ready #editor-form textarea{min-height:10rem;resize:vertical;line-height:1.6}
+.editor-ready #editor-form .mover{margin:1.5rem 0;flex-wrap:wrap}
+.editor-ready #editor-form .mover button{flex:1}
+.editor-ready .editor-search{font-size:.8rem;color:var(--suave)}
+.editor-preview{clear:both;padding:1rem;margin:1rem 0;border:1px solid var(--borda);border-radius:.75rem;background:var(--superficie)}
+.editor-preview-bar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem}
+.editor-preview-bar button{width:auto;margin:0}
+.editor-preview iframe{display:block;width:100%;height:75vh;margin:auto;border:1px solid var(--borda);background:white}
+.editor-preview iframe.mobile{width:min(390px,100%)}
+.editor-ready [data-editor-section]{scroll-margin-top:5rem}
+@media(max-width:800px){.editor-ready main{padding:1rem}.editor-outline{position:static;float:none;width:100%;max-height:none;margin-bottom:1rem;padding:0}.editor-section-picker{display:block;margin-bottom:.75rem}.editor-outline .editor-section-button{display:none}.editor-ready #editor-form{margin-left:0;padding:1rem}.editor-toolbar button{flex:1}.editor-preview{padding:.5rem}}
