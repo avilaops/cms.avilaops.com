@@ -4,6 +4,7 @@
 .editor-toolbar button{width:auto;margin:0}
 .editor-outline{width:15rem;position:sticky;top:4rem;float:left;max-height:80vh;overflow:auto;padding-right:1rem}
 .editor-outline h2{margin:.5rem 0 1rem}.editor-outline button{text-align:left;margin:0 0 .4rem;background:transparent;color:var(--grafite);font-weight:400;overflow-wrap:anywhere}
+.editor-section-picker{display:none}
 .editor-outline button span{color:var(--suave);margin-right:.4rem;font-size:.75rem}
 .editor-outline button[aria-current]{background:var(--cota);color:var(--sobre-cota)}
 .editor-outline button[aria-current] span{color:inherit}
@@ -20,4 +21,4 @@
 .editor-preview iframe{display:block;width:100%;height:75vh;margin:auto;border:1px solid var(--borda);background:white}
 .editor-preview iframe.mobile{width:min(390px,100%)}
 .editor-ready [data-editor-section]{scroll-margin-top:5rem}
-@media(max-width:800px){.editor-ready main{padding:1rem}.editor-outline{position:static;float:none;width:100%;max-height:14rem;margin-bottom:1rem;display:grid;grid-template-columns:1fr 1fr;gap:.25rem}.editor-outline h2{grid-column:1/-1}.editor-ready #editor-form{margin-left:0;padding:1rem}.editor-toolbar button{flex:1}.editor-preview{padding:.5rem}}
+@media(max-width:800px){.editor-ready main{padding:1rem}.editor-outline{position:static;float:none;width:100%;max-height:none;margin-bottom:1rem;padding:0}.editor-section-picker{display:block;margin-bottom:.75rem}.editor-outline .editor-section-button{display:none}.editor-ready #editor-form{margin-left:0;padding:1rem}.editor-toolbar button{flex:1}.editor-preview{padding:.5rem}}

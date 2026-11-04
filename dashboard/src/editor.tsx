@@ -89,7 +89,15 @@ function Workspace({ form }: { form: HTMLFormElement }) {
     </div>
     <nav className="editor-outline" aria-label="Seções do documento">
       <h2>Documento</h2>
+      <label className="editor-section-picker">Seção em edição
+        <select value={active} onChange={event => { setActive(event.target.value); setExpanded(false); }}>
+          {sections.map((section, i) => <option key={section.id} value={section.id}>
+            {i + 1}. {section.dataset.editorSection}
+          </option>)}
+        </select>
+      </label>
       {sections.map((section, i) => <button key={section.id} type="button"
+        className="editor-section-button"
         aria-current={active === section.id ? 'step' : undefined}
         onClick={() => { setActive(section.id); setExpanded(false); }}>
         <span>{String(i + 1).padStart(2, '0')}</span> {section.dataset.editorSection}

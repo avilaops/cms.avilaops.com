@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 // These pages are produced by the authenticated Rust router tests, not a
@@ -52,10 +52,16 @@ test('editor real: navegação, dados, prévia, teclado e celular', async () => 
     await page.frameLocator('iframe').getByRole('heading', { name: 'Sobre a padaria' }).waitFor();
     await page.getByRole('button', { name: 'Ver celular', exact: true }).click();
     assert.equal(await page.locator('iframe').evaluate(e => e.getBoundingClientRect().width), 390);
+    await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: new URL('desktop.png', capture).pathname, fullPage: true });
     await page.getByRole('button', { name: 'Fechar prévia' }).click();
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByLabel('Seção em edição').selectOption('editor-publication');
+    assert.equal(await page.locator('#editor-publication').isVisible(), true);
+    assert.equal(await page.locator('#titulo').inputValue(), 'Título editado no navegador');
+    await page.getByLabel('Seção em edição').selectOption('editor-properties');
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({ path: new URL('mobile.png', capture).pathname, fullPage: true });
     await page.keyboard.press('Control+s');
     await page.getByText('Recebido pelo servidor de teste').waitFor();
