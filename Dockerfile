@@ -2,6 +2,13 @@
 # Imagem do CMS: um binário só, `servidor`. Contexto `.`, linux/amd64.
 # Não recebe segredo de build; o único argumento é GIT_SHA.
 
+FROM node:24-bookworm-slim AS painel
+WORKDIR /app/dashboard
+COPY dashboard/package*.json ./
+RUN npm ci
+COPY dashboard/ ./
+RUN npm run build
+
 FROM rust:1-bookworm AS base
 RUN cargo install cargo-chef --locked
 WORKDIR /app
@@ -18,6 +25,7 @@ ENV SQLX_OFFLINE=true
 COPY --from=plano /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
+COPY --from=painel /app/dashboard/dist/ dashboard/dist/
 RUN cargo build --release --locked --bin servidor
 
 FROM debian:bookworm-slim

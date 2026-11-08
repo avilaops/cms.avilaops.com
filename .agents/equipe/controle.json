@@ -11,6 +11,26 @@
   ],
   "tasks": [
     {
+      "id": "T-20261104-editor-react",
+      "title": "Modernizar o editor editorial seguindo experiments",
+      "owner": "codex-cms",
+      "priority": "alta",
+      "status": "em-revisao",
+      "objective": "Integrar React/TypeScript ao editor com BFF Rust, navegação por blocos e prévia fiel.",
+      "acceptance": [
+        "Preservar campos, autorização e fluxo editorial do servidor.",
+        "Conferir edição e prévia em desktop e 390 px no navegador.",
+        "Corrigir todas as variantes de imagem da prévia.",
+        "Registrar evidência de CI sem inferir publicação."
+      ],
+      "evidence": [
+        "docs/editor-react.md",
+        "https://github.com/avilaops/cms.avilaops.com/pull/30",
+        "CI 41898047696 aprovada no commit 218989e; Rust, navegador e capturas conferidos. Ajuste posterior de navegação mobile exige nova CI."
+      ],
+      "next": "Conferir CI final e revisar PR30. Sem merge ou deploy."
+    },
+    {
       "id": "T-20261028-mlops",
       "title": "Estruturar desenvolvimento do módulo CMS no padrão MLOps",
       "owner": "codex-cms",

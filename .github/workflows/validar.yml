@@ -27,7 +27,9 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
+      - name: Compilar painel React
+        run: npm ci --prefix dashboard && npm run build --prefix dashboard
       - name: Testes do gate MLOps
         id: mlops-tests
         run: node --test scripts/validar-mlops.test.mjs
@@ -90,12 +92,21 @@ jobs:
         env:
           CMS_CARDAPIO_PREVIEW: ${{ github.workspace }}/target/cardapio-preview
           CMS_APP_BUILDER_SCREENSHOTS: ${{ github.workspace }}/target/app-builder-capture
+          CMS_EDITOR_CAPTURE: ${{ github.workspace }}/target/editor-capture
           CMS_CONTRACT_RESPONSES: ${{ github.workspace }}/target/contracts/responses
           CMS_OAUTH_RESPONSES: ${{ github.workspace }}/target/contracts/oauth-responses
           CMS_MCP_RESPONSES: ${{ github.workspace }}/target/contracts/mcp-responses
           CMS_CONTRACT_REVISION: ${{ github.sha }}
           CMS_CONTRACT_RUN: ${{ github.run_id }}/${{ github.run_attempt }}
         run: cargo test --workspace --features cms-web/contracts --locked
+      - name: Verificar editor no navegador
+        run: npm test --prefix dashboard
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cms-editor-evidence
+          path: target/editor-capture
+          retention-days: 14
       - name: Compatibilidade de contratos e respostas reais
         id: contracts
         env:
